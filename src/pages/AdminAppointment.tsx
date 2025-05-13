@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
+import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
 import { appointmentData } from '@/mocks';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -43,6 +44,7 @@ export const AdminAppointment: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [showNewAppointment, setShowNewAppointment] = useState(false);
 
   // Filter appointments
   const filteredAppointments = appointmentData
@@ -89,9 +91,7 @@ export const AdminAppointment: React.FC = () => {
         description="Manage and track all appointments"
         action={{
           label: "New Appointment",
-          onClick: () => {
-            alert('New appointment clicked');
-          },
+          onClick: () => setShowNewAppointment(true),
           icon: <Plus className="h-4 w-4 mr-2" />,
         }}
       />
@@ -275,6 +275,12 @@ export const AdminAppointment: React.FC = () => {
       <AppointmentList
         appointments={filteredAppointments}
         showActions
+      />
+
+      <NewAppointmentDialog
+        open={showNewAppointment}
+        onOpenChange={setShowNewAppointment}
+        selectedDate={selectedDate}
       />
     </div>
   );
