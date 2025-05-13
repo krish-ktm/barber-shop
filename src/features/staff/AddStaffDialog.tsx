@@ -77,7 +77,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] h-[90vh]">
+      <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add New Staff Member</DialogTitle>
           <DialogDescription>
@@ -86,161 +86,162 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
         </DialogHeader>
 
         <ScrollArea className="flex-1">
-          <div className="px-1">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter full name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Position</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+          <div className="px-6 pb-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select position" />
-                          </SelectTrigger>
+                          <Input placeholder="Enter full name" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Junior Barber">Junior Barber</SelectItem>
-                          <SelectItem value="Senior Barber">Senior Barber</SelectItem>
-                          <SelectItem value="Master Barber">Master Barber</SelectItem>
-                          <SelectItem value="Style Specialist">Style Specialist</SelectItem>
-                          <SelectItem value="Color Specialist">Color Specialist</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="Enter email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter phone number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bio</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter staff member's bio"
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="services"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Services Offered</FormLabel>
-                    <div className="grid grid-cols-2 gap-2 border rounded-md p-4">
-                      {serviceData.map((service) => (
-                        <label
-                          key={service.id}
-                          className="flex items-center space-x-2 text-sm"
+                  <FormField
+                    control={form.control}
+                    name="position"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Position</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
                         >
-                          <input
-                            type="checkbox"
-                            checked={field.value.includes(service.id)}
-                            onChange={(e) => {
-                              const value = service.id;
-                              if (e.target.checked) {
-                                field.onChange([...field.value, value]);
-                              } else {
-                                field.onChange(
-                                  field.value.filter((v) => v !== value)
-                                );
-                              }
-                            }}
-                            className="form-checkbox h-4 w-4"
-                          />
-                          <span>{service.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select position" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Junior Barber">Junior Barber</SelectItem>
+                            <SelectItem value="Senior Barber">Senior Barber</SelectItem>
+                            <SelectItem value="Master Barber">Master Barber</SelectItem>
+                            <SelectItem value="Style Specialist">Style Specialist</SelectItem>
+                            <SelectItem value="Color Specialist">Color Specialist</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              <FormField
-                control={form.control}
-                name="commissionPercentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Commission Percentage</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </form>
-          </Form>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="Enter email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter phone number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bio</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter staff member's bio"
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="services"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Services Offered</FormLabel>
+                      <div className="grid grid-cols-2 gap-2 border rounded-md p-4">
+                        {serviceData.map((service) => (
+                          <label
+                            key={service.id}
+                            className="flex items-center space-x-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={field.value.includes(service.id)}
+                              onChange={(e) => {
+                                const value = service.id;
+                                if (e.target.checked) {
+                                  field.onChange([...field.value, value]);
+                                } else {
+                                  field.onChange(
+                                    field.value.filter((v) => v !== value)
+                                  );
+                                }
+                              }}
+                              className="form-checkbox h-4 w-4"
+                            />
+                            <span>{service.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="commissionPercentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Commission Percentage</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
           </div>
-  </ScrollArea>
-        <DialogFooter className="mt-4">
+        </ScrollArea>
+
+        <DialogFooter className="mt-6">
           <Button onClick={form.handleSubmit(onSubmit)}>Add Staff Member</Button>
         </DialogFooter>
       </DialogContent>
