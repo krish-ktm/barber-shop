@@ -96,10 +96,10 @@ export const AdminAppointment: React.FC = () => {
         }}
       />
       
-      <div className="bg-card border rounded-lg p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
+      <div className="bg-card border rounded-lg">
+        <div className="p-4 border-b">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="icon"
@@ -160,97 +160,34 @@ export const AdminAppointment: React.FC = () => {
               </Badge>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search appointments..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+        <div className="p-4 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search appointments..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
-            <div className="hidden sm:block min-w-[180px]">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="no-show">No Show</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Sheet open={showFilters} onOpenChange={setShowFilters}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="sm:hidden"
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-full sm:max-w-lg">
-                <SheetHeader className="mb-6">
-                  <SheetTitle>Filters</SheetTitle>
-                </SheetHeader>
-                
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Status</label>
-                    <Select value={statusFilter} onValueChange={(value) => {
-                      setStatusFilter(value);
-                      setShowFilters(false);
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="no-show">No Show</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Date</label>
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => {
-                        if (date) {
-                          setSelectedDate(date);
-                          setShowFilters(false);
-                        }
-                      }}
-                      className="rounded-md border"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <Button variant="outline" onClick={clearFilters}>
-                      Reset filters
-                    </Button>
-                    <SheetClose asChild>
-                      <Button>Apply filters</Button>
-                    </SheetClose>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+          <div className="hidden sm:flex items-center gap-3 flex-wrap">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="no-show">No Show</SelectItem>
+              </SelectContent>
+            </Select>
 
             {(searchQuery || statusFilter !== 'all') && (
               <Button
@@ -260,10 +197,78 @@ export const AdminAppointment: React.FC = () => {
                 className="h-9"
               >
                 <X className="h-4 w-4 mr-2" />
-                Clear
+                Clear filters
               </Button>
             )}
           </div>
+
+          <Sheet open={showFilters} onOpenChange={setShowFilters}>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                className="sm:hidden"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+                {(searchQuery || statusFilter !== 'all') && (
+                  <Badge variant="secondary" className="ml-2">
+                    {(searchQuery ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[90vh]">
+              <SheetHeader className="mb-6">
+                <SheetTitle>Filters</SheetTitle>
+              </SheetHeader>
+              
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Status</label>
+                  <Select value={statusFilter} onValueChange={(value) => {
+                    setStatusFilter(value);
+                    setShowFilters(false);
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="no-show">No Show</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Date</label>
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(date);
+                        setShowFilters(false);
+                      }
+                    }}
+                    className="rounded-md border"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <Button variant="outline" onClick={clearFilters}>
+                    Reset filters
+                  </Button>
+                  <SheetClose asChild>
+                    <Button>Apply filters</Button>
+                  </SheetClose>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 
