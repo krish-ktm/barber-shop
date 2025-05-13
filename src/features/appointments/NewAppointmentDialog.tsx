@@ -35,6 +35,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { staffData, serviceData } from '@/mocks';
 import { createTimeSlots } from '@/utils';
@@ -116,7 +118,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>New Appointment</DialogTitle>
           <DialogDescription>
@@ -124,17 +126,47 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        <ScrollArea className="flex-1 px-1 ">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="customerName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Customer Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter customer name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="customerPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter phone number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="customerName"
+                name="customerEmail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Name</FormLabel>
+                    <FormLabel>Email (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter customer name" {...field} />
+                      <Input type="email" placeholder="Enter email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -143,161 +175,26 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
 
               <FormField
                 control={form.control}
-                name="customerPhone"
+                name="staffId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter phone number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="customerEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email (Optional)</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="Enter email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="staffId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Staff Member</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      setSelectedStaff(value);
-                    }}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select staff member" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {staffData.map((staff) => (
-                        <SelectItem key={staff.id} value={staff.id}>
-                          {staff.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="services"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Services</FormLabel>
-                  <div className="grid grid-cols-2 gap-2">
-                    {serviceData.map((service) => (
-                      <label
-                        key={service.id}
-                        className="flex items-center space-x-2 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={field.value.includes(service.id)}
-                          onChange={(e) => {
-                            const value = service.id;
-                            const newServices = e.target.checked
-                              ? [...field.value, value]
-                              : field.value.filter((v) => v !== value);
-                            field.onChange(newServices);
-                            setSelectedServices(newServices);
-                          }}
-                          className="form-checkbox h-4 w-4"
-                        />
-                        <span>
-                          {service.name} - ${service.price}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? (
-                              format(field.value, 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="time"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Time</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>Staff Member</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedStaff(value);
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select time">
-                            <div className="flex items-center">
-                              <Clock className="mr-2 h-4 w-4" />
-                              {field.value || 'Select time'}
-                            </div>
-                          </SelectValue>
+                          <SelectValue placeholder="Select staff member" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {timeSlots.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
+                        {staffData.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -306,40 +203,146 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                   </FormItem>
                 )}
               />
-            </div>
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Add any notes about the appointment" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="services"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Services</FormLabel>
+                    <div className="grid grid-cols-2 gap-2 border rounded-md p-4">
+                      {serviceData.map((service) => (
+                        <div key={service.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={service.id}
+                            checked={field.value.includes(service.id)}
+                            onCheckedChange={(checked) => {
+                              const value = service.id;
+                              const newServices = checked
+                                ? [...field.value, value]
+                                : field.value.filter((v) => v !== value);
+                              field.onChange(newServices);
+                              setSelectedServices(newServices);
+                            }}
+                          />
+                          <label
+                            htmlFor={service.id}
+                            className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {service.name} - ${service.price}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {selectedServices.length > 0 && (
-              <div className="rounded-lg border p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Duration:</span>
-                  <span>{duration} minutes</span>
-                </div>
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Total Price:</span>
-                  <span>${price.toFixed(2)}</span>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                'w-full pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Time</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select time">
+                              <div className="flex items-center">
+                                <Clock className="mr-2 h-4 w-4" />
+                                {field.value || 'Select time'}
+                              </div>
+                            </SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {timeSlots.map((time) => (
+                            <SelectItem key={time} value={time}>
+                              {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            )}
 
-            <DialogFooter>
-              <Button type="submit">Create Appointment</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Add any notes about the appointment" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {selectedServices.length > 0 && (
+                <div className="rounded-lg border p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Duration:</span>
+                    <span>{duration} minutes</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-medium">
+                    <span>Total Price:</span>
+                    <span>${price.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </form>
+          </Form>
+        </ScrollArea>
+
+        <DialogFooter className="mt-4">
+          <Button onClick={form.handleSubmit(onSubmit)}>Create Appointment</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
