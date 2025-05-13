@@ -40,6 +40,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils';
 import { InvoiceDialog } from '@/features/pos/InvoiceDialog';
+import { NewInvoiceDialog } from '@/features/pos/NewInvoiceDialog';
 
 export const POS: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +48,7 @@ export const POS: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [showNewInvoiceDialog, setShowNewInvoiceDialog] = useState(false);
 
   // Filter and sort invoices
   const filteredInvoices = invoiceData
@@ -115,9 +117,7 @@ export const POS: React.FC = () => {
         description="Create and manage invoices"
         action={{
           label: "New Invoice",
-          onClick: () => {
-            alert('New invoice clicked');
-          },
+          onClick: () => setShowNewInvoiceDialog(true),
           icon: <Plus className="h-4 w-4 mr-2" />,
         }}
       />
@@ -279,6 +279,11 @@ export const POS: React.FC = () => {
         invoice={selectedInvoice}
         open={showInvoiceDialog}
         onOpenChange={setShowInvoiceDialog}
+      />
+
+      <NewInvoiceDialog
+        open={showNewInvoiceDialog}
+        onOpenChange={setShowNewInvoiceDialog}
       />
     </div>
   );
