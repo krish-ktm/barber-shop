@@ -1,7 +1,7 @@
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { Staff } from './pages/Staff';
-import { Appointments } from './pages/Appointments';
+import { AdminAppointment } from './pages/AdminAppointment';
 import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -13,7 +13,7 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="staff" element={<Staff />} />
-          <Route path="appointments" element={<Appointments />} />
+          <Route path="appointments" element={<AdminAppointment />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
