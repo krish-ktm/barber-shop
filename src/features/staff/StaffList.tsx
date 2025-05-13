@@ -1,8 +1,18 @@
 import React from 'react';
-import { staffData } from '@/mocks';
+import { 
+  Edit, 
+  Mail, 
+  MoreHorizontal, 
+  Phone, 
+  Trash,
+  Calendar,
+  Clock,
+  DollarSign
+} from 'lucide-react';
+import { Staff } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatCurrency } from '@/utils';
+import { formatCurrency, formatPhoneNumber } from '@/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
@@ -13,25 +23,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Edit, 
-  Mail, 
-  MoreHorizontal, 
-  Phone, 
-  Trash 
-} from 'lucide-react';
 
-export const StaffList: React.FC = () => {
+interface StaffListProps {
+  staff: Staff[];
+}
+
+export const StaffList: React.FC<StaffListProps> = ({ staff }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {staffData.map((staff) => (
-        <Card key={staff.id} className="overflow-hidden">
+      {staff.map((member) => (
+        <Card key={member.id} className="overflow-hidden">
           <div className="relative">
             <div className="h-24 bg-gradient-to-r from-black to-primary"></div>
             <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-16 w-16 border-4 border-background">
-              <AvatarImage src={staff.image} alt={staff.name} />
+              <AvatarImage src={member.image} alt={member.name} />
               <AvatarFallback>
-                {staff.name
+                {member.name
                   .split(' ')
                   .map(n => n[0])
                   .join('')}
@@ -49,7 +56,11 @@ export const StaffList: React.FC = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    Edit Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    View Schedule
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Phone className="mr-2 h-4 w-4" />
@@ -57,10 +68,10 @@ export const StaffList: React.FC = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Mail className="mr-2 h-4 w-4" />
-                    Email
+                    Send Email
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-error">
+                  <DropdownMenuItem className="text-destructive">
                     <Trash className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
@@ -71,39 +82,79 @@ export const StaffList: React.FC = () => {
           
           <CardContent className="pt-10 pb-6">
             <div className="mb-4">
-              <h3 className="font-semibold text-lg">{staff.name}</h3>
-              <p className="text-sm text-muted-foreground">{staff.position}</p>
-              <div className="mt-2">
-                <Badge variant={staff.isAvailable ? "default" : "outline"}>
-                  {staff.isAvailable ? 'Available' : 'Unavailable'}
+              <h3 className="font-semibold text-lg">{member.name}</h3>
+              <p className="text-sm text-muted-foreground">{member.position}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant={member.isAvailable ? "default" : "outline"}>
+                  {member.isAvailable ? 'Available' : 'Unavailable'}
                 </Badge>
+                <Badge variant="outline">{member.commissionPercentage}% Commission</Badge>
               </div>
             </div>
             
             <div className="space-y-1 text-sm mb-4">
               <p className="flex items-center">
                 <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                {staff.email}
+                {member.email}
               </p>
               <p className="flex items-center">
                 <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                {staff.phone}
+                {formatPhoneNumber(member.phone)}
               </p>
+              {member.bio && (
+                <p className="text-muted-foreground mt-2">{member.bio}</p>
+              )}
             </div>
             
-            <div className="pt-4 border-t">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Total Appointments</span>
-                <span className="font-medium">{staff.totalAppointments}</span>
+            <div className="grid grid-cols-3 gap-4 py-4 border-t border-b mb-4">
+              <div className="text-center">
+                <p className="text-2xl font-semibold">{member.totalAppointments}</p>
+                <p className="text-xs text-muted-foreground">Appointments</p>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Earnings</span>
-                <span className="font-medium">{formatCurrency(staff.totalEarnings)}</span>
+              <div className="text-center border-x">
+                <p className="text-2xl font-semibold">
+                  {member.services.length}
+                </p>
+                <p className="text-xs text-muted-foreground">Services</p>
               </div>
+              <div className="text-center">
+                <p className="text-2xl font-semibold">
+                  {formatCurrency(member.totalEarnings).replace('$', '')}
+                </p>
+                <p className="text-xs text-muted-foreground">Earnings</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium mb-2">Today's Schedule</h4>
+              {member.workingHours[getDayKey(new Date())].length > 0 ? (
+                member.workingHours[getDayKey(new Date())].map((slot, index) => (
+                  <div key={index} className="flex items-center text-sm">
+                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span>{slot.start} - {slot.end}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">Not scheduled today</p>
+              )}
             </div>
           </CardContent>
         </Card>
       ))}
     </div>
   );
+};
+
+// Helper function to get the day key for workingHours
+const getDayKey = (date: Date): keyof Staff['workingHours'] => {
+  const days: (keyof Staff['workingHours'])[] = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ];
+  return days[date.getDay()];
 };
