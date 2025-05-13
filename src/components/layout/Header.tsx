@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Bell, Calendar, ChevronDown, Menu, MessageSquare, Search, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Calendar, ChevronDown, LogOut, Menu, MessageSquare, Search, X } from 'lucide-react';
 import { adminUser } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -14,9 +15,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Sidebar } from './Sidebar';
+import { useAuth } from '@/lib/auth';
 
 export const Header: React.FC = () => {
   const [showSearch, setShowSearch] = useState(false);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <header className="bg-white border-b border-border h-16 flex items-center px-4 md:px-6 w-full z-10 sticky top-0">
@@ -108,7 +117,10 @@ export const Header: React.FC = () => {
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuItem>Billing</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Log out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

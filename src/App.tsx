@@ -7,14 +7,24 @@ import { POS } from './pages/POS';
 import { Slots } from './pages/Slots';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
+import { Login } from './pages/Login';
 import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MainLayout />}>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="staff" element={<Staff />} />
@@ -32,4 +42,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
