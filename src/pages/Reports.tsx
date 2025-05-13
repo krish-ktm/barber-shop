@@ -32,6 +32,7 @@ export const Reports: React.FC = () => {
   const [reportType, setReportType] = useState('daily');
   const [date, setDate] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState('revenue');
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleExport = () => {
     // In a real app, this would trigger a CSV/PDF export
@@ -50,8 +51,9 @@ export const Reports: React.FC = () => {
         }}
       />
 
-      <div className="flex flex-col md:flex-row gap-4 items-start">
-        <Card className="w-full md:w-64">
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Filters Card - Responsive positioning */}
+        <Card className="lg:w-64 shrink-0">
           <CardHeader>
             <CardTitle>Filters</CardTitle>
           </CardHeader>
@@ -89,159 +91,161 @@ export const Reports: React.FC = () => {
           </CardContent>
         </Card>
 
-        <div className="flex-1 w-full">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="revenue">Revenue</TabsTrigger>
-              <TabsTrigger value="staff">Staff Performance</TabsTrigger>
-              <TabsTrigger value="services">Service Analytics</TabsTrigger>
-              <TabsTrigger value="customers">Customer Insights</TabsTrigger>
-            </TabsList>
+        {/* Main Content Area - Responsive tabs and cards */}
+        <div className="flex-1 min-w-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <div className="overflow-auto">
+              <TabsList className="w-full justify-start inline-flex h-auto p-1 whitespace-nowrap">
+                <TabsTrigger value="revenue" className="flex-shrink-0">Revenue</TabsTrigger>
+                <TabsTrigger value="staff" className="flex-shrink-0">Staff Performance</TabsTrigger>
+                <TabsTrigger value="services" className="flex-shrink-0">Service Analytics</TabsTrigger>
+                <TabsTrigger value="customers" className="flex-shrink-0">Customer Insights</TabsTrigger>
+              </TabsList>
+            </div>
 
-            <div className="mt-4 space-y-4">
-              <TabsContent value="revenue">
-                <div className="grid gap-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Revenue Trends</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <RevenueChart
-                        title=""
-                        data={revenueData}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Daily Average</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">$245.75</div>
-                        <p className="text-sm text-muted-foreground">
-                          +12.5% from last week
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Weekly Total</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">$1,720.25</div>
-                        <p className="text-sm text-muted-foreground">
-                          +5.2% from last week
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Monthly Projection</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">$7,450.00</div>
-                        <p className="text-sm text-muted-foreground">
-                          Based on current trends
-                        </p>
-                      </CardContent>
-                    </Card>
+            <TabsContent value="revenue" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Trends</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] sm:h-[400px]">
+                    <RevenueChart title="" data={revenueData} />
                   </div>
-                </div>
-              </TabsContent>
+                </CardContent>
+              </Card>
 
-              <TabsContent value="staff">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Staff Performance</CardTitle>
+                    <CardTitle className="text-base">Daily Average</CardTitle>
                   </CardHeader>
                   <CardContent>
+                    <div className="text-2xl font-bold">$245.75</div>
+                    <p className="text-sm text-muted-foreground">
+                      +12.5% from last week
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Weekly Total</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">$1,720.25</div>
+                    <p className="text-sm text-muted-foreground">
+                      +5.2% from last week
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="sm:col-span-2 lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="text-base">Monthly Projection</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">$7,450.00</div>
+                    <p className="text-sm text-muted-foreground">
+                      Based on current trends
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="staff">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Staff Performance</CardTitle>
+                </CardHeader>
+                <CardContent className="overflow-auto">
+                  <div className="min-w-[600px]">
                     <PerformanceTable
                       title=""
                       data={staffPerformanceData}
                       type="staff"
                     />
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              <TabsContent value="services">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Service Analytics</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+            <TabsContent value="services">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Service Analytics</CardTitle>
+                </CardHeader>
+                <CardContent className="overflow-auto">
+                  <div className="min-w-[600px]">
                     <PerformanceTable
                       title=""
                       data={servicePerformanceData}
                       type="service"
                     />
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              <TabsContent value="customers">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Customer Insights</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">New Customers</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">24</div>
-                          <p className="text-sm text-muted-foreground">
-                            This month
-                          </p>
-                        </CardContent>
-                      </Card>
+            <TabsContent value="customers">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Customer Insights</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">New Customers</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">24</div>
+                        <p className="text-sm text-muted-foreground">
+                          This month
+                        </p>
+                      </CardContent>
+                    </Card>
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">Returning Rate</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">68%</div>
-                          <p className="text-sm text-muted-foreground">
-                            Last 30 days
-                          </p>
-                        </CardContent>
-                      </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Returning Rate</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">68%</div>
+                        <p className="text-sm text-muted-foreground">
+                          Last 30 days
+                        </p>
+                      </CardContent>
+                    </Card>
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">Average Spend</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">$45.50</div>
-                          <p className="text-sm text-muted-foreground">
-                            Per visit
-                          </p>
-                        </CardContent>
-                      </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Average Spend</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">$45.50</div>
+                        <p className="text-sm text-muted-foreground">
+                          Per visit
+                        </p>
+                      </CardContent>
+                    </Card>
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">Satisfaction</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">4.8/5.0</div>
-                          <p className="text-sm text-muted-foreground">
-                            Based on feedback
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </div>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Satisfaction</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">4.8/5.0</div>
+                        <p className="text-sm text-muted-foreground">
+                          Based on feedback
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
