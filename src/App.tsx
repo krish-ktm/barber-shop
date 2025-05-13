@@ -3,6 +3,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Staff } from './pages/Staff';
 import { AdminAppointment } from './pages/AdminAppointment';
 import { Customers } from './pages/Customers';
+import { POS } from './pages/POS';
 import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -16,6 +17,7 @@ function App() {
           <Route path="staff" element={<Staff />} />
           <Route path="appointments" element={<AdminAppointment />} />
           <Route path="customers" element={<Customers />} />
+          <Route path="pos" element={<POS />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
@@ -24,4 +26,4 @@ function App() {
   );
 }
 
-export default App;
+export default App
