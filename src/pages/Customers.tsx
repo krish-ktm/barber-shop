@@ -41,6 +41,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatCurrency, formatPhoneNumber } from '@/utils';
 import { EditCustomerDialog } from '@/features/customers/EditCustomerDialog';
+import { AddCustomerDialog } from '@/features/customers/AddCustomerDialog';
 
 export const Customers: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +49,7 @@ export const Customers: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Filter and sort customers
   const filteredCustomers = customerData
@@ -113,9 +115,7 @@ export const Customers: React.FC = () => {
         description="View and manage your customer database"
         action={{
           label: "Add Customer",
-          onClick: () => {
-            alert('Add customer clicked');
-          },
+          onClick: () => setShowAddDialog(true),
           icon: <Plus className="h-4 w-4 mr-2" />,
         }}
       />
@@ -286,6 +286,11 @@ export const Customers: React.FC = () => {
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         onSave={handleSaveCustomer}
+      />
+
+      <AddCustomerDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
       />
     </div>
   );
