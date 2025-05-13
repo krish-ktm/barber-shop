@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Invoice } from '@/types';
 import { formatCurrency } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -73,139 +74,142 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
+        <div className="absolute right-12 top-6">
+          {getStatusBadge(invoice.status)}
+        </div>
+        
+        <DialogHeader className="pb-2">
           <DialogTitle>Invoice Details</DialogTitle>
-          <div className="flex items-center gap-2">
-            {getStatusBadge(invoice.status)}
-          </div>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Header Information */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Invoice Number:</span>
-              <span className="font-medium">{invoice.id}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={handleCopyInvoiceNumber}
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Date: {format(new Date(invoice.date), 'MMMM d, yyyy')}
-            </div>
-            {invoice.appointmentId && (
-              <div className="text-sm text-muted-foreground">
-                Appointment: #{invoice.appointmentId}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Customer Information */}
-            <div className="space-y-1">
-              <h4 className="text-sm font-medium">Customer</h4>
-              <div className="text-sm">{invoice.customerName}</div>
-            </div>
-
-            {/* Staff Information */}
-            <div className="space-y-1">
-              <h4 className="text-sm font-medium">Staff</h4>
-              <div className="text-sm">{invoice.staffName}</div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Services */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium">Services</h4>
-            <div className="space-y-2">
-              {invoice.services.map((service, index) => (
-                <div
-                  key={`${service.serviceId}-${index}`}
-                  className="flex justify-between text-sm"
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          <div className="space-y-6">
+            {/* Header Information */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Invoice Number:</span>
+                <span className="font-medium">{invoice.id}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleCopyInvoiceNumber}
                 >
-                  <div>
-                    <span>{service.serviceName}</span>
-                    {service.quantity > 1 && (
-                      <span className="text-muted-foreground"> × {service.quantity}</span>
-                    )}
-                  </div>
-                  <span>{formatCurrency(service.total)}</span>
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Date: {format(new Date(invoice.date), 'MMMM d, yyyy')}
+              </div>
+              {invoice.appointmentId && (
+                <div className="text-sm text-muted-foreground">
+                  Appointment: #{invoice.appointmentId}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Totals */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal</span>
-              <span>{formatCurrency(invoice.subtotal)}</span>
+              )}
             </div>
 
-            {invoice.discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>
-                  Discount
-                  {invoice.discountType === 'percentage' && invoice.discountValue
-                    ? ` (${invoice.discountValue}%)`
-                    : ''}
-                </span>
-                <span>-{formatCurrency(invoice.discountAmount)}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Customer Information */}
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium">Customer</h4>
+                <div className="text-sm">{invoice.customerName}</div>
               </div>
-            )}
 
-            {invoice.tipAmount && invoice.tipAmount > 0 && (
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Tip</span>
-                <span>{formatCurrency(invoice.tipAmount)}</span>
+              {/* Staff Information */}
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium">Staff</h4>
+                <div className="text-sm">{invoice.staffName}</div>
               </div>
-            )}
-
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Tax ({invoice.tax}%)</span>
-              <span>{formatCurrency(invoice.taxAmount)}</span>
             </div>
 
             <Separator />
 
-            <div className="flex justify-between font-medium">
-              <span>Total</span>
-              <span>{formatCurrency(invoice.total)}</span>
+            {/* Services */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Services</h4>
+              <div className="space-y-2">
+                {invoice.services.map((service, index) => (
+                  <div
+                    key={`${service.serviceId}-${index}`}
+                    className="flex justify-between text-sm"
+                  >
+                    <div>
+                      <span>{service.serviceName}</span>
+                      {service.quantity > 1 && (
+                        <span className="text-muted-foreground"> × {service.quantity}</span>
+                      )}
+                    </div>
+                    <span>{formatCurrency(service.total)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2 pt-4">
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </Button>
-            <Button variant="outline" onClick={handleDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </Button>
-            <Button variant="outline" onClick={handleSendEmail}>
-              <Mail className="h-4 w-4 mr-2" />
-              Send Email
-            </Button>
-          </div>
+            <Separator />
 
-          {invoice.notes && (
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium">Notes: </span>
-              {invoice.notes}
+            {/* Totals */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal</span>
+                <span>{formatCurrency(invoice.subtotal)}</span>
+              </div>
+
+              {invoice.discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>
+                    Discount
+                    {invoice.discountType === 'percentage' && invoice.discountValue
+                      ? ` (${invoice.discountValue}%)`
+                      : ''}
+                  </span>
+                  <span>-{formatCurrency(invoice.discountAmount)}</span>
+                </div>
+              )}
+
+              {invoice.tipAmount && invoice.tipAmount > 0 && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Tip</span>
+                  <span>{formatCurrency(invoice.tipAmount)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Tax ({invoice.tax}%)</span>
+                <span>{formatCurrency(invoice.taxAmount)}</span>
+              </div>
+
+              <Separator />
+
+              <div className="flex justify-between font-medium">
+                <span>Total</span>
+                <span>{formatCurrency(invoice.total)}</span>
+              </div>
             </div>
-          )}
+
+            {invoice.notes && (
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium">Notes: </span>
+                {invoice.notes}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t">
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+          <Button variant="outline" onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+          <Button variant="outline" onClick={handleSendEmail}>
+            <Mail className="h-4 w-4 mr-2" />
+            Send Email
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
