@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Copy, Download, Mail, Printer, X } from 'lucide-react';
+import { Copy, Download, Mail, Printer } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -78,14 +78,6 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
           <DialogTitle>Invoice Details</DialogTitle>
           <div className="flex items-center gap-2">
             {getStatusBadge(invoice.status)}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 rounded-full"
-              onClick={() => onOpenChange(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         </DialogHeader>
 
