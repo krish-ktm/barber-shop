@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,8 +13,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { PerformanceTable } from '@/components/dashboard/PerformanceTable';
+import { cn } from '@/lib/utils';
 import { 
   revenueData, 
   servicePerformanceData, 
@@ -52,7 +58,7 @@ export const Reports: React.FC = () => {
       />
 
       <div className="flex flex-col lg:flex-row gap-4">
-        {/* Filters Card - Responsive positioning */}
+        {/* Filters Card */}
         <Card className="lg:w-64 shrink-0">
           <CardHeader>
             <CardTitle>Filters</CardTitle>
@@ -76,12 +82,28 @@ export const Reports: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Date Range</label>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(date) => date && setDate(date)}
-                className="rounded-md border"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, 'PPP') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(date) => date && setDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Button className="w-full" variant="outline">
@@ -91,7 +113,7 @@ export const Reports: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Main Content Area - Responsive tabs and cards */}
+        {/* Main Content Area */}
         <div className="flex-1 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <div className="overflow-auto">
@@ -159,8 +181,8 @@ export const Reports: React.FC = () => {
                 <CardHeader>
                   <CardTitle>Staff Performance</CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-auto">
-                  <div className="min-w-[600px]">
+                <CardContent>
+                  <div className="min-w-[600px] overflow-auto">
                     <PerformanceTable
                       title=""
                       data={staffPerformanceData}
@@ -176,8 +198,8 @@ export const Reports: React.FC = () => {
                 <CardHeader>
                   <CardTitle>Service Analytics</CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-auto">
-                  <div className="min-w-[600px]">
+                <CardContent>
+                  <div className="min-w-[600px] overflow-auto">
                     <PerformanceTable
                       title=""
                       data={servicePerformanceData}
