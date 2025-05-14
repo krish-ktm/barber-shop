@@ -1,9 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type UserRole = 'admin' | 'staff' | null;
+
 interface AuthState {
   isAuthenticated: boolean;
-  login: () => void;
+  userRole: UserRole;
+  login: (role: UserRole) => void;
   logout: () => void;
 }
 
@@ -11,8 +14,9 @@ export const useAuth = create<AuthState>()(
   persist(
     (set) => ({
       isAuthenticated: false,
-      login: () => set({ isAuthenticated: true }),
-      logout: () => set({ isAuthenticated: false }),
+      userRole: null,
+      login: (role) => set({ isAuthenticated: true, userRole: role }),
+      logout: () => set({ isAuthenticated: false, userRole: null }),
     }),
     {
       name: 'auth-storage',

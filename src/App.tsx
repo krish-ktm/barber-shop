@@ -28,7 +28,7 @@ function App() {
         <Route
           path="/"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="admin">
               <MainLayout />
             </ProtectedRoute>
           }
@@ -49,7 +49,7 @@ function App() {
         <Route
           path="/staff"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="staff">
               <StaffLayout />
             </ProtectedRoute>
           }

@@ -34,7 +34,7 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, userRole } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -46,17 +46,27 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      const from = location.state?.from?.pathname;
+      if (userRole === 'admin') {
+        navigate(from || '/dashboard', { replace: true });
+      } else if (userRole === 'staff') {
+        navigate(from || '/staff/dashboard', { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, userRole, navigate, location]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (values.email === 'admin@barbershop.com' && values.password === 'admin123') {
-      login();
+      login('admin');
       toast({
         title: 'Success',
-        description: 'Welcome back!',
+        description: 'Welcome back, Admin!',
+      });
+    } else if (values.email === 'staff@barbershop.com' && values.password === 'staff123') {
+      login('staff');
+      toast({
+        title: 'Success',
+        description: 'Welcome back, Staff Member!',
       });
     } else {
       toast({
@@ -127,8 +137,16 @@ export const Login: React.FC = () => {
         <CardFooter className="flex flex-col gap-4 text-sm text-muted-foreground">
           <div className="text-center w-full">
             Demo credentials:
-            <div>Email: admin@barbershop.com</div>
-            <div>Password: admin123</div>
+            <div className="pt-2">
+              <strong>Admin Access</strong>
+              <div>Email: admin@barbershop.com</div>
+              <div>Password: admin123</div>
+            </div>
+            <div className="pt-2">
+              <strong>Staff Access</strong>
+              <div>Email: staff@barbershop.com</div>
+              <div>Password: staff123</div>
+            </div>
           </div>
         </CardFooter>
       </Card>
