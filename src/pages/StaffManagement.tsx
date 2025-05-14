@@ -1,3 +1,4 @@
+// Rename file to StaffManagement.tsx
 import React, { useState } from 'react';
 import { Plus, Search, Filter, SortAsc, X } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
@@ -15,7 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { staffData } from '@/mocks';
 
-export const Staff: React.FC = () => {
+export const StaffManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
   const [showAddDialog, setShowAddDialog] = useState(false);

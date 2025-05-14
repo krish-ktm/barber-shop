@@ -1,6 +1,6 @@
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
-import { Staff } from './pages/Staff';
+import { StaffManagement } from './pages/StaffManagement';
 import { AdminAppointment } from './pages/AdminAppointment';
 import { Customers } from './pages/Customers';
 import { POS } from './pages/POS';
@@ -12,11 +12,19 @@ import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
+// Staff Routes
+import { StaffDashboard } from './pages/staff/Dashboard';
+import { StaffAppointments } from './pages/staff/Appointments';
+import { StaffProfile } from './pages/staff/Profile';
+import { StaffLayout } from './components/layout/StaffLayout';
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        
+        {/* Admin Routes */}
         <Route
           path="/"
           element={
@@ -27,7 +35,7 @@ function App() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="staff" element={<Staff />} />
+          <Route path="staff-management" element={<StaffManagement />} />
           <Route path="appointments" element={<AdminAppointment />} />
           <Route path="customers" element={<Customers />} />
           <Route path="pos" element={<POS />} />
@@ -35,6 +43,22 @@ function App() {
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+
+        {/* Staff Routes */}
+        <Route
+          path="/staff"
+          element={
+            <ProtectedRoute>
+              <StaffLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/staff/dashboard" replace />} />
+          <Route path="dashboard" element={<StaffDashboard />} />
+          <Route path="appointments" element={<StaffAppointments />} />
+          <Route path="profile" element={<StaffProfile />} />
+          <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
         </Route>
       </Routes>
       <Toaster />

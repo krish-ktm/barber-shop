@@ -1,14 +1,9 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  BarChart3, 
   Calendar, 
-  CreditCard, 
-  Home, 
-  Scissors, 
-  Settings, 
-  Users,
-  Clock
+  Home,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,7 +33,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive }
   );
 };
 
-export const Sidebar: React.FC = () => {
+export const StaffSidebar: React.FC = () => {
   const location = useLocation();
   const pathName = location.pathname;
 
@@ -46,42 +41,17 @@ export const Sidebar: React.FC = () => {
     {
       icon: <Home size={18} />,
       label: 'Dashboard',
-      href: '/dashboard',
+      href: '/staff/dashboard',
     },
     {
       icon: <Calendar size={18} />,
       label: 'Appointments',
-      href: '/appointments',
+      href: '/staff/appointments',
     },
     {
-      icon: <Users size={18} />,
-      label: 'Customers',
-      href: '/customers',
-    },
-    {
-      icon: <Scissors size={18} />,
-      label: 'Staff Management',
-      href: '/staff-management',
-    },
-    {
-      icon: <CreditCard size={18} />,
-      label: 'POS & Invoices',
-      href: '/pos',
-    },
-    {
-      icon: <Clock size={18} />,
-      label: 'Slots',
-      href: '/slots',
-    },
-    {
-      icon: <BarChart3 size={18} />,
-      label: 'Reports',
-      href: '/reports',
-    },
-    {
-      icon: <Settings size={18} />,
-      label: 'Settings',
-      href: '/settings',
+      icon: <User size={18} />,
+      label: 'Profile',
+      href: '/staff/profile',
     },
   ];
 
@@ -89,8 +59,8 @@ export const Sidebar: React.FC = () => {
     <ScrollArea className="h-full">
       <div className="py-4 px-3 h-full flex flex-col">
         <div className="px-3 py-2 mb-6">
-          <h2 className="font-bold text-xl">Barber Shop</h2>
-          <p className="text-xs text-muted-foreground">Management System</p>
+          <h2 className="font-bold text-xl">Staff Portal</h2>
+          <p className="text-xs text-muted-foreground">Barber Shop</p>
         </div>
         
         <div className="space-y-1">
@@ -107,8 +77,8 @@ export const Sidebar: React.FC = () => {
         
         <div className="mt-auto pt-4 px-3">
           <div className="bg-background border rounded-lg p-3">
-            <p className="text-xs text-muted-foreground mb-2">Current version</p>
-            <p className="text-sm font-medium">Barber Shop v1.0</p>
+            <p className="text-xs text-muted-foreground mb-2">Staff Portal</p>
+            <p className="text-sm font-medium">v1.0</p>
           </div>
         </div>
       </div>
