@@ -1,4 +1,4 @@
-import { Staff, User } from '@/types';
+import { Staff } from '@/types';
 
 export const staffData: Staff[] = [
   {
