@@ -8,9 +8,7 @@ import {
   User,
   Plus,
   Trash,
-  Edit,
-  CheckCircle,
-  Copy
+  Edit
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { staffData } from '@/mocks';
@@ -43,19 +41,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -104,10 +89,6 @@ export const StaffProfile: React.FC = () => {
     { label: 'Full Day (9:00 AM - 5:00 PM)', start: '09:00', end: '17:00' },
     { label: 'Lunch Break (12:00 PM - 1:00 PM)', start: '12:00', end: '13:00', isBreak: true },
   ];
-
-  // Template schedule for copying to multiple days
-  const [templateDay, setTemplateDay] = useState<keyof WorkingHours | null>(null);
-  const [targetDays, setTargetDays] = useState<Array<keyof WorkingHours>>([]);
 
   // Day names for iteration
   const dayNames: Array<keyof WorkingHours> = [
@@ -207,35 +188,6 @@ export const StaffProfile: React.FC = () => {
 
   const handleQuickTimeSlotSelect = (preset: TimeSlot) => {
     setTimeSlotForm(preset);
-  };
-
-  const handleCopySchedule = () => {
-    if (!templateDay) return;
-    
-    const updatedHours = { ...workingHours };
-    
-    targetDays.forEach(day => {
-      updatedHours[day] = [...workingHours[templateDay]];
-    });
-    
-    setWorkingHours(updatedHours);
-    setTemplateDay(null);
-    setTargetDays([]);
-    
-    toast({
-      title: 'Schedule copied',
-      description: `Your schedule has been copied to the selected days.`,
-    });
-  };
-
-  const toggleTargetDay = (day: keyof WorkingHours) => {
-    if (templateDay === day) return; // Can't copy to the template day
-    
-    setTargetDays(prev => 
-      prev.includes(day) 
-        ? prev.filter(d => d !== day) 
-        : [...prev, day]
-    );
   };
 
   const formatTimeSlotDisplay = (slot: TimeSlot) => {
@@ -390,173 +342,99 @@ export const StaffProfile: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="weekly" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="weekly">Weekly Schedule</TabsTrigger>
-                  <TabsTrigger value="copy">Copy Schedule</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="weekly" className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {dayNames.map((day) => (
-                      <Card key={day} className="border shadow-sm overflow-hidden">
-                        <CardHeader className="bg-muted/40 p-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-base capitalize">{day}</CardTitle>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => openAddDialog(day)}
-                                    className="h-8 px-2"
-                                  >
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Add
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Add new time slot</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          {workingHours[day].length > 0 && !workingHours[day].every(slot => slot.isBreak) && (
-                            <CardDescription className="mt-1">
-                              Total: {calculateDayTotalHours(day)}
-                            </CardDescription>
-                          )}
-                        </CardHeader>
-                        <CardContent className="p-3 max-h-[200px] overflow-y-auto">
-                          {workingHours[day].length > 0 ? (
-                            <div className="space-y-2">
-                              {workingHours[day].map((slot, index) => (
-                                <div 
-                                  key={index} 
-                                  className={`flex items-center justify-between p-2 rounded-md border ${slot.isBreak ? 'bg-muted/30' : 'bg-card'}`}
+              <div className="grid md:grid-cols-2 gap-4">
+                {dayNames.map((day) => (
+                  <Card key={day} className="border shadow-sm overflow-hidden">
+                    <CardHeader className="bg-muted/40 p-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base capitalize">{day}</CardTitle>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => openAddDialog(day)}
+                                className="h-8 px-2"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Add new time slot</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      {workingHours[day].length > 0 && !workingHours[day].every(slot => slot.isBreak) && (
+                        <CardDescription className="mt-1">
+                          Total: {calculateDayTotalHours(day)}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="p-3 max-h-[200px] overflow-y-auto">
+                      {workingHours[day].length > 0 ? (
+                        <div className="space-y-2">
+                          {workingHours[day].map((slot, index) => (
+                            <div 
+                              key={index} 
+                              className={`flex items-center justify-between p-2 rounded-md border ${slot.isBreak ? 'bg-muted/30' : 'bg-card'}`}
+                            >
+                              <div className="flex items-center flex-1 min-w-0">
+                                <Clock className={`h-4 w-4 mr-2 ${slot.isBreak ? 'text-muted-foreground' : 'text-primary'}`} />
+                                <span className="text-sm truncate">
+                                  {formatTimeSlotDisplay(slot)}
+                                  {slot.isBreak && <Badge variant="outline" className="ml-2 text-xs">Break</Badge>}
+                                </span>
+                              </div>
+                              <div className="flex items-center ml-2 flex-shrink-0">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => openEditDialog(day, slot)}
+                                  className="h-7 w-7"
                                 >
-                                  <div className="flex items-center flex-1 min-w-0">
-                                    <Clock className={`h-4 w-4 mr-2 ${slot.isBreak ? 'text-muted-foreground' : 'text-primary'}`} />
-                                    <span className="text-sm truncate">
-                                      {formatTimeSlotDisplay(slot)}
-                                      {slot.isBreak && <Badge variant="outline" className="ml-2 text-xs">Break</Badge>}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center ml-2 flex-shrink-0">
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
                                     <Button 
                                       variant="ghost" 
-                                      size="icon" 
-                                      onClick={() => openEditDialog(day, slot)}
+                                      size="icon"
                                       className="h-7 w-7"
                                     >
-                                      <Edit className="h-3.5 w-3.5" />
+                                      <Trash className="h-3.5 w-3.5 text-destructive" />
                                     </Button>
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon"
-                                          className="h-7 w-7"
-                                        >
-                                          <Trash className="h-3.5 w-3.5 text-destructive" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Delete Time Slot</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to delete this time slot? This action cannot be undone.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDeleteTimeSlot(day, slot)}>
-                                            Delete
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                </div>
-                              ))}
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Time Slot</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this time slot? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteTimeSlot(day, slot)}>
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
                             </div>
-                          ) : (
-                            <div className="text-sm text-muted-foreground p-2 text-center bg-muted/20 rounded-md">
-                              No hours set (day off)
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="copy">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Copy Schedule Between Days</CardTitle>
-                      <CardDescription>
-                        Select a source day to copy from, then select target days to copy to
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="template-day">Copy from:</Label>
-                        <Select
-                          value={templateDay || undefined}
-                          onValueChange={(value) => setTemplateDay(value as keyof WorkingHours)}
-                        >
-                          <SelectTrigger id="template-day" className="mt-1">
-                            <SelectValue placeholder="Select a day" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {dayNames.map((day) => (
-                              <SelectItem key={day} value={day}>
-                                <span className="capitalize">{day}</span>
-                                {workingHours[day].length === 0 && " (Day off)"}
-                                {workingHours[day].length > 0 && ` (${workingHours[day].length} slots)`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      {templateDay && (
-                        <>
-                          <div>
-                            <Label className="mb-2 block">Copy to:</Label>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                              {dayNames.filter(day => day !== templateDay).map((day) => (
-                                <div 
-                                  key={day} 
-                                  className={`
-                                    flex items-center justify-between p-2 rounded-md border cursor-pointer transition-colors
-                                    ${targetDays.includes(day) ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}
-                                  `}
-                                  onClick={() => toggleTargetDay(day)}
-                                >
-                                  <span className="capitalize text-sm">{day}</span>
-                                  {targetDays.includes(day) && <CheckCircle className="h-4 w-4 text-primary" />}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          <Button 
-                            onClick={handleCopySchedule} 
-                            disabled={targetDays.length === 0}
-                            className="w-full"
-                          >
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copy Schedule to Selected Days
-                          </Button>
-                        </>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground p-2 text-center bg-muted/20 rounded-md">
+                          No hours set (day off)
+                        </div>
                       )}
                     </CardContent>
                   </Card>
-                </TabsContent>
-              </Tabs>
+                ))}
+              </div>
 
               {/* Time slot dialog */}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Calendar, ChevronDown, LogOut, Menu, MessageSquare, Search, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu } from 'lucide-react';
 import { adminUser } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -12,13 +12,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/lib/auth';
 
 export const Header: React.FC = () => {
-  const [showSearch, setShowSearch] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -45,53 +43,9 @@ export const Header: React.FC = () => {
           <div className="text-xl font-bold">Barber Shop</div>
         </div>
 
-        {showSearch ? (
-          <div className="hidden md:flex items-center relative flex-1 max-w-md mx-4">
-            <Search className="absolute left-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8 w-full"
-              autoFocus
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-0"
-              onClick={() => setShowSearch(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <div className="hidden md:block flex-1"></div>
-        )}
+        <div className="flex-1"></div>
 
-        <div className="flex items-center gap-2">
-          {!showSearch && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden md:flex"
-              onClick={() => setShowSearch(true)}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-          )}
-
-          <Button variant="ghost" size="icon">
-            <Calendar className="h-5 w-5" />
-          </Button>
-
-          <Button variant="ghost" size="icon">
-            <MessageSquare className="h-5 w-5" />
-          </Button>
-
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
-          </Button>
-
+        <div className="flex items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
@@ -100,7 +54,7 @@ export const Header: React.FC = () => {
                   <AvatarFallback>
                     {adminUser.name
                       .split(' ')
-                      .map(n => n[0])
+                      .map((n: string) => n[0])
                       .join('')}
                   </AvatarFallback>
                 </Avatar>
