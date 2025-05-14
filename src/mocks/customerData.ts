@@ -54,7 +54,7 @@ export const customerData: Customer[] = [
     phone: '(555) 567-8901',
     visitCount: 1,
     totalSpent: 75.00,
-    lastVisit: null,
+    lastVisit: '',
     notes: 'First-time customer',
     createdAt: format(subDays(new Date(), 2), "yyyy-MM-dd'T'HH:mm:ss")
   },

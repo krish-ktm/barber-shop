@@ -210,7 +210,7 @@ export const invoiceData: Invoice[] = [
     tax: 7.5,
     taxAmount: 3.00,
     total: 43.00,
-    paymentMethod: 'pending',
+    paymentMethod: 'card',
     status: 'pending',
     createdAt: format(subDays(new Date(), 2), "yyyy-MM-dd'T'HH:mm:ss")
   }
