@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Search, Trash, UserPlus } from 'lucide-react';
+import { Search, Plus, Trash } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -50,7 +50,6 @@ const formSchema = z.object({
 
 const newCustomerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
 });
 
@@ -68,6 +67,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'new'>('search');
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -84,7 +84,6 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     resolver: zodResolver(newCustomerSchema),
     defaultValues: {
       name: '',
-      phone: '',
       email: '',
     },
   });
@@ -99,45 +98,24 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       
       if (customer) {
         setSelectedCustomer(customer);
+        setIsNewCustomer(false);
         toast({
           title: 'Customer found',
           description: `Found customer: ${customer.name}`,
         });
       } else {
         setSelectedCustomer(null);
-        toast({
-          description: 'No customer found. You can add them as a new customer.',
-        });
-        // Pre-fill the new customer form with the phone number
-        newCustomerForm.setValue('phone', phone);
+        setIsNewCustomer(true);
         setActiveTab('new');
+        // Pre-fill the phone number in the form
+        form.setValue('customerPhone', phone);
+        toast({
+          description: 'No customer found. Please provide customer details.',
+        });
       }
       
       setIsSearching(false);
     }, 500);
-  };
-
-  const handleAddNewCustomer = (data: z.infer<typeof newCustomerSchema>) => {
-    // Simulate adding a new customer
-    const newCustomer: Customer = {
-      id: `cust-${Date.now()}`,
-      name: data.name,
-      phone: data.phone,
-      email: data.email,
-      visitCount: 0,
-      totalSpent: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    setSelectedCustomer(newCustomer);
-    setActiveTab('search');
-    form.setValue('customerPhone', data.phone);
-    newCustomerForm.reset();
-
-    toast({
-      title: 'Customer added',
-      description: 'New customer has been added successfully.',
-    });
   };
 
   const calculateSubtotal = () => {
@@ -155,21 +133,42 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     setServices(services.filter((_, i) => i !== index));
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!selectedCustomer) {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!selectedCustomer && !isNewCustomer) {
       toast({
         title: 'Customer required',
-        description: 'Please search and select a customer first.',
+        description: 'Please search for a customer first.',
         variant: 'destructive',
       });
       return;
     }
 
-    console.log({
+    // If it's a new customer, validate the form
+    if (isNewCustomer) {
+      const newCustomerData = newCustomerForm.getValues();
+      if (!newCustomerData.name) {
+        toast({
+          title: 'Customer details required',
+          description: 'Please provide customer name.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    // Prepare the data to be sent to the server
+    const invoiceData = {
       ...values,
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.name,
-    });
+      isNewCustomer,
+      customerDetails: isNewCustomer ? {
+        name: newCustomerForm.getValues('name'),
+        email: newCustomerForm.getValues('email'),
+        phone: values.customerPhone,
+      } : undefined,
+      customerId: selectedCustomer?.id,
+    };
+
+    console.log('Submitting invoice:', invoiceData);
     
     toast({
       title: 'Invoice created',
@@ -179,7 +178,9 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     form.reset();
     setServices([{ id: '1', serviceId: '', quantity: 1 }]);
     setSelectedCustomer(null);
+    setIsNewCustomer(false);
     setActiveTab('search');
+    newCustomerForm.reset();
   };
 
   const subtotal = calculateSubtotal();
@@ -201,7 +202,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <Card className="p-4">
-                  <Tabs value={activeTab} onValueChange={(value: 'search' | 'new') => setActiveTab(value)}>
+                  <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
                     <TabsList className="grid w-full grid-cols-2 mb-4">
                       <TabsTrigger value="search">Search Customer</TabsTrigger>
                       <TabsTrigger value="new">New Customer</TabsTrigger>
@@ -222,6 +223,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                                   onChange={(e) => {
                                     field.onChange(e);
                                     setSelectedCustomer(null);
+                                    setIsNewCustomer(false);
                                   }}
                                 />
                               </FormControl>
@@ -254,6 +256,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                               size="sm"
                               onClick={() => {
                                 setSelectedCustomer(null);
+                                setIsNewCustomer(false);
                                 form.setValue('customerPhone', '');
                               }}
                             >
@@ -274,7 +277,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                     </TabsContent>
 
                     <TabsContent value="new">
-                      <form onSubmit={newCustomerForm.handleSubmit(handleAddNewCustomer)} className="space-y-4">
+                      <div className="space-y-4">
                         <FormField
                           control={newCustomerForm.control}
                           name="name"
@@ -289,19 +292,17 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                           )}
                         />
 
-                        <FormField
-                          control={newCustomerForm.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone Number</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter phone number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter phone number" 
+                              value={form.watch('customerPhone')} 
+                              onChange={(e) => form.setValue('customerPhone', e.target.value)}
+                            />
+                          </FormControl>
+                          <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
+                        </FormItem>
 
                         <FormField
                           control={newCustomerForm.control}
@@ -316,12 +317,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                             </FormItem>
                           )}
                         />
-
-                        <Button type="submit" className="w-full">
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Add Customer
-                        </Button>
-                      </form>
+                      </div>
                     </TabsContent>
                   </Tabs>
                 </Card>
