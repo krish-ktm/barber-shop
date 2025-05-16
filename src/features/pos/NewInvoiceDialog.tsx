@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Plus, Trash } from 'lucide-react';
+import { Search, Plus, Trash, Percent } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -44,7 +44,10 @@ const formSchema = z.object({
     serviceId: z.string().min(1, 'Please select a service'),
     quantity: z.number().min(1, 'Quantity must be at least 1'),
   })).min(1, 'Add at least one service'),
+  discountType: z.enum(['none', 'percentage', 'fixed']).default('none'),
+  discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
   tipAmount: z.number().min(0, 'Tip cannot be negative'),
+  paymentMethod: z.enum(['cash', 'card', 'mobile']).default('cash'),
   notes: z.string().optional(),
 });
 
@@ -75,7 +78,10 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       customerPhone: '',
       staffId: '',
       services: [{ serviceId: '', quantity: 1 }],
+      discountType: 'none',
+      discountValue: 0,
       tipAmount: 0,
+      paymentMethod: 'cash',
       notes: '',
     },
   });
@@ -156,9 +162,46 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       }
     }
 
+    const subtotal = calculateSubtotal();
+    const discountType = values.discountType !== 'none' ? values.discountType : undefined;
+    const discountValue = discountType ? values.discountValue : undefined;
+    const discountAmount = 
+      discountType === 'percentage' 
+        ? (subtotal * (values.discountValue / 100)) 
+        : discountType === 'fixed' 
+          ? values.discountValue 
+          : 0;
+    
+    const subtotalAfterDiscount = subtotal - discountAmount;
+    const taxAmount = subtotalAfterDiscount * 0.075; // 7.5% tax rate
+    const total = subtotalAfterDiscount + taxAmount + (values.tipAmount || 0);
+
+    // Format services to match InvoiceService type
+    const formattedServices = services.map(service => {
+      const selectedService = serviceData.find(s => s.id === service.serviceId);
+      if (!selectedService) return null;
+      
+      return {
+        serviceId: selectedService.id,
+        serviceName: selectedService.name,
+        price: selectedService.price,
+        quantity: service.quantity,
+        total: selectedService.price * service.quantity
+      };
+    }).filter(Boolean);
+
+    // Get staff name
+    const selectedStaff = staffData.find(staff => staff.id === values.staffId);
+    const staffName = selectedStaff ? selectedStaff.name : '';
+    
+    // Generate invoice ID
+    const today = new Date();
+    const invoiceId = `inv-${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
     // Prepare the data to be sent to the server
     const invoiceData = {
       ...values,
+      id: invoiceId,
       isNewCustomer,
       customerDetails: isNewCustomer ? {
         name: newCustomerForm.getValues('name'),
@@ -166,6 +209,19 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
         phone: values.customerPhone,
       } : undefined,
       customerId: selectedCustomer?.id,
+      customerName: selectedCustomer?.name || newCustomerForm.getValues('name'),
+      staffName,
+      subtotal,
+      discountType,
+      discountValue,
+      discountAmount,
+      tax: 7.5,
+      taxAmount,
+      total,
+      status: 'paid' as const,
+      date: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      services: formattedServices
     };
 
     console.log('Submitting invoice:', invoiceData);
@@ -184,12 +240,23 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   };
 
   const subtotal = calculateSubtotal();
-  const tax = subtotal * 0.075; // 7.5% tax rate
-  const total = subtotal + tax + (form.watch('tipAmount') || 0);
+  const discountType = form.watch('discountType');
+  const discountValue = form.watch('discountValue') || 0;
+  
+  const discountAmount = 
+    discountType === 'percentage' 
+      ? (subtotal * (discountValue / 100)) 
+      : discountType === 'fixed' 
+        ? discountValue 
+        : 0;
+        
+  const subtotalAfterDiscount = subtotal - discountAmount;
+  const tax = subtotalAfterDiscount * 0.075; // 7.5% tax rate
+  const total = subtotalAfterDiscount + tax + (form.watch('tipAmount') || 0);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} side="right">
-      <SheetContent className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
         <SheetHeader>
           <SheetTitle>Create New Invoice</SheetTitle>
           <SheetDescription>
@@ -448,6 +515,96 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                 )}
               />
 
+              <div className="space-y-4">
+                <FormLabel>Discount</FormLabel>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="discountType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              if (value === 'none') {
+                                form.setValue('discountValue', 0);
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Discount Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No Discount</SelectItem>
+                              <SelectItem value="percentage">Percentage (%)</SelectItem>
+                              <SelectItem value="fixed">Fixed Amount</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="discountValue"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              min="0"
+                              step={discountType === 'percentage' ? '1' : '0.01'}
+                              disabled={discountType === 'none'}
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              className={discountType === 'percentage' ? 'pr-8' : ''}
+                            />
+                            {discountType === 'percentage' && (
+                              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                                <Percent className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <div className="text-sm text-right text-muted-foreground">
+                    Discount: -{formatCurrency(discountAmount)}
+                  </div>
+                )}
+              </div>
+
+              <FormField
+                control={form.control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Method</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="mobile">Mobile Payment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="notes"
@@ -467,6 +624,15 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                   <span>Subtotal:</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>
+                      Discount
+                      {discountType === 'percentage' ? ` (${discountValue}%)` : ''}:
+                    </span>
+                    <span>-{formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Tax (7.5%):</span>
                   <span>{formatCurrency(tax)}</span>
