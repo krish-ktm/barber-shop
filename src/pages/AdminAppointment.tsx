@@ -8,8 +8,6 @@ import {
   Plus,
   Search,
   X,
-  Save,
-  BookmarkIcon,
   CalendarRange,
   Sliders
 } from 'lucide-react';
@@ -46,12 +44,6 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { DateRange } from 'react-day-picker';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
   Tabs,
   TabsContent,
   TabsList,
@@ -67,36 +59,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
-interface FilterPreset {
-  id: string;
-  name: string;
-  dateRange: DateRange | undefined;
-  timeRange: [string, string] | null;
-  priceRange: [number, number] | null;
-  statusFilter: string;
-  staffFilter: string;
-  serviceFilter: string;
-  searchQuery: string;
-  durationRange: [number, number] | null;
-}
-
-// Simple notification system without the toast dependency
-const useSimpleNotification = () => {
-  const showNotification = (message: string) => {
-    // In a real implementation, we would show a toast
-    // For now, we'll just log it to the console
-    console.log(`[Notification]: ${message}`);
-  };
-
-  return {
-    showSuccess: (message: string) => showNotification(`✅ ${message}`),
-    showError: (message: string) => showNotification(`❌ ${message}`)
-  };
-};
-
 export const AdminAppointment: React.FC = () => {
-  const notification = useSimpleNotification();
-  
   // Basic filters
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,12 +76,6 @@ export const AdminAppointment: React.FC = () => {
   const [timeRange, setTimeRange] = useState<[string, string] | null>(['09:00', '18:00']);
   const [priceRange, setPriceRange] = useState<[number, number] | null>([0, 100]);
   const [durationRange, setDurationRange] = useState<[number, number] | null>([15, 120]);
-  
-  // Filter presets
-  const [filterPresets, setFilterPresets] = useState<FilterPreset[]>([]);
-  const [activePreset, setActivePreset] = useState<string | null>(null);
-  const [showSavePresetDialog, setShowSavePresetDialog] = useState(false);
-  const [presetName, setPresetName] = useState('');
   
   // UI state
   const [showFilters, setShowFilters] = useState(false);
@@ -239,8 +196,6 @@ export const AdminAppointment: React.FC = () => {
       setPriceRange([0, 100]);
       setDurationRange([15, 120]);
     }
-    
-    setActivePreset(null);
   };
   
   const getActiveFiltersCount = () => {
@@ -258,64 +213,6 @@ export const AdminAppointment: React.FC = () => {
     }
     
     return count;
-  };
-  
-  // Filter preset functions
-  const saveCurrentFilterAsPreset = () => {
-    if (!presetName.trim()) {
-      notification.showError("Please enter a name for your preset");
-      return;
-    }
-    
-    const newPreset: FilterPreset = {
-      id: `preset-${Date.now()}`,
-      name: presetName,
-      dateRange,
-      timeRange,
-      priceRange,
-      statusFilter,
-      staffFilter,
-      serviceFilter,
-      searchQuery,
-      durationRange
-    };
-    
-    setFilterPresets([...filterPresets, newPreset]);
-    setActivePreset(newPreset.id);
-    setPresetName('');
-    setShowSavePresetDialog(false);
-    
-    notification.showSuccess(`Preset "${newPreset.name}" has been saved`);
-  };
-  
-  const loadFilterPreset = (presetId: string) => {
-    const preset = filterPresets.find(p => p.id === presetId);
-    if (!preset) return;
-    
-    setDateRange(preset.dateRange);
-    setTimeRange(preset.timeRange);
-    setPriceRange(preset.priceRange);
-    setStatusFilter(preset.statusFilter);
-    setStaffFilter(preset.staffFilter);
-    setServiceFilter(preset.serviceFilter);
-    setSearchQuery(preset.searchQuery);
-    setDurationRange(preset.durationRange);
-    setUseAdvancedFilters(true);
-    setActivePreset(presetId);
-    
-    setShowFilters(false);
-  };
-  
-  const deleteFilterPreset = (presetId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updatedPresets = filterPresets.filter(p => p.id !== presetId);
-    setFilterPresets(updatedPresets);
-    
-    if (activePreset === presetId) {
-      setActivePreset(null);
-    }
-    
-    notification.showSuccess("Preset has been deleted");
   };
 
   return (
@@ -442,7 +339,6 @@ export const AdminAppointment: React.FC = () => {
                     if (!checked) {
                       // Reset advanced filters when switching to basic mode
                       setDateRange({ from: undefined, to: undefined });
-                      setActivePreset(null);
                     }
                   }}
                 />
@@ -538,180 +434,93 @@ export const AdminAppointment: React.FC = () => {
                       </DialogDescription>
                     </DialogHeader>
                     
-                    <Tabs defaultValue="filters" className="mt-4">
-                      <TabsList className="grid grid-cols-2">
-                        <TabsTrigger value="filters">Filters</TabsTrigger>
-                        <TabsTrigger value="presets">Saved Presets</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="filters" className="space-y-6 py-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Label>Time Range</Label>
-                            <div className="flex gap-2 items-center">
-                              <Select
-                                value={timeRange?.[0] || '09:00'}
-                                onValueChange={(value) => setTimeRange([value, timeRange?.[1] || '18:00'])}
-                              >
-                                <SelectTrigger className="w-[100px]">
-                                  <SelectValue placeholder="Start" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
-                                    <SelectItem key={`start-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
-                                      {`${hour.toString().padStart(2, '0')}:00`}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <span>to</span>
-                              <Select
-                                value={timeRange?.[1] || '18:00'}
-                                onValueChange={(value) => setTimeRange([timeRange?.[0] || '09:00', value])}
-                              >
-                                <SelectTrigger className="w-[100px]">
-                                  <SelectValue placeholder="End" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
-                                    <SelectItem key={`end-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
-                                      {`${hour.toString().padStart(2, '0')}:00`}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label>Price Range (${priceRange?.[0]} - ${priceRange?.[1]})</Label>
-                            </div>
-                            <Slider
-                              value={priceRange || [0, 100]}
-                              min={0}
-                              max={100}
-                              step={5}
-                              onValueChange={(value) => setPriceRange(value as [number, number])}
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label>Duration Range ({durationRange?.[0]} - {durationRange?.[1]} mins)</Label>
-                            </div>
-                            <Slider
-                              value={durationRange || [15, 120]}
-                              min={15}
-                              max={120}
-                              step={15}
-                              onValueChange={(value) => setDurationRange(value as [number, number])}
-                            />
+                    <div className="space-y-6 py-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label>Time Range</Label>
+                          <div className="flex gap-2 items-center">
+                            <Select
+                              value={timeRange?.[0] || '09:00'}
+                              onValueChange={(value) => setTimeRange([value, timeRange?.[1] || '18:00'])}
+                            >
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue placeholder="Start" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
+                                  <SelectItem key={`start-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
+                                    {`${hour.toString().padStart(2, '0')}:00`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <span>to</span>
+                            <Select
+                              value={timeRange?.[1] || '18:00'}
+                              onValueChange={(value) => setTimeRange([timeRange?.[0] || '09:00', value])}
+                            >
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue placeholder="End" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
+                                  <SelectItem key={`end-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
+                                    {`${hour.toString().padStart(2, '0')}:00`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                         
-                        <DialogFooter className="mt-6 flex justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label>Price Range (${priceRange?.[0]} - ${priceRange?.[1]})</Label>
+                          </div>
+                          <Slider
+                            value={priceRange || [0, 100]}
+                            min={0}
+                            max={100}
+                            step={5}
+                            onValueChange={(value) => setPriceRange(value as [number, number])}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label>Duration Range ({durationRange?.[0]} - {durationRange?.[1]} mins)</Label>
+                          </div>
+                          <Slider
+                            value={durationRange || [15, 120]}
+                            min={15}
+                            max={120}
+                            step={15}
+                            onValueChange={(value) => setDurationRange(value as [number, number])}
+                          />
+                        </div>
+                      </div>
+                      
+                      <DialogFooter className="mt-6">
+                        <div className="flex gap-2 ml-auto">
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setShowSavePresetDialog(true)}
+                            onClick={() => {
+                              clearFilters();
+                              setShowAdvancedFilters(false);
+                            }}
                           >
-                            <Save className="h-4 w-4 mr-2" />
-                            Save Preset
+                            Reset
                           </Button>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                clearFilters();
-                                setShowAdvancedFilters(false);
-                              }}
-                            >
-                              Reset
-                            </Button>
-                            <Button
-                              type="button"
-                              onClick={() => setShowAdvancedFilters(false)}
-                            >
-                              Apply
-                            </Button>
-                          </div>
-                        </DialogFooter>
-                      </TabsContent>
-                      
-                      <TabsContent value="presets" className="py-4">
-                        {filterPresets.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <BookmarkIcon className="h-12 w-12 mx-auto mb-2 opacity-20" />
-                            <p>No saved presets yet</p>
-                            <p className="text-xs">Create a filter and save it as a preset</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {filterPresets.map((preset) => (
-                              <div
-                                key={preset.id}
-                                className={cn(
-                                  "flex items-center justify-between p-3 rounded-md cursor-pointer hover:bg-accent",
-                                  activePreset === preset.id && "bg-accent"
-                                )}
-                                onClick={() => loadFilterPreset(preset.id)}
-                              >
-                                <div>
-                                  <p className="font-medium">{preset.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {preset.statusFilter !== 'all' && `${preset.statusFilter}, `}
-                                    {preset.dateRange?.from && `${format(preset.dateRange.from, 'MMM d')}`}
-                                    {preset.dateRange?.from && preset.dateRange?.to && ` - ${format(preset.dateRange.to, 'MMM d')}`}
-                                    {preset.priceRange && preset.priceRange[0] > 0 && `, $${preset.priceRange[0]}+`}
-                                  </p>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => deleteFilterPreset(preset.id, e)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </TabsContent>
-                    </Tabs>
-                  </DialogContent>
-                </Dialog>
-                
-                <Dialog open={showSavePresetDialog} onOpenChange={setShowSavePresetDialog}>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Save Filter Preset</DialogTitle>
-                      <DialogDescription>
-                        Give your filter configuration a name to save it for future use
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <Label htmlFor="presetName" className="mb-2 block">Preset Name</Label>
-                      <Input
-                        id="presetName"
-                        value={presetName}
-                        onChange={(e) => setPresetName(e.target.value)}
-                        placeholder="e.g., High value appointments"
-                      />
+                          <Button
+                            type="button"
+                            onClick={() => setShowAdvancedFilters(false)}
+                          >
+                            Apply
+                          </Button>
+                        </div>
+                      </DialogFooter>
                     </div>
-                    <DialogFooter>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowSavePresetDialog(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="button" onClick={saveCurrentFilterAsPreset}>
-                        Save Preset
-                      </Button>
-                    </DialogFooter>
                   </DialogContent>
                 </Dialog>
               </>
@@ -771,9 +580,7 @@ export const AdminAppointment: React.FC = () => {
                   
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Status</label>
-                    <Select value={statusFilter} onValueChange={(value) => {
-                      setStatusFilter(value);
-                    }}>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
@@ -947,55 +754,6 @@ export const AdminAppointment: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="presets">
-                      <AccordionTrigger>Saved Presets</AccordionTrigger>
-                      <AccordionContent>
-                        {filterPresets.length === 0 ? (
-                          <div className="text-center py-4 text-muted-foreground">
-                            <p>No saved presets yet</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2 py-2">
-                            {filterPresets.map((preset) => (
-                              <div
-                                key={preset.id}
-                                className={cn(
-                                  "flex items-center justify-between p-3 rounded-md cursor-pointer hover:bg-accent",
-                                  activePreset === preset.id && "bg-accent"
-                                )}
-                                onClick={() => loadFilterPreset(preset.id)}
-                              >
-                                <div>
-                                  <p className="font-medium">{preset.name}</p>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => deleteFilterPreset(preset.id, e)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        
-                        <Button
-                          variant="outline"
-                          className="w-full mt-2"
-                          onClick={() => {
-                            setShowFilters(false);
-                            setShowSavePresetDialog(true);
-                          }}
-                        >
-                          <Save className="h-4 w-4 mr-2" />
-                          Save Current Filters
-                        </Button>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
                 </TabsContent>
               </Tabs>
               
