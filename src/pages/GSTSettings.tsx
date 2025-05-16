@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { gstRatesData } from '@/mocks';
+import { GSTRate } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,19 +21,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-interface GSTRate {
-  id: string;
-  name: string;
-  rate: number;
-  isActive: boolean;
-}
-
 export const GSTSettings: React.FC = () => {
   const { toast } = useToast();
-  const [gstRates, setGstRates] = useState<GSTRate[]>([
-    { id: '1', name: 'Standard GST', rate: 7.5, isActive: true },
-    { id: '2', name: 'Reduced GST', rate: 5, isActive: false },
-  ]);
+  const [gstRates, setGstRates] = useState<GSTRate[]>(gstRatesData);
 
   const handleAddRate = () => {
     const newRate: GSTRate = {

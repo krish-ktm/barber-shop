@@ -90,7 +90,7 @@ export interface Invoice {
   tax: number;
   taxAmount: number;
   total: number;
-  paymentMethod: 'cash' | 'card' | 'mobile';
+  paymentMethod: 'cash' | 'card' | 'mobile' | 'pending';
   status: 'paid' | 'pending' | 'cancelled';
   notes?: string;
   createdAt: string; // ISO date string
@@ -172,4 +172,11 @@ export interface StaffPerformance {
   appointments: number;
   revenue: number;
   commissionEarned: number;
+}
+
+export interface GSTRate {
+  id: string;
+  name: string;
+  rate: number;
+  isActive: boolean;
 }

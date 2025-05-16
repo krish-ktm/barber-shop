@@ -1,5 +1,9 @@
 import { Invoice } from '@/types';
 import { addDays, format, subDays } from 'date-fns';
+import { gstRatesData } from './gstRatesData';
+
+// Get the standard GST rate
+const standardGstRate = gstRatesData.find(rate => rate.isActive)?.rate || 7.5;
 
 // Create invoice data matching some of the appointments
 export const invoiceData: Invoice[] = [
@@ -25,7 +29,7 @@ export const invoiceData: Invoice[] = [
     discountValue: undefined,
     discountAmount: 0,
     tipAmount: 5,
-    tax: 7.5,
+    tax: standardGstRate,
     taxAmount: 1.88,
     total: 31.88,
     paymentMethod: 'card',
@@ -54,7 +58,7 @@ export const invoiceData: Invoice[] = [
     discountValue: undefined,
     discountAmount: 0,
     tipAmount: 6,
-    tax: 7.5,
+    tax: standardGstRate,
     taxAmount: 2.25,
     total: 38.25,
     paymentMethod: 'cash',
@@ -83,7 +87,7 @@ export const invoiceData: Invoice[] = [
     discountValue: 10,
     discountAmount: 4.5,
     tipAmount: 8,
-    tax: 7.5,
+    tax: standardGstRate,
     taxAmount: 3.04,
     total: 51.54,
     paymentMethod: 'card',
@@ -112,7 +116,7 @@ export const invoiceData: Invoice[] = [
     discountValue: undefined,
     discountAmount: 0,
     tipAmount: 5,
-    tax: 7.5,
+    tax: standardGstRate,
     taxAmount: 1.88,
     total: 31.88,
     paymentMethod: 'mobile',
@@ -141,7 +145,7 @@ export const invoiceData: Invoice[] = [
     discountValue: undefined,
     discountAmount: 0,
     tipAmount: 3,
-    tax: 7.5,
+    tax: standardGstRate,
     taxAmount: 1.50,
     total: 24.50,
     paymentMethod: 'cash',
@@ -177,7 +181,7 @@ export const invoiceData: Invoice[] = [
     discountValue: 5,
     discountAmount: 5,
     tipAmount: 10,
-    tax: 7.5,
+    tax: standardGstRate,
     taxAmount: 3.38,
     total: 58.38,
     paymentMethod: 'card',
@@ -207,7 +211,7 @@ export const invoiceData: Invoice[] = [
     discountType: undefined,
     discountValue: undefined,
     discountAmount: 0,
-    tax: 7.5,
+    tax: standardGstRate,
     taxAmount: 3.00,
     total: 43.00,
     paymentMethod: 'pending',

@@ -30,8 +30,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { staffData, serviceData, customerData } from '@/mocks';
-import { formatCurrency, formatPhoneNumber } from '@/utils';
+import { staffData, serviceData, customerData, gstRatesData } from '@/mocks';
+import { formatCurrency, formatPhoneNumber, calculateTax } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Customer } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -47,7 +47,8 @@ const formSchema = z.object({
   discountType: z.enum(['none', 'percentage', 'fixed']).default('none'),
   discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
   tipAmount: z.number().min(0, 'Tip cannot be negative'),
-  paymentMethod: z.enum(['cash', 'card', 'mobile']).default('cash'),
+  paymentMethod: z.enum(['cash', 'card', 'mobile', 'pending']).default('cash'),
+  gstRateId: z.string().min(1, 'Please select a GST rate'),
   notes: z.string().optional(),
 });
 
@@ -72,6 +73,9 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   const [activeTab, setActiveTab] = useState<'search' | 'new'>('search');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
 
+  // Get default active GST rate
+  const defaultGstRate = gstRatesData.find(rate => rate.isActive)?.id || '';
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -82,6 +86,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       discountValue: 0,
       tipAmount: 0,
       paymentMethod: 'cash',
+      gstRateId: defaultGstRate,
       notes: '',
     },
   });
@@ -173,7 +178,11 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
           : 0;
     
     const subtotalAfterDiscount = subtotal - discountAmount;
-    const taxAmount = subtotalAfterDiscount * 0.075; // 7.5% tax rate
+    
+    // Get selected GST rate
+    const selectedGstRate = gstRatesData.find(rate => rate.id === values.gstRateId);
+    const taxRate = selectedGstRate?.rate || 0;
+    const taxAmount = calculateTax(subtotalAfterDiscount, taxRate);
     const total = subtotalAfterDiscount + taxAmount + (values.tipAmount || 0);
 
     // Format services to match InvoiceService type
@@ -215,7 +224,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       discountType,
       discountValue,
       discountAmount,
-      tax: 7.5,
+      tax: taxRate,
       taxAmount,
       total,
       status: 'paid' as const,
@@ -242,6 +251,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   const subtotal = calculateSubtotal();
   const discountType = form.watch('discountType');
   const discountValue = form.watch('discountValue') || 0;
+  const gstRateId = form.watch('gstRateId');
   
   const discountAmount = 
     discountType === 'percentage' 
@@ -251,7 +261,9 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
         : 0;
         
   const subtotalAfterDiscount = subtotal - discountAmount;
-  const tax = subtotalAfterDiscount * 0.075; // 7.5% tax rate
+  const selectedGstRate = gstRatesData.find(rate => rate.id === gstRateId);
+  const taxRate = selectedGstRate?.rate || 0;
+  const tax = calculateTax(subtotalAfterDiscount, taxRate);
   const total = subtotalAfterDiscount + tax + (form.watch('tipAmount') || 0);
 
   return (
@@ -598,6 +610,32 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                         <SelectItem value="cash">Cash</SelectItem>
                         <SelectItem value="card">Card</SelectItem>
                         <SelectItem value="mobile">Mobile Payment</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gstRateId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GST Rate</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select GST rate" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {gstRatesData.map((gstRate) => (
+                          <SelectItem key={gstRate.id} value={gstRate.id}>
+                            {gstRate.name} ({gstRate.rate}%)
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -634,7 +672,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Tax (7.5%):</span>
+                  <span>GST ({taxRate}%):</span>
                   <span>{formatCurrency(tax)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
