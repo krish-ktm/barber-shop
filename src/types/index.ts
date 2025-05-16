@@ -73,6 +73,12 @@ export interface AppointmentService {
   duration: number;
 }
 
+export interface InvoiceTaxComponent {
+  name: string;
+  rate: number;
+  amount: number;
+}
+
 export interface Invoice {
   id: string;
   appointmentId?: string;
@@ -87,8 +93,9 @@ export interface Invoice {
   discountValue?: number;
   discountAmount: number;
   tipAmount?: number;
-  tax: number;
-  taxAmount: number;
+  tax: number; // Total tax rate
+  taxAmount: number; // Total tax amount
+  taxComponents?: InvoiceTaxComponent[]; // Individual tax components
   total: number;
   paymentMethod: 'cash' | 'card' | 'mobile' | 'pending';
   status: 'paid' | 'pending' | 'cancelled';
@@ -174,9 +181,16 @@ export interface StaffPerformance {
   commissionEarned: number;
 }
 
-export interface GSTRate {
+export interface GSTComponent {
   id: string;
   name: string;
   rate: number;
+}
+
+export interface GSTRate {
+  id: string;
+  name: string;
+  components: GSTComponent[];
   isActive: boolean;
+  totalRate?: number; // Calculated total of all components
 }

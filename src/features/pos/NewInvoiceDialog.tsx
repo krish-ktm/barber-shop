@@ -181,9 +181,20 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     
     // Get selected GST rate
     const selectedGstRate = gstRatesData.find(rate => rate.id === values.gstRateId);
-    const taxRate = selectedGstRate?.rate || 0;
-    const taxAmount = calculateTax(subtotalAfterDiscount, taxRate);
+    
+    // Calculate tax components
+    const taxComponents = selectedGstRate?.components.map(comp => ({
+      name: comp.name,
+      rate: comp.rate,
+      amount: calculateTax(subtotalAfterDiscount, comp.rate)
+    })) || [];
+    
+    // Calculate total tax amount
+    const taxAmount = taxComponents.reduce((sum, comp) => sum + comp.amount, 0);
     const total = subtotalAfterDiscount + taxAmount + (values.tipAmount || 0);
+    
+    // Get total tax rate for invoice record
+    const taxRate = selectedGstRate?.totalRate || 0;
 
     // Format services to match InvoiceService type
     const formattedServices = services.map(service => {
@@ -226,6 +237,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       discountAmount,
       tax: taxRate,
       taxAmount,
+      taxComponents,
       total,
       status: 'paid' as const,
       date: new Date().toISOString(),
@@ -262,8 +274,16 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
         
   const subtotalAfterDiscount = subtotal - discountAmount;
   const selectedGstRate = gstRatesData.find(rate => rate.id === gstRateId);
-  const taxRate = selectedGstRate?.rate || 0;
-  const tax = calculateTax(subtotalAfterDiscount, taxRate);
+  
+  // Calculate tax components
+  const taxComponents = selectedGstRate?.components.map(comp => ({
+    name: comp.name,
+    rate: comp.rate,
+    amount: calculateTax(subtotalAfterDiscount, comp.rate)
+  })) || [];
+  
+  // Calculate total tax amount
+  const tax = taxComponents.reduce((sum, comp) => sum + comp.amount, 0);
   const total = subtotalAfterDiscount + tax + (form.watch('tipAmount') || 0);
 
   return (
@@ -630,13 +650,13 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                           <SelectValue placeholder="Select GST rate" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        {gstRatesData.map((gstRate) => (
-                          <SelectItem key={gstRate.id} value={gstRate.id}>
-                            {gstRate.name} ({gstRate.rate}%)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                                              <SelectContent>
+                          {gstRatesData.map((gstRate) => (
+                            <SelectItem key={gstRate.id} value={gstRate.id}>
+                              {gstRate.name} ({gstRate.totalRate}%)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
@@ -671,10 +691,15 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                     <span>-{formatCurrency(discountAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>GST ({taxRate}%):</span>
-                  <span>{formatCurrency(tax)}</span>
-                </div>
+                
+                {/* Display each tax component */}
+                {taxComponents.map((component, index) => (
+                  <div key={index} className="flex justify-between text-sm text-muted-foreground">
+                    <span>{component.name} ({component.rate}%):</span>
+                    <span>{formatCurrency(component.amount)}</span>
+                  </div>
+                ))}
+                
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Tip:</span>
                   <span>{formatCurrency(form.watch('tipAmount') || 0)}</span>

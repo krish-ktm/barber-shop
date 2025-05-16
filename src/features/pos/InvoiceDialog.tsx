@@ -174,10 +174,20 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 </div>
               )}
 
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Tax ({invoice.tax}%)</span>
-                <span>{formatCurrency(invoice.taxAmount)}</span>
-              </div>
+              {/* Display individual tax components if available */}
+              {invoice.taxComponents && invoice.taxComponents.length > 0 ? (
+                invoice.taxComponents.map((component, index) => (
+                  <div key={index} className="flex justify-between text-sm text-muted-foreground">
+                    <span>{component.name} ({component.rate}%)</span>
+                    <span>{formatCurrency(component.amount)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Tax ({invoice.tax}%)</span>
+                  <span>{formatCurrency(invoice.taxAmount)}</span>
+                </div>
+              )}
 
               <Separator />
 

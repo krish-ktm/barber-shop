@@ -2,8 +2,21 @@ import { Invoice } from '@/types';
 import { addDays, format, subDays } from 'date-fns';
 import { gstRatesData } from './gstRatesData';
 
-// Get the standard GST rate
-const standardGstRate = gstRatesData.find(rate => rate.isActive)?.rate || 7.5;
+// Get the standard GST rate and components
+const standardGstRate = gstRatesData.find(rate => rate.isActive);
+const standardRate = standardGstRate?.totalRate || 7.5;
+
+// Create tax components for invoices
+const createTaxComponents = (subtotal: number, gstRateId: string) => {
+  const rate = gstRatesData.find(r => r.id === gstRateId) || standardGstRate;
+  if (!rate) return undefined;
+  
+  return rate.components.map(comp => ({
+    name: comp.name,
+    rate: comp.rate,
+    amount: parseFloat(((subtotal * comp.rate) / 100).toFixed(2))
+  }));
+};
 
 // Create invoice data matching some of the appointments
 export const invoiceData: Invoice[] = [
@@ -29,8 +42,9 @@ export const invoiceData: Invoice[] = [
     discountValue: undefined,
     discountAmount: 0,
     tipAmount: 5,
-    tax: standardGstRate,
+    tax: standardRate,
     taxAmount: 1.88,
+    taxComponents: createTaxComponents(25, '1'),
     total: 31.88,
     paymentMethod: 'card',
     status: 'paid',
@@ -58,8 +72,9 @@ export const invoiceData: Invoice[] = [
     discountValue: undefined,
     discountAmount: 0,
     tipAmount: 6,
-    tax: standardGstRate,
+    tax: standardRate,
     taxAmount: 2.25,
+    taxComponents: createTaxComponents(30, '1'),
     total: 38.25,
     paymentMethod: 'cash',
     status: 'paid',
@@ -87,9 +102,13 @@ export const invoiceData: Invoice[] = [
     discountValue: 10,
     discountAmount: 4.5,
     tipAmount: 8,
-    tax: standardGstRate,
-    taxAmount: 3.04,
-    total: 51.54,
+    tax: 18, // Using India GST (18%)
+    taxAmount: 7.29,
+    taxComponents: [
+      { name: 'CGST', rate: 9, amount: 3.645 },
+      { name: 'SGST', rate: 9, amount: 3.645 }
+    ],
+    total: 55.79,
     paymentMethod: 'card',
     status: 'paid',
     createdAt: format(subDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm:ss")
@@ -116,8 +135,9 @@ export const invoiceData: Invoice[] = [
     discountValue: undefined,
     discountAmount: 0,
     tipAmount: 5,
-    tax: standardGstRate,
+    tax: standardRate,
     taxAmount: 1.88,
+    taxComponents: createTaxComponents(25, '1'),
     total: 31.88,
     paymentMethod: 'mobile',
     status: 'paid',
@@ -145,8 +165,9 @@ export const invoiceData: Invoice[] = [
     discountValue: undefined,
     discountAmount: 0,
     tipAmount: 3,
-    tax: standardGstRate,
+    tax: standardRate,
     taxAmount: 1.50,
+    taxComponents: createTaxComponents(20, '1'),
     total: 24.50,
     paymentMethod: 'cash',
     status: 'paid',
@@ -181,8 +202,9 @@ export const invoiceData: Invoice[] = [
     discountValue: 5,
     discountAmount: 5,
     tipAmount: 10,
-    tax: standardGstRate,
+    tax: standardRate,
     taxAmount: 3.38,
+    taxComponents: createTaxComponents(50, '1'),
     total: 58.38,
     paymentMethod: 'card',
     status: 'paid',
@@ -211,8 +233,9 @@ export const invoiceData: Invoice[] = [
     discountType: undefined,
     discountValue: undefined,
     discountAmount: 0,
-    tax: standardGstRate,
+    tax: standardRate,
     taxAmount: 3.00,
+    taxComponents: createTaxComponents(40, '1'),
     total: 43.00,
     paymentMethod: 'pending',
     status: 'pending',
