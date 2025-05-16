@@ -8,6 +8,7 @@ import { Slots } from './pages/Slots';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
 import { Services } from './pages/Services';
+import { GSTSettings } from './pages/GSTSettings';
 import { Login } from './pages/Login';
 import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
@@ -44,6 +45,7 @@ function App() {
           <Route path="slots" element={<Slots />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="gst-settings" element={<GSTSettings />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
 
