@@ -4,13 +4,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Search, Plus, Trash } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -188,309 +188,309 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   const total = subtotal + tax + (form.watch('tipAmount') || 0);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Create New Invoice</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange} side="right">
+      <SheetContent className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl">
+        <SheetHeader>
+          <SheetTitle>Create New Invoice</SheetTitle>
+          <SheetDescription>
             Create a new invoice by filling in the details below.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <ScrollArea className="flex-1">
-          <div className="px-6 pb-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <Card className="p-4">
-                  <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
-                      <TabsTrigger value="search">Search Customer</TabsTrigger>
-                      <TabsTrigger value="new">New Customer</TabsTrigger>
-                    </TabsList>
+        <ScrollArea className="h-[calc(100vh-10rem)] pr-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-6">
+              <Card className="p-4">
+                <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="search">Search Customer</TabsTrigger>
+                    <TabsTrigger value="new">New Customer</TabsTrigger>
+                  </TabsList>
 
-                    <TabsContent value="search" className="space-y-4">
+                  <TabsContent value="search" className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="customerPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input
+                                placeholder="Enter phone number"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  setSelectedCustomer(null);
+                                  setIsNewCustomer(false);
+                                }}
+                              />
+                            </FormControl>
+                            <Button
+                              type="button"
+                              onClick={() => handleSearchCustomer(field.value)}
+                              disabled={isSearching || !field.value}
+                            >
+                              {isSearching ? (
+                                "Searching..."
+                              ) : (
+                                <>
+                                  <Search className="h-4 w-4 mr-2" />
+                                  Search
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {selectedCustomer && (
+                      <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium">Customer Details</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedCustomer(null);
+                              setIsNewCustomer(false);
+                              form.setValue('customerPhone', '');
+                            }}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <p><span className="font-medium">Name:</span> {selectedCustomer.name}</p>
+                          <p><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedCustomer.phone)}</p>
+                          {selectedCustomer.email && (
+                            <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
+                          )}
+                          <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
+                          <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="new">
+                    <div className="space-y-4">
                       <FormField
-                        control={form.control}
-                        name="customerPhone"
+                        control={newCustomerForm.control}
+                        name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
-                            <div className="flex gap-2">
-                              <FormControl>
-                                <Input
-                                  placeholder="Enter phone number"
-                                  {...field}
-                                  onChange={(e) => {
-                                    field.onChange(e);
-                                    setSelectedCustomer(null);
-                                    setIsNewCustomer(false);
-                                  }}
-                                />
-                              </FormControl>
-                              <Button
-                                type="button"
-                                onClick={() => handleSearchCustomer(field.value)}
-                                disabled={isSearching || !field.value}
-                              >
-                                {isSearching ? (
-                                  "Searching..."
-                                ) : (
-                                  <>
-                                    <Search className="h-4 w-4 mr-2" />
-                                    Search
-                                  </>
-                                )}
-                              </Button>
-                            </div>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter customer name" {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      {selectedCustomer && (
-                        <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
-                          <div className="flex justify-between items-center">
-                            <h4 className="font-medium">Customer Details</h4>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedCustomer(null);
-                                setIsNewCustomer(false);
-                                form.setValue('customerPhone', '');
-                              }}
-                            >
-                              Clear
-                            </Button>
-                          </div>
-                          <div className="space-y-1 text-sm">
-                            <p><span className="font-medium">Name:</span> {selectedCustomer.name}</p>
-                            <p><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedCustomer.phone)}</p>
-                            {selectedCustomer.email && (
-                              <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
-                            )}
-                            <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
-                            <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
-                          </div>
-                        </div>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="new">
-                      <div className="space-y-4">
-                        <FormField
-                          control={newCustomerForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter customer name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Enter phone number" 
-                              value={form.watch('customerPhone')} 
-                              onChange={(e) => form.setValue('customerPhone', e.target.value)}
-                            />
-                          </FormControl>
-                          <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
-                        </FormItem>
-
-                        <FormField
-                          control={newCustomerForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email (Optional)</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="Enter email address" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </Card>
-
-                <FormField
-                  control={form.control}
-                  name="staffId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Staff Member</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select staff member" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {staffData.map((staff) => (
-                            <SelectItem key={staff.id} value={staff.id}>
-                              {staff.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Services</FormLabel>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddService}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Service
-                    </Button>
-                  </div>
-
-                  {services.map((service, index) => (
-                    <div key={service.id} className="space-y-4">
-                      <div className="flex items-end gap-4">
-                        <div className="flex-1">
-                          <FormLabel className="text-sm">Service</FormLabel>
-                          <Select
-                            value={service.serviceId}
-                            onValueChange={(value) => {
-                              const newServices = [...services];
-                              newServices[index].serviceId = value;
-                              setServices(newServices);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select service" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {serviceData.map((s) => (
-                                <SelectItem key={s.id} value={s.id}>
-                                  {s.name} - {formatCurrency(s.price)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="w-24">
-                          <FormLabel className="text-sm">Quantity</FormLabel>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={service.quantity}
-                            onChange={(e) => {
-                              const newServices = [...services];
-                              newServices[index].quantity = parseInt(e.target.value) || 1;
-                              setServices(newServices);
-                            }}
+                          <Input 
+                            placeholder="Enter phone number" 
+                            value={form.watch('customerPhone')} 
+                            onChange={(e) => form.setValue('customerPhone', e.target.value)}
                           />
-                        </div>
+                        </FormControl>
+                        <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
+                      </FormItem>
 
-                        {services.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveService(index)}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
+                      <FormField
+                        control={newCustomerForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email (Optional)</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Enter email address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                      </div>
-
-                      {service.serviceId && (
-                        <div className="text-sm text-right text-muted-foreground">
-                          {formatCurrency(
-                            (serviceData.find(s => s.id === service.serviceId)?.price || 0) *
-                            service.quantity
-                          )}
-                        </div>
-                      )}
-
-                      {index < services.length - 1 && (
-                        <Separator className="my-4" />
-                      )}
+                      />
                     </div>
-                  ))}
+                  </TabsContent>
+                </Tabs>
+              </Card>
+
+              <FormField
+                control={form.control}
+                name="staffId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Staff Member</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select staff member" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {staffData.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <FormLabel>Services</FormLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddService}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Service
+                  </Button>
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="tipAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tip Amount</FormLabel>
-                      <FormControl>
+                {services.map((service, index) => (
+                  <div key={service.id} className="space-y-4">
+                    <div className="flex items-end gap-4">
+                      <div className="flex-1">
+                        <FormLabel className="text-sm">Service</FormLabel>
+                        <Select
+                          value={service.serviceId}
+                          onValueChange={(value) => {
+                            const newServices = [...services];
+                            newServices[index].serviceId = value;
+                            setServices(newServices);
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select service" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {serviceData.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name} - {formatCurrency(s.price)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="w-24">
+                        <FormLabel className="text-sm">Quantity</FormLabel>
                         <Input
                           type="number"
-                          min="0"
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          min="1"
+                          value={service.quantity}
+                          onChange={(e) => {
+                            const newServices = [...services];
+                            newServices[index].quantity = parseInt(e.target.value) || 1;
+                            setServices(newServices);
+                          }}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      </div>
 
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Add any notes about the invoice" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      {services.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveService(index)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
 
-                <div className="rounded-lg border p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal:</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    {service.serviceId && (
+                      <div className="text-sm text-right text-muted-foreground">
+                        {formatCurrency(
+                          (serviceData.find(s => s.id === service.serviceId)?.price || 0) *
+                          service.quantity
+                        )}
+                      </div>
+                    )}
+
+                    {index < services.length - 1 && (
+                      <Separator className="my-4" />
+                    )}
                   </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Tax (7.5%):</span>
-                    <span>{formatCurrency(tax)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Tip:</span>
-                    <span>{formatCurrency(form.watch('tipAmount') || 0)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-medium">
-                    <span>Total:</span>
-                    <span>{formatCurrency(total)}</span>
-                  </div>
+                ))}
+              </div>
+
+              <FormField
+                control={form.control}
+                name="tipAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tip Amount</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Add any notes about the invoice" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
-              </form>
-            </Form>
-          </div>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Tax (7.5%):</span>
+                  <span>{formatCurrency(tax)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Tip:</span>
+                  <span>{formatCurrency(form.watch('tipAmount') || 0)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between font-medium">
+                  <span>Total:</span>
+                  <span>{formatCurrency(total)}</span>
+                </div>
+              </div>
+            </form>
+          </Form>
         </ScrollArea>
 
-        <DialogFooter className="mt-6">
-          <Button onClick={form.handleSubmit(onSubmit)}>Create Invoice</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <SheetFooter className="mt-6">
+          <Button onClick={form.handleSubmit(onSubmit)} className="w-full">
+            Create Invoice
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 };
