@@ -8,7 +8,6 @@ export const serviceData: Service[] = [
     price: 25,
     duration: 30, // minutes
     category: 'haircut',
-    image: 'https://images.pexels.com/photos/1319461/pexels-photo-1319461.jpeg',
   },
   {
     id: 'service-2',
@@ -17,7 +16,6 @@ export const serviceData: Service[] = [
     price: 15,
     duration: 15, // minutes
     category: 'beard',
-    image: 'https://images.pexels.com/photos/1319459/pexels-photo-1319459.jpeg',
   },
   {
     id: 'service-3',
@@ -26,7 +24,6 @@ export const serviceData: Service[] = [
     price: 35,
     duration: 45, // minutes
     category: 'shave',
-    image: 'https://images.pexels.com/photos/1813346/pexels-photo-1813346.jpeg',
   },
   {
     id: 'service-4',
@@ -35,7 +32,6 @@ export const serviceData: Service[] = [
     price: 30,
     duration: 45, // minutes
     category: 'haircut',
-    image: 'https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg',
   },
   {
     id: 'service-5',
@@ -44,7 +40,6 @@ export const serviceData: Service[] = [
     price: 40,
     duration: 60, // minutes
     category: 'combo',
-    image: 'https://images.pexels.com/photos/897270/pexels-photo-897270.jpeg',
   },
   {
     id: 'service-6',
@@ -53,7 +48,6 @@ export const serviceData: Service[] = [
     price: 20,
     duration: 30, // minutes
     category: 'haircut',
-    image: 'https://images.pexels.com/photos/2026764/pexels-photo-2026764.jpeg',
   },
   {
     id: 'service-7',
@@ -62,7 +56,6 @@ export const serviceData: Service[] = [
     price: 60,
     duration: 90, // minutes
     category: 'color',
-    image: 'https://images.pexels.com/photos/3993367/pexels-photo-3993367.jpeg',
   },
   {
     id: 'service-8',
@@ -71,7 +64,6 @@ export const serviceData: Service[] = [
     price: 75,
     duration: 120, // minutes
     category: 'combo',
-    image: 'https://images.pexels.com/photos/3998406/pexels-photo-3998406.jpeg',
   },
   {
     id: 'service-9',
@@ -80,6 +72,5 @@ export const serviceData: Service[] = [
     price: 45,
     duration: 60, // minutes
     category: 'treatment',
-    image: 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg',
   },
 ];

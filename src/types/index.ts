@@ -45,7 +45,6 @@ export interface Service {
   price: number;
   duration: number; // in minutes
   category: string;
-  image?: string;
 }
 
 export interface Appointment {

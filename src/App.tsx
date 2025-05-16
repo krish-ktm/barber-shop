@@ -7,6 +7,7 @@ import { POS } from './pages/POS';
 import { Slots } from './pages/Slots';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
+import { Services } from './pages/Services';
 import { Login } from './pages/Login';
 import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
@@ -38,6 +39,7 @@ function App() {
           <Route path="staff-management" element={<StaffManagement />} />
           <Route path="appointments" element={<AdminAppointment />} />
           <Route path="customers" element={<Customers />} />
+          <Route path="services" element={<Services />} />
           <Route path="pos" element={<POS />} />
           <Route path="slots" element={<Slots />} />
           <Route path="reports" element={<Reports />} />
@@ -66,4 +68,4 @@ function App() {
   );
 }
 
-export default App;
+export default App
