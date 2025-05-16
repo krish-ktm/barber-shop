@@ -12,7 +12,7 @@ import {
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
 import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
-import { appointmentData } from '@/mocks';
+import { appointmentData, staffData, serviceData } from '@/mocks';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,8 @@ export const AdminAppointment: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [staffFilter, setStaffFilter] = useState<string>('all');
+  const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showNewAppointment, setShowNewAppointment] = useState(false);
 
@@ -56,8 +58,11 @@ export const AdminAppointment: React.FC = () => {
         appointment.staffName.toLowerCase().includes(searchLower) ||
         appointment.customerPhone.includes(searchQuery);
       const isStatusMatch = statusFilter === 'all' || appointment.status === statusFilter;
+      const isStaffMatch = staffFilter === 'all' || appointment.staffId === staffFilter;
+      const isServiceMatch = serviceFilter === 'all' || 
+        appointment.services.some(service => service.serviceId === serviceFilter);
       
-      return isDateMatch && isSearchMatch && isStatusMatch;
+      return isDateMatch && isSearchMatch && isStatusMatch && isStaffMatch && isServiceMatch;
     })
     .sort((a, b) => {
       const timeA = a.time.split(':').map(Number);
@@ -82,6 +87,17 @@ export const AdminAppointment: React.FC = () => {
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
+    setStaffFilter('all');
+    setServiceFilter('all');
+  };
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (searchQuery) count++;
+    if (statusFilter !== 'all') count++;
+    if (staffFilter !== 'all') count++;
+    if (serviceFilter !== 'all') count++;
+    return count;
   };
 
   return (
@@ -189,7 +205,35 @@ export const AdminAppointment: React.FC = () => {
               </SelectContent>
             </Select>
 
-            {(searchQuery || statusFilter !== 'all') && (
+            <Select value={staffFilter} onValueChange={setStaffFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by staff" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Staff</SelectItem>
+                {staffData.map((staff) => (
+                  <SelectItem key={staff.id} value={staff.id}>
+                    {staff.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={serviceFilter} onValueChange={setServiceFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by service" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Services</SelectItem>
+                {serviceData.map((service) => (
+                  <SelectItem key={service.id} value={service.id}>
+                    {service.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {getActiveFiltersCount() > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -210,9 +254,9 @@ export const AdminAppointment: React.FC = () => {
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
-                {(searchQuery || statusFilter !== 'all') && (
+                {getActiveFiltersCount() > 0 && (
                   <Badge variant="secondary" className="ml-2">
-                    {(searchQuery ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0)}
+                    {getActiveFiltersCount()}
                   </Badge>
                 )}
               </Button>
@@ -239,6 +283,46 @@ export const AdminAppointment: React.FC = () => {
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                       <SelectItem value="no-show">No Show</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Staff Member</label>
+                  <Select value={staffFilter} onValueChange={(value) => {
+                    setStaffFilter(value);
+                    setShowFilters(false);
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by staff" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Staff</SelectItem>
+                      {staffData.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Service</label>
+                  <Select value={serviceFilter} onValueChange={(value) => {
+                    setServiceFilter(value);
+                    setShowFilters(false);
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Services</SelectItem>
+                      {serviceData.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
