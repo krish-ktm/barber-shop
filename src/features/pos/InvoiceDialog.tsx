@@ -107,6 +107,12 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                   Appointment: #{invoice.appointmentId}
                 </div>
               )}
+              <div className="text-sm text-muted-foreground">
+                Payment Method: {invoice.paymentMethod.charAt(0).toUpperCase() + invoice.paymentMethod.slice(1)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Created: {format(new Date(invoice.createdAt), 'MMMM d, yyyy, h:mm a')}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -297,8 +297,8 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-10rem)] pr-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-6">
+          <Form {...form} >
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-6 px-4">
               <Card className="p-4">
                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
                   <TabsList className="grid w-full grid-cols-2 mb-4">
