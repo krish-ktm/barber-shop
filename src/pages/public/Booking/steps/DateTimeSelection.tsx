@@ -48,20 +48,23 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
           }}
           initial="initial"
           animate="animate"
+          className="w-full"
         >
           <div className="space-y-2">
             <h3 className="font-medium">Select Date</h3>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              className="border rounded-md"
-              disabled={(date) => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                return date < today || date.getDay() === 0;
-              }}
-            />
+            <div className="p-4 border rounded-lg bg-card w-full">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className="w-full"
+                disabled={(date) => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  return date < today || date.getDay() === 0;
+                }}
+              />
+            </div>
           </div>
         </motion.div>
 
