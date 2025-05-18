@@ -37,52 +37,52 @@ export const Sidebar: React.FC = () => {
     {
       icon: <Home size={18} />,
       label: 'Dashboard',
-      href: '/dashboard',
+      href: '/admin/dashboard',
     },
     {
       icon: <Calendar size={18} />,
       label: 'Appointments',
-      href: '/appointments',
+      href: '/admin/appointments',
     },
     {
       icon: <Users size={18} />,
       label: 'Customers',
-      href: '/customers',
+      href: '/admin/customers',
     },
     {
       icon: <Scissors size={18} />,
       label: 'Staff Management',
-      href: '/staff-management',
+      href: '/admin/staff-management',
     },
     {
       icon: <ListChecklist size={18} />,
       label: 'Services',
-      href: '/services',
+      href: '/admin/services',
     },
     {
       icon: <CreditCard size={18} />,
       label: 'POS & Invoices',
-      href: '/pos',
+      href: '/admin/pos',
     },
     {
       icon: <Clock size={18} />,
       label: 'Slots',
-      href: '/slots',
+      href: '/admin/slots',
     },
     {
       icon: <BarChart3 size={18} />,
       label: 'Reports',
-      href: '/reports',
+      href: '/admin/reports',
     },
     {
       icon: <Settings size={18} />,
       label: 'Settings',
-      href: '/settings',
+      href: '/admin/settings',
     },
     {
       icon: <Percent size={18} />,
       label: 'GST Settings',
-      href: '/gst-settings',
+      href: '/admin/gst-settings',
     },
   ];
 
