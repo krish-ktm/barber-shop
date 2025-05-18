@@ -1,9 +1,27 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { ArrowRight, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { serviceData } from '@/mocks';
 import { formatCurrency } from '@/utils';
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.3,
+    },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+};
 
 export const Services: React.FC = () => {
   // Group services by category
@@ -18,7 +36,12 @@ export const Services: React.FC = () => {
   return (
     <div>
       {/* Hero Section */}
-      <section className="relative h-[60vh] flex items-center justify-center text-white">
+      <motion.section 
+        className="relative h-[60vh] flex items-center justify-center text-white"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      >
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
@@ -29,71 +52,111 @@ export const Services: React.FC = () => {
         </div>
         
         <div className="relative z-10 container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">Our Services</h1>
-          <p className="text-xl md:text-2xl max-w-2xl mx-auto">
+          <motion.h1 
+            className="text-4xl md:text-6xl font-bold mb-6"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            Our Services
+          </motion.h1>
+          <motion.p 
+            className="text-xl md:text-2xl max-w-2xl mx-auto"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             Premium grooming services tailored to your style
-          </p>
+          </motion.p>
         </div>
-      </section>
+      </motion.section>
 
       {/* Services Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          {Object.entries(groupedServices).map(([category, services]) => (
-            <div key={category} className="mb-16 last:mb-0">
-              <h2 className="text-3xl font-bold capitalize mb-8">{category}</h2>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {services.map((service) => (
-                  <Card key={service.id} className="overflow-hidden">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
-                          <p className="text-muted-foreground text-sm mb-4">
-                            {service.description}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {service.duration} min
-                        </div>
-                        <span className="text-lg font-semibold">
-                          {formatCurrency(service.price)}
-                        </span>
-                      </div>
-                      
-                      <Button className="w-full">
-                        Book Now
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))}
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="space-y-16"
+          >
+            {Object.entries(groupedServices).map(([category, services]) => (
+              <motion.div key={category} variants={item}>
+                <div className="flex items-center gap-4 mb-8">
+                  <h2 className="text-3xl font-bold capitalize">{category}</h2>
+                  <div className="flex-1 border-t border-border" />
+                </div>
+                
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {services.map((service) => (
+                    <motion.div
+                      key={service.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Card className="group overflow-hidden border-2 hover:border-primary/50 transition-colors">
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="space-y-2">
+                              <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">
+                                {service.name}
+                              </h3>
+                              <p className="text-muted-foreground text-sm line-clamp-2">
+                                {service.description}
+                              </p>
+                            </div>
+                            <Badge variant="secondary" className="shrink-0">
+                              {formatCurrency(service.price)}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4 mr-1" />
+                              {service.duration} min
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              Book Now
+                              <ArrowRight className="h-4 w-4 ml-2" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* Additional Info */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">The Modern Cuts Experience</h2>
-            <p className="text-muted-foreground mb-8">
-              Every service includes a consultation, relaxing shampoo, precision cut,
-              and styling. Complimentary hot towel and neck shave with every haircut.
-            </p>
-            <Button size="lg">
-              Book Your Appointment
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+      {/* CTA Section */}
+      <motion.section 
+        className="py-20 bg-primary text-primary-foreground"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-6">Ready to Look Your Best?</h2>
+          <p className="text-primary-foreground/80 max-w-2xl mx-auto mb-8">
+            Book your appointment now and experience our premium grooming services
+          </p>
+          <Button 
+            size="lg" 
+            variant="secondary"
+            className="min-w-[200px]"
+          >
+            Book Appointment
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 };
