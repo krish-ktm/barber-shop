@@ -170,8 +170,8 @@ export const Booking: React.FC = () => {
                           </div>
                           
                           <div className="text-center space-y-1">
-                            <span className="text-sm font-medium">{step.title}</span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-sm font-medium block">{step.title}</span>
+                            <span className="text-xs text-muted-foreground block">
                               {index === 0 ? 'Start' :
                                 index === steps.length - 1 ? 'Finish' :
                                 `Step ${index + 1}`}
