@@ -20,22 +20,39 @@ import { StaffAppointments } from './pages/staff/Appointments';
 import { StaffProfile } from './pages/staff/Profile';
 import { StaffLayout } from './components/layout/StaffLayout';
 
+// Public Routes
+import { PublicLayout } from './components/layout/PublicLayout';
+import { Home } from './pages/public/Home';
+import { About } from './pages/public/About';
+import { Services as PublicServices } from './pages/public/Services';
+import { Gallery } from './pages/public/Gallery';
+import { Contact } from './pages/public/Contact';
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<PublicLayout />}>
+          <Route index element={<Home />} />
+          <Route path="about" element={<About />} />
+          <Route path="services" element={<PublicServices />} />
+          <Route path="gallery" element={<Gallery />} />
+          <Route path="contact" element={<Contact />} />
+        </Route>
+
         <Route path="/login" element={<Login />} />
         
         {/* Admin Routes */}
         <Route
-          path="/"
+          path="/admin"
           element={
             <ProtectedRoute requiredRole="admin">
               <MainLayout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="staff-management" element={<StaffManagement />} />
           <Route path="appointments" element={<AdminAppointment />} />
@@ -46,7 +63,7 @@ function App() {
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
           <Route path="gst-settings" element={<GSTSettings />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
         {/* Staff Routes */}
@@ -70,4 +87,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
