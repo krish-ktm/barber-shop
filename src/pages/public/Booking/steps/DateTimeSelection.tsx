@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Clock } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar } from './Fullcalendar';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
