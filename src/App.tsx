@@ -27,6 +27,7 @@ import { About } from './pages/public/About';
 import { Services as PublicServices } from './pages/public/Services';
 import { Gallery } from './pages/public/Gallery';
 import { Contact } from './pages/public/Contact';
+import { Booking } from './pages/public/Booking';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route path="services" element={<PublicServices />} />
           <Route path="gallery" element={<Gallery />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="booking" element={<Booking />} />
         </Route>
 
         <Route path="/login" element={<Login />} />
