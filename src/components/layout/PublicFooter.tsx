@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Twitter, Youtube, Scissors } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
 
 export const PublicFooter: React.FC = () => {
   return (
@@ -9,11 +9,8 @@ export const PublicFooter: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <Scissors className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-xl">Modern Cuts</span>
+            <Link to="/" className="flex items-center">
+              <img src="/logo/logo-tran.png" alt="Modern Cuts Logo" className="h-20 w-auto" />
             </Link>
             <p className="text-sm text-muted-foreground">
               Premium grooming services for the modern gentleman. Experience the difference at Modern Cuts.
@@ -108,7 +105,7 @@ export const PublicFooter: React.FC = () => {
         </div>
 
         <div className="border-t mt-12 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Modern Cuts. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} All rights reserved.</p>
         </div>
       </div>
     </footer>

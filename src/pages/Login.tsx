@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Scissors } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,7 +9,6 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Form,
@@ -82,12 +80,9 @@ export const Login: React.FC = () => {
       <Card className="w-full max-w-[400px]">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
-            <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
-              <Scissors className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src="/logo/logo-tran.png" alt="Barber Shop Logo" className="h-32 w-auto" />
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl">Barber Shop</CardTitle>
             <CardDescription>Sign in to your account</CardDescription>
           </div>
         </CardHeader>

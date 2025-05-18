@@ -40,7 +40,9 @@ export const Header: React.FC = () => {
             </SheetContent>
           </Sheet>
 
-          <div className="text-xl font-bold">Barber Shop</div>
+          <div className="flex items-center">
+            <img src="/logo/logo-tran.png" alt="Barber Shop Logo" className="h-20 w-auto" />
+          </div>
         </div>
 
         <div className="flex-1"></div>

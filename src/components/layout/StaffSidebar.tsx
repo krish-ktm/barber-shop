@@ -58,11 +58,6 @@ export const StaffSidebar: React.FC = () => {
   return (
     <ScrollArea className="h-full">
       <div className="py-4 px-3 h-full flex flex-col">
-        <div className="px-3 py-2 mb-6">
-          <h2 className="font-bold text-xl">Staff Portal</h2>
-          <p className="text-xs text-muted-foreground">Barber Shop</p>
-        </div>
-        
         <div className="space-y-1">
           {sidebarItems.map((item) => (
             <SidebarItem

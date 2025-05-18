@@ -89,10 +89,6 @@ export const Sidebar: React.FC = () => {
   return (
     <ScrollArea className="h-full">
       <div className="py-4 px-3 h-full flex flex-col">
-        <div className="px-3 py-2 mb-6">
-          <h2 className="font-bold text-xl">Barber Shop</h2>
-          <p className="text-xs text-muted-foreground">Management System</p>
-        </div>
         
         <div className="space-y-1">
           {sidebarItems.map((item) => (
@@ -109,7 +105,7 @@ export const Sidebar: React.FC = () => {
         <div className="mt-auto pt-4 px-3">
           <div className="bg-background border rounded-lg p-3">
             <p className="text-xs text-muted-foreground mb-2">Current version</p>
-            <p className="text-sm font-medium">Barber Shop v1.0</p>
+            <p className="text-sm font-medium">v1.0</p>
           </div>
         </div>
       </div>

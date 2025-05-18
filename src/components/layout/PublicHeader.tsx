@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, Scissors, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -25,11 +25,8 @@ export const PublicHeader: React.FC = () => {
     <header className="bg-white border-b sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-              <Scissors className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-xl">Modern Cuts</span>
+          <Link to="/" className="flex items-center">
+            <img src="/logo/logo-tran.png" alt="Modern Cuts Logo" className="h-20 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center space-x-8">
@@ -59,12 +56,9 @@ export const PublicHeader: React.FC = () => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <SheetHeader className="border-b pb-4 mb-4">
-                  <SheetTitle className="flex items-center space-x-2">
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                      <Scissors className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                    <span>Modern Cuts</span>
+                                  <SheetHeader className="border-b pb-4 mb-4">
+                  <SheetTitle className="flex items-center justify-center">
+                    <img src="/logo/logo-tran.png" alt="Modern Cuts Logo" className="h-20 w-auto" />
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col space-y-4">
