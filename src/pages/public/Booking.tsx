@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Clock, User, Scissors, ArrowRight, ArrowLeft } from 'lucide-react';
+import { 
+  ArrowRight, 
+  ArrowLeft, 
+  Calendar as CalendarIcon, 
+  Clock, 
+  User, 
+  Scissors,
+  CheckCircle2,
+  Info
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,17 +24,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { staffData, serviceData } from '@/mocks';
 import { createTimeSlots, formatCurrency } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 
 const steps = [
-  { id: 'service', title: 'Choose Service' },
-  { id: 'staff', title: 'Select Staff' },
-  { id: 'datetime', title: 'Pick Date & Time' },
-  { id: 'details', title: 'Your Details' },
-  { id: 'confirm', title: 'Confirm' },
+  { id: 'service', title: 'Choose Service', icon: Scissors },
+  { id: 'staff', title: 'Select Staff', icon: User },
+  { id: 'datetime', title: 'Pick Date & Time', icon: CalendarIcon },
+  { id: 'details', title: 'Your Details', icon: Info },
+  { id: 'confirm', title: 'Confirm', icon: CheckCircle2 },
 ];
 
 export const Booking: React.FC = () => {
@@ -59,7 +74,7 @@ export const Booking: React.FC = () => {
       });
 
       toast({
-        title: 'Booking Confirmed!',
+        title: 'Booking Confirmed! 🎉',
         description: 'Your appointment has been scheduled successfully.',
       });
 
@@ -129,43 +144,46 @@ export const Booking: React.FC = () => {
       </section>
 
       {/* Booking Section */}
-      <section className="py-12 md:py-20">
+      <section className="py-12 md:py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             {/* Progress Steps */}
-            <div className="mb-8">
+            <div className="mb-12">
               <div className="flex items-center justify-between relative">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-muted" />
                 
                 <div className="flex items-center justify-between relative w-full">
-                  {steps.map((step, index) => (
-                    <div
-                      key={step.id}
-                      className={cn(
-                        'flex flex-col items-center relative bg-background px-3',
-                        index <= currentStep ? 'text-primary' : 'text-muted-foreground'
-                      )}
-                    >
+                  {steps.map((step, index) => {
+                    const StepIcon = step.icon;
+                    return (
                       <div
+                        key={step.id}
                         className={cn(
-                          'w-8 h-8 rounded-full border-2 flex items-center justify-center mb-2 font-medium',
-                          index <= currentStep
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-muted bg-background'
+                          'flex flex-col items-center relative bg-background px-3',
+                          index <= currentStep ? 'text-primary' : 'text-muted-foreground'
                         )}
                       >
-                        {index + 1}
+                        <div
+                          className={cn(
+                            'w-10 h-10 rounded-full border-2 flex items-center justify-center mb-2',
+                            index <= currentStep
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-muted bg-background'
+                          )}
+                        >
+                          <StepIcon className="h-5 w-5" />
+                        </div>
+                        <span className="text-sm font-medium hidden md:block">{step.title}</span>
                       </div>
-                      <span className="text-sm hidden md:block">{step.title}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             {/* Step Content */}
-            <Card>
-              <CardContent className="p-6">
+            <Card className="border-2">
+              <CardContent className="p-6 md:p-8">
                 {/* Step 1: Choose Service */}
                 {currentStep === 0 && (
                   <div className="space-y-6">
@@ -185,10 +203,10 @@ export const Booking: React.FC = () => {
                         <Label
                           key={service.id}
                           className={cn(
-                            'flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors',
+                            'flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all duration-200',
                             selectedService === service.id
-                              ? 'border-primary bg-primary/5'
-                              : 'hover:bg-muted/50'
+                              ? 'border-primary bg-primary/5 shadow-sm'
+                              : 'hover:border-primary/50 hover:bg-muted/50'
                           )}
                         >
                           <div className="flex items-start gap-4">
@@ -198,14 +216,14 @@ export const Booking: React.FC = () => {
                               <div className="text-sm text-muted-foreground max-w-md">
                                 {service.description}
                               </div>
-                              <div className="flex items-center gap-4 mt-2 text-sm">
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                                  <span>{service.duration} min</span>
-                                </div>
-                                <div className="font-medium">
+                              <div className="flex items-center gap-4 mt-2">
+                                <Badge variant="secondary" className="font-normal">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  {service.duration} min
+                                </Badge>
+                                <Badge variant="secondary" className="font-normal">
                                   {formatCurrency(service.price)}
-                                </div>
+                                </Badge>
                               </div>
                             </div>
                           </div>
@@ -228,21 +246,21 @@ export const Booking: React.FC = () => {
                     <RadioGroup
                       value={selectedStaff || ''}
                       onValueChange={setSelectedStaff}
-                      className="grid gap-4"
+                      className="grid md:grid-cols-2 gap-4"
                     >
                       {staffData.map((staff) => (
                         <Label
                           key={staff.id}
                           className={cn(
-                            'flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors',
+                            'flex items-start p-4 rounded-lg border-2 cursor-pointer transition-all duration-200',
                             selectedStaff === staff.id
-                              ? 'border-primary bg-primary/5'
-                              : 'hover:bg-muted/50'
+                              ? 'border-primary bg-primary/5 shadow-sm'
+                              : 'hover:border-primary/50 hover:bg-muted/50'
                           )}
                         >
-                          <div className="flex items-start gap-4">
-                            <RadioGroupItem value={staff.id} id={staff.id} className="mt-1" />
-                            <div className="flex items-start gap-4">
+                          <RadioGroupItem value={staff.id} id={staff.id} className="mt-1 mr-4" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-4 mb-3">
                               <Avatar className="h-12 w-12">
                                 <AvatarImage src={staff.image} alt={staff.name} />
                                 <AvatarFallback>
@@ -252,16 +270,17 @@ export const Booking: React.FC = () => {
                                     .join('')}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <div className="font-medium">{staff.name}</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate">{staff.name}</div>
                                 <div className="text-sm text-muted-foreground">{staff.position}</div>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <Badge variant={staff.isAvailable ? "default" : "outline"}>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant={staff.isAvailable ? "default" : "secondary"}>
                                     {staff.isAvailable ? 'Available' : 'Unavailable'}
                                   </Badge>
                                 </div>
                               </div>
                             </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{staff.bio}</p>
                           </div>
                         </Label>
                       ))}
@@ -279,16 +298,15 @@ export const Booking: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-2 gap-8">
                       <div>
-                        <Label className="mb-2 block">Date</Label>
+                        <Label className="mb-3 block">Select Date</Label>
                         <Calendar
                           mode="single"
                           selected={selectedDate}
                           onSelect={setSelectedDate}
                           className="border rounded-md"
                           disabled={(date) => {
-                            // Disable past dates and Sundays
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
                             return date < today || date.getDay() === 0;
@@ -297,18 +315,33 @@ export const Booking: React.FC = () => {
                       </div>
 
                       <div>
-                        <Label className="mb-2 block">Time</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {timeSlots.map((time) => (
-                            <Button
-                              key={time}
-                              variant={selectedTime === time ? "default" : "outline"}
-                              className="w-full"
-                              onClick={() => setSelectedTime(time)}
-                            >
-                              {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
-                            </Button>
-                          ))}
+                        <Label className="mb-3 block">Select Time</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {timeSlots.map((time) => {
+                            const isAvailable = Math.random() > 0.3; // Simulate availability
+                            return (
+                              <TooltipProvider key={time}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant={selectedTime === time ? "default" : "outline"}
+                                      className={cn(
+                                        "w-full",
+                                        !isAvailable && "opacity-50 cursor-not-allowed"
+                                      )}
+                                      onClick={() => isAvailable && setSelectedTime(time)}
+                                      disabled={!isAvailable}
+                                    >
+                                      {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {isAvailable ? 'Available' : 'Booked'}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -397,27 +430,35 @@ export const Booking: React.FC = () => {
                             <div className="text-sm text-muted-foreground">
                               {getSelectedService()?.name}
                             </div>
-                            <div className="flex items-center gap-4 mt-1 text-sm">
-                              <div className="flex items-center">
-                                <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                                <span>{getSelectedService()?.duration} min</span>
-                              </div>
-                              <div className="font-medium">
+                            <div className="flex items-center gap-4 mt-1">
+                              <Badge variant="secondary" className="font-normal">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {getSelectedService()?.duration} min
+                              </Badge>
+                              <Badge variant="secondary" className="font-normal">
                                 {formatCurrency(getSelectedService()?.price || 0)}
-                              </div>
+                              </Badge>
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-start gap-4 p-4 bg-muted/30 rounded-lg">
                           <User className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                          <div>
-                            <div className="font-medium">Staff</div>
-                            <div className="text-sm text-muted-foreground">
-                              {getSelectedStaff()?.name}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {getSelectedStaff()?.position}
+                          <div className="flex items-start gap-4">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={getSelectedStaff()?.image} />
+                              <AvatarFallback>
+                                {getSelectedStaff()?.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{getSelectedStaff()?.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {getSelectedStaff()?.position}
+                              </div>
                             </div>
                           </div>
                         </div>
