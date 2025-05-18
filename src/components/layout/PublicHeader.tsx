@@ -30,7 +30,9 @@ export const PublicHeader: React.FC = () => {
             </Link>
           </nav>
 
-          <Button>Book Now</Button>
+          <Link to="/booking">
+            <Button>Book Now</Button>
+          </Link>
         </div>
       </div>
     </header>
