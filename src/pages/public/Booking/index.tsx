@@ -25,12 +25,20 @@ export const Booking: React.FC = () => {
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
+      // Scroll to top on mobile when changing steps
+      if (window.innerWidth < 768) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+      // Scroll to top on mobile when changing steps
+      if (window.innerWidth < 768) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
@@ -39,7 +47,7 @@ export const Booking: React.FC = () => {
       <div>
         {/* Hero Section */}
         <motion.section 
-          className="relative h-[40vh] flex items-center justify-center text-white"
+          className="relative h-[30vh] md:h-[40vh] flex items-center justify-center text-white"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
@@ -55,7 +63,7 @@ export const Booking: React.FC = () => {
           
           <div className="relative z-10 container mx-auto px-4 text-center">
             <motion.h1 
-              className="text-4xl md:text-6xl font-bold mb-6"
+              className="text-3xl md:text-6xl font-bold mb-4 md:mb-6"
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -63,7 +71,7 @@ export const Booking: React.FC = () => {
               Book Your Appointment
             </motion.h1>
             <motion.p 
-              className="text-xl md:text-2xl max-w-2xl mx-auto"
+              className="text-lg md:text-2xl max-w-2xl mx-auto"
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -74,11 +82,34 @@ export const Booking: React.FC = () => {
         </motion.section>
 
         {/* Booking Section */}
-        <section className="py-12 md:py-20 bg-muted/30">
+        <section className="py-8 md:py-20 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
-              {/* Progress Steps */}
-              <div className="mb-12">
+              {/* Progress Steps - Mobile */}
+              <div className="md:hidden mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                      {currentStep + 1}
+                    </div>
+                    <span className="font-medium">{steps[currentStep].title}</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Step {currentStep + 1} of {steps.length}
+                  </div>
+                </div>
+                <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                  <motion.div 
+                    className="absolute left-0 top-0 h-full bg-primary"
+                    initial={{ width: '0%' }}
+                    animate={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                  />
+                </div>
+              </div>
+
+              {/* Progress Steps - Desktop */}
+              <div className="hidden md:block mb-12">
                 <div className="relative">
                   {/* Progress Bar */}
                   <div className="absolute left-0 top-[38px] w-full">
@@ -139,8 +170,8 @@ export const Booking: React.FC = () => {
                           </div>
                           
                           <div className="text-center space-y-1">
-                            <span className="text-sm font-medium hidden md:block">{step.title}</span>
-                            <span className="text-xs text-muted-foreground hidden md:block">
+                            <span className="text-sm font-medium">{step.title}</span>
+                            <span className="text-xs text-muted-foreground">
                               {index === 0 ? 'Start' :
                                 index === steps.length - 1 ? 'Finish' :
                                 `Step ${index + 1}`}
@@ -160,13 +191,14 @@ export const Booking: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
+                className="bg-card border rounded-lg p-4 md:p-6 shadow-sm"
               >
                 <CurrentStepComponent onNext={handleNext} onBack={handleBack} />
               </motion.div>
 
               {/* Navigation */}
               <motion.div 
-                className="flex items-center justify-between mt-8 pt-6 border-t"
+                className="flex items-center justify-between mt-6 pt-4 border-t"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
