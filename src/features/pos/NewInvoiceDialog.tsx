@@ -42,6 +42,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
   customerPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
@@ -53,7 +54,7 @@ const formSchema = z.object({
   discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
   tipAmount: z.number().min(0, 'Tip cannot be negative'),
   paymentMethod: z.enum(['cash', 'card', 'mobile', 'pending']).default('cash'),
-  gstRateId: z.string().min(1, 'Please select a GST rate'),
+  gstRates: z.array(z.string()).min(1, 'Please select at least one GST rate'),
   notes: z.string().optional(),
 });
 
@@ -87,12 +88,12 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     defaultValues: {
       customerPhone: '',
       staffId: '',
-      services: [{ serviceId: '' }],
+      services: [],
       discountType: 'none',
       discountValue: 0,
       tipAmount: 0,
       paymentMethod: 'cash',
-      gstRateId: defaultGstRate,
+      gstRates: [defaultGstRate],
       notes: '',
     },
   });
@@ -207,7 +208,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     const subtotalAfterDiscount = subtotal - discountAmount;
     
     // Get selected GST rate
-    const selectedGstRate = gstRatesData.find(rate => rate.id === values.gstRateId);
+    const selectedGstRate = gstRatesData.find(rate => values.gstRates.includes(rate.id));
     
     // Calculate tax components
     const taxComponents = selectedGstRate?.components.map(comp => ({
@@ -290,7 +291,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   const subtotal = calculateSubtotal();
   const discountType = form.watch('discountType');
   const discountValue = form.watch('discountValue') || 0;
-  const gstRateId = form.watch('gstRateId');
+  const gstRates = form.watch('gstRates');
   
   const discountAmount = 
     discountType === 'percentage' 
@@ -300,7 +301,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
         : 0;
         
   const subtotalAfterDiscount = subtotal - discountAmount;
-  const selectedGstRate = gstRatesData.find(rate => rate.id === gstRateId);
+  const selectedGstRate = gstRatesData.find(rate => gstRates.includes(rate.id));
   
   // Calculate tax components
   const taxComponents = selectedGstRate?.components.map(comp => ({
@@ -447,31 +448,6 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                 </Tabs>
               </Card>
 
-              <FormField
-                control={form.control}
-                name="staffId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Staff Member</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select staff member" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {staffData.map((staff) => (
-                          <SelectItem key={staff.id} value={staff.id}>
-                            {staff.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <FormLabel>Services</FormLabel>
@@ -568,6 +544,78 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                     })}
                   </div>
                 )}
+              </div>
+
+              <FormField
+                control={form.control}
+                name="staffId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Staff Member</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select staff member" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {staffData.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="space-y-4">
+                <FormLabel>GST Rates</FormLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  {gstRatesData.map((gstRate) => (
+                    <FormField
+                      key={gstRate.id}
+                      control={form.control}
+                      name="gstRates"
+                      render={({ field }) => {
+                        return (
+                          <FormItem
+                            key={gstRate.id}
+                            className="relative"
+                          >
+                            <FormControl>
+                              <label className="flex flex-row items-center space-x-2 space-y-0 rounded-md border p-2 hover:bg-muted/50 transition-colors cursor-pointer">
+                                <Checkbox
+                                  checked={field.value?.includes(gstRate.id)}
+                                  onCheckedChange={(checked) => {
+                                    const currentRates = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...currentRates, gstRate.id]);
+                                    } else {
+                                      field.onChange(
+                                        currentRates.filter((id) => id !== gstRate.id)
+                                      );
+                                    }
+                                  }}
+                                />
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="font-medium text-sm">
+                                    {gstRate.name}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {gstRate.totalRate}%
+                                  </span>
+                                </div>
+                              </label>
+                            </FormControl>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
 
               <FormField
@@ -683,31 +731,6 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
 
               <FormField
                 control={form.control}
-                name="gstRateId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>GST Rate</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select GST rate" />
-                        </SelectTrigger>
-                      </FormControl>
-                                              <SelectContent>
-                          {gstRatesData.map((gstRate) => (
-                            <SelectItem key={gstRate.id} value={gstRate.id}>
-                              {gstRate.name} ({gstRate.totalRate}%)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
@@ -735,13 +758,18 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                   </div>
                 )}
                 
-                {/* Display each tax component */}
-                {taxComponents.map((component, index) => (
-                  <div key={index} className="flex justify-between text-sm text-muted-foreground">
-                    <span>{component.name} ({component.rate}%):</span>
-                    <span>{formatCurrency(component.amount)}</span>
-                  </div>
-                ))}
+                {/* Display each tax component from selected GST rates */}
+                {gstRates.map((gstRateId) => {
+                  const gstRate = gstRatesData.find(rate => rate.id === gstRateId);
+                  if (!gstRate) return null;
+
+                  return gstRate.components.map((component, index) => (
+                    <div key={`${gstRateId}-${index}`} className="flex justify-between text-sm text-muted-foreground">
+                      <span>{component.name} ({component.rate}%):</span>
+                      <span>{formatCurrency(calculateTax(subtotalAfterDiscount, component.rate))}</span>
+                    </div>
+                  ));
+                })}
                 
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Tip:</span>
