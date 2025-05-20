@@ -9,12 +9,19 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 export const PublicHeader: React.FC = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = React.useState(false);
+  const { scrollY } = useScroll();
+  
+  // Transform scroll position to header height and logo size
+  const headerHeight = useTransform(scrollY, [0, 100], [96, 64]); // 24rem to 16rem
+  const logoHeight = useTransform(scrollY, [0, 100], [112, 80]); // 28rem to 20rem
 
   const navigation = [
+    { name: 'Home', href: '/' },
     { name: 'About', href: '/about' },
     { name: 'Services', href: '/services' },
     { name: 'Gallery', href: '/gallery' },
@@ -22,43 +29,79 @@ export const PublicHeader: React.FC = () => {
   ];
 
   return (
-    <header className="bg-white border-b sticky top-0 z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+    <motion.header 
+      className="bg-white border-b sticky top-0 z-50"
+      style={{
+        height: headerHeight,
+      }}
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="container mx-auto px-8 h-full">
+        <div className="flex items-center justify-between h-full">
           <Link to="/" className="flex items-center">
-            <img src="/logo/logo-tran.png" alt="Modern Cuts Logo" className="h-20 w-auto" />
+            <motion.img 
+              src="/logo/logo-tran.png" 
+              alt="Modern Cuts Logo" 
+              style={{ height: logoHeight }}
+              className="w-auto"
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            />
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-12">
             {navigation.map((item) => (
-              <Link
+              <motion.div
                 key={item.name}
-                to={item.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname === item.href ? 'text-primary' : 'text-foreground'
-                }`}
+                whileHover={{ y: -2 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
-                {item.name}
-              </Link>
+                <Link
+                  to={item.href}
+                  className={`text-base font-medium transition-colors relative ${
+                    location.pathname === item.href 
+                      ? 'text-primary' 
+                      : 'text-foreground hover:text-primary'
+                  }`}
+                >
+                  {item.name}
+                  {location.pathname === item.href && (
+                    <motion.div
+                      layoutId="activeNav"
+                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              </motion.div>
             ))}
           </nav>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <Link to="/booking" className="hidden md:block">
-              <Button>Book Now</Button>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button className="bg-primary hover:bg-primary/90 text-white px-8 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+                  Book Now
+                </Button>
+              </motion.div>
             </Link>
 
             {/* Mobile Menu */}
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                                  <SheetHeader className="border-b pb-4 mb-4">
+                <SheetHeader className="border-b pb-4 mb-4">
                   <SheetTitle className="flex items-center justify-center">
-                    <img src="/logo/logo-tran.png" alt="Modern Cuts Logo" className="h-20 w-auto" />
+                    <img src="/logo/logo-tran.png" alt="Modern Cuts Logo" className="h-28 w-auto" />
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col space-y-4">
@@ -76,7 +119,9 @@ export const PublicHeader: React.FC = () => {
                   ))}
                   <div className="pt-4 border-t">
                     <Link to="/booking" onClick={() => setIsOpen(false)}>
-                      <Button className="w-full">Book Now</Button>
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-full">
+                        Book Now
+                      </Button>
                     </Link>
                   </div>
                 </nav>
@@ -85,6 +130,6 @@ export const PublicHeader: React.FC = () => {
           </div>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 };
