@@ -46,7 +46,7 @@ export const Login: React.FC = () => {
     if (isAuthenticated) {
       const from = location.state?.from?.pathname;
       if (userRole === 'admin') {
-        navigate(from || '/dashboard', { replace: true });
+        navigate(from || '/admin/dashboard', { replace: true });
       } else if (userRole === 'staff') {
         navigate(from || '/staff/dashboard', { replace: true });
       }
