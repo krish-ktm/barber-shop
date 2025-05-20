@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Clock, ChevronRight, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { serviceData } from '@/mocks';
 import { formatCurrency } from '@/utils';
 import { Badge } from '@/components/ui/badge';
@@ -108,7 +108,7 @@ export const Services: React.FC = () => {
 
       {/* Services Section */}
       <section className="py-12">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-6 max-w-[1400px]">
           <motion.div
             variants={staggerContainer}
             initial="initial"
@@ -116,24 +116,27 @@ export const Services: React.FC = () => {
             className="space-y-8"
           >
             {Object.entries(groupedServices).map(([category, services], index) => (
-              <Card key={category} className="overflow-hidden">
+              <Card 
+                key={category} 
+                className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10"
+              >
                 <div className="grid md:grid-cols-12 gap-0">
-                  <div className="md:col-span-4 relative h-[200px] md:h-full">
+                  <div className={`md:col-span-6 relative h-[200px] md:h-[500px] ${index % 2 === 0 ? 'md:order-1' : 'md:order-2'}`}>
                     <img 
                       src={categoryImages[category as keyof typeof categoryImages]}
                       alt={category}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <div className="absolute bottom-0 left-0 right-0 p-8">
                       <h2 className="text-2xl font-bold text-white capitalize">
                         {category}
                       </h2>
                     </div>
                   </div>
 
-                  <div className="md:col-span-8">
-                    <ScrollArea className="h-[400px]">
+                  <div className={`md:col-span-6 ${index % 2 === 0 ? 'md:order-2' : 'md:order-1'}`}>
+                    <ScrollArea className="h-[400px] md:h-[500px]">
                       <div className="divide-y divide-border">
                         {services.map((service) => (
                           <motion.div
@@ -142,24 +145,24 @@ export const Services: React.FC = () => {
                             initial="initial"
                             animate="animate"
                             whileHover="hover"
-                            className="p-4 flex items-center justify-between group cursor-pointer hover:bg-muted/50"
+                            className="px-8 py-5 flex items-center justify-between group cursor-pointer hover:bg-primary/5 transition-colors duration-200"
                           >
                             <div className="flex-1 min-w-0 mr-6">
-                              <div className="flex items-center gap-3">
-                                <Scissors className="h-5 w-5 text-muted-foreground" />
+                              <div className="flex items-center gap-4">
+                                <Scissors className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                                 <div>
                                   <h3 className="font-medium group-hover:text-primary transition-colors">
                                     {service.name}
                                   </h3>
-                                  <p className="text-sm text-muted-foreground mt-1">
+                                  <p className="text-sm text-muted-foreground mt-1 group-hover:text-foreground/80 transition-colors line-clamp-2">
                                     {service.description}
                                   </p>
                                   <div className="flex items-center gap-4 mt-2">
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge variant="secondary" className="text-xs group-hover:bg-primary/10 transition-colors">
                                       <Clock className="h-3 w-3 mr-1" />
                                       {service.duration} min
                                     </Badge>
-                                    <span className="text-sm font-medium">
+                                    <span className="text-sm font-medium group-hover:text-primary transition-colors">
                                       {formatCurrency(service.price)}
                                     </span>
                                   </div>
@@ -170,7 +173,7 @@ export const Services: React.FC = () => {
                             <Button 
                               variant="ghost" 
                               size="icon"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:bg-primary/10"
                               asChild
                             >
                               <motion.a
