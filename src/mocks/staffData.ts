@@ -1,4 +1,4 @@
-import { Staff } from '@/types';
+import { Staff, User } from '@/types';
 
 export const staffData: Staff[] = [
   {
@@ -10,7 +10,14 @@ export const staffData: Staff[] = [
     image: 'https://images.pexels.com/photos/1722198/pexels-photo-1722198.jpeg',
     position: 'Senior Barber',
     bio: 'James has over 10 years of experience specializing in modern and classic cuts.',
-    services: ['service-1', 'service-2', 'service-3', 'service-6'],
+    services: [
+      'service-1', // Classic Haircut
+      'service-4', // Fade Haircut
+      'service-5', // Hair & Beard Combo
+      'service-10', // Buzz Cut
+      'service-15', // Senior Haircut
+      'service-21', // Designer Fade
+    ],
     workingHours: {
       monday: [{ start: '09:00', end: '17:00' }],
       tuesday: [{ start: '09:00', end: '17:00' }],
@@ -34,7 +41,16 @@ export const staffData: Staff[] = [
     image: 'https://images.pexels.com/photos/1680172/pexels-photo-1680172.jpeg',
     position: 'Master Barber',
     bio: 'Miguel is known for his precision fades and beard styling techniques.',
-    services: ['service-1', 'service-2', 'service-4', 'service-5'],
+    services: [
+      'service-2', // Beard Trim
+      'service-3', // Hot Towel Shave
+      'service-11', // Beard Styling
+      'service-12', // Straight Razor Shave
+      'service-16', // Beard Coloring
+      'service-17', // Head Shave
+      'service-22', // Beard Wash & Treatment
+      'service-23', // Traditional Shave
+    ],
     workingHours: {
       monday: [{ start: '09:00', end: '17:00' }],
       tuesday: [{ start: '09:00', end: '17:00' }],
@@ -58,7 +74,12 @@ export const staffData: Staff[] = [
     image: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
     position: 'Style Specialist',
     bio: 'Sarah specializes in trending styles and transformative hair coloring.',
-    services: ['service-2', 'service-3', 'service-7', 'service-8'],
+    services: [
+      'service-7', // Hair Coloring
+      'service-13', // Highlights
+      'service-18', // Balayage
+      'service-24', // Root Touch-Up
+    ],
     workingHours: {
       monday: [{ start: '10:00', end: '18:00' }],
       tuesday: [{ start: '10:00', end: '18:00' }],
@@ -82,7 +103,12 @@ export const staffData: Staff[] = [
     image: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg',
     position: 'Junior Barber',
     bio: 'David brings fresh perspective with expertise in contemporary styling.',
-    services: ['service-1', 'service-2', 'service-6'],
+    services: [
+      'service-1', // Classic Haircut
+      'service-6', // Kids Haircut
+      'service-10', // Buzz Cut
+      'service-15', // Senior Haircut
+    ],
     workingHours: {
       monday: [],
       tuesday: [{ start: '09:00', end: '17:00' }],
@@ -106,7 +132,13 @@ export const staffData: Staff[] = [
     image: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg',
     position: 'Senior Stylist',
     bio: 'Olivia excels in creative cuts and styling for all hair textures.',
-    services: ['service-2', 'service-3', 'service-7', 'service-9'],
+    services: [
+      'service-8', // Deluxe Package
+      'service-9', // Hair Treatment
+      'service-14', // Keratin Treatment
+      'service-19', // Scalp Treatment
+      'service-20', // Premium Combo
+    ],
     workingHours: {
       monday: [{ start: '12:00', end: '20:00' }],
       tuesday: [{ start: '12:00', end: '20:00' }],
