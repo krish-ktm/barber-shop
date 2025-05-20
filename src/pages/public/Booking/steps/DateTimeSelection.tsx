@@ -26,6 +26,38 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
     { start: '12:00', end: '13:00' },
   ]);
 
+  // Generate a consistent random seed based on the selected date
+  const getDateSeed = (date: Date) => {
+    return date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
+  };
+
+  // Determine availability based on the time slot and selected date
+  const getSlotAvailability = (time: string) => {
+    if (!selectedDate) return false;
+
+    // Convert time to minutes for easier comparison
+    const [hours, minutes] = time.split(':').map(Number);
+    const timeInMinutes = hours * 60 + minutes;
+
+    // Make slots unavailable if they're too close to the current time
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    // If the selected date is today, make past slots unavailable
+    if (selectedDate.toDateString() === now.toDateString()) {
+      if (timeInMinutes <= currentTimeInMinutes + 30) {
+        return false;
+      }
+    }
+
+    // Use the date seed to generate consistent availability
+    const seed = getDateSeed(selectedDate);
+    const slotIndex = timeSlots.indexOf(time);
+    return (seed + slotIndex) % 3 !== 0; // Makes roughly 1/3 of slots unavailable
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -84,7 +116,7 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
             </p>
             <div className="grid grid-cols-3 gap-2">
               {timeSlots.map((time) => {
-                const isAvailable = Math.random() > 0.3; // Simulate availability
+                const isAvailable = getSlotAvailability(time);
                 return (
                   <TooltipProvider key={time}>
                     <Tooltip>
