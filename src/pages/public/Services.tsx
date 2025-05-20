@@ -90,7 +90,7 @@ export const Services: React.FC = () => {
   }, {} as Record<string, typeof serviceData>);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-background/90">
       {/* Hero Section */}
       <section className="relative h-[50vh] flex items-center justify-center overflow-hidden bg-primary">
         <motion.div 
