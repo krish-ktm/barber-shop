@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Plus, Trash, Percent } from 'lucide-react';
+import { Search, Trash, Percent } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -36,13 +36,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Customer } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 const formSchema = z.object({
   customerPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
   staffId: z.string().min(1, 'Please select a staff member'),
   services: z.array(z.object({
     serviceId: z.string().min(1, 'Please select a service'),
-    quantity: z.number().min(1, 'Quantity must be at least 1'),
   })).min(1, 'Add at least one service'),
   discountType: z.enum(['none', 'percentage', 'fixed']).default('none'),
   discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
@@ -67,11 +72,12 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   onOpenChange,
 }) => {
   const { toast } = useToast();
-  const [services, setServices] = useState([{ id: '1', serviceId: '', quantity: 1 }]);
+  const [services, setServices] = useState<Array<{ id: string; serviceId: string }>>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'new'>('search');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   // Get default active GST rate
   const defaultGstRate = gstRatesData.find(rate => rate.isActive)?.id || '';
@@ -81,7 +87,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     defaultValues: {
       customerPhone: '',
       staffId: '',
-      services: [{ serviceId: '', quantity: 1 }],
+      services: [{ serviceId: '' }],
       discountType: 'none',
       discountValue: 0,
       tipAmount: 0,
@@ -132,16 +138,37 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   const calculateSubtotal = () => {
     return services.reduce((total, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
-      return total + (selectedService?.price || 0) * service.quantity;
+      return total + (selectedService?.price || 0);
     }, 0);
   };
 
-  const handleAddService = () => {
-    setServices([...services, { id: Date.now().toString(), serviceId: '', quantity: 1 }]);
+  const handleServiceSelection = (serviceId: string) => {
+    const isSelected = services.some(s => s.serviceId === serviceId);
+    
+    if (isSelected) {
+      // Remove service if already selected
+      setServices(services.filter(s => s.serviceId !== serviceId));
+    } else {
+      // Add new service
+      setServices([...services, { id: Date.now().toString(), serviceId }]);
+    }
   };
 
-  const handleRemoveService = (index: number) => {
-    setServices(services.filter((_, i) => i !== index));
+  const getSelectedServicesCount = (category: string) => {
+    return services.filter(service => {
+      const selectedService = serviceData.find(s => s.id === service.serviceId);
+      return selectedService?.category === category;
+    }).length;
+  };
+
+  // Get unique categories from services
+  const categories = Array.from(new Set(serviceData.map(service => service.category)));
+
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -205,8 +232,8 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
         serviceId: selectedService.id,
         serviceName: selectedService.name,
         price: selectedService.price,
-        quantity: service.quantity,
-        total: selectedService.price * service.quantity
+        quantity: 1,
+        total: selectedService.price
       };
     }).filter(Boolean);
 
@@ -253,7 +280,7 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     });
     onOpenChange(false);
     form.reset();
-    setServices([{ id: '1', serviceId: '', quantity: 1 }]);
+    setServices([{ id: '1', serviceId: '' }]);
     setSelectedCustomer(null);
     setIsNewCustomer(false);
     setActiveTab('search');
@@ -448,83 +475,99 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <FormLabel>Services</FormLabel>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddService}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Service
-                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    {services.length} service{services.length !== 1 ? 's' : ''} selected
+                  </div>
                 </div>
 
-                {services.map((service, index) => (
-                  <div key={service.id} className="space-y-4">
-                    <div className="flex items-end gap-4">
-                      <div className="flex-1">
-                        <FormLabel className="text-sm">Service</FormLabel>
-                        <Select
-                          value={service.serviceId}
-                          onValueChange={(value) => {
-                            const newServices = [...services];
-                            newServices[index].serviceId = value;
-                            setServices(newServices);
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select service" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {serviceData.map((s) => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.name} - {formatCurrency(s.price)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                <div className="space-y-2">
+                  {categories.map((category) => {
+                    const selectedCount = getSelectedServicesCount(category);
+                    return (
+                      <Collapsible
+                        key={category}
+                        open={openCategories[category]}
+                        onOpenChange={() => toggleCategory(category)}
+                        className="border rounded-lg"
+                      >
+                        <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-muted/50">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              {category.charAt(0).toUpperCase() + category.slice(1)}
+                            </span>
+                            {selectedCount > 0 && (
+                              <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                                {selectedCount}
+                              </span>
+                            )}
+                          </div>
+                          {openCategories[category] ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-2">
+                          <div className="grid gap-2">
+                            {serviceData
+                              .filter(s => s.category === category)
+                              .map((s) => {
+                                const isSelected = services.some(service => service.serviceId === s.id);
+                                return (
+                                  <Button
+                                    key={s.id}
+                                    type="button"
+                                    variant={isSelected ? "default" : "outline"}
+                                    className="w-full justify-between group"
+                                    onClick={() => handleServiceSelection(s.id)}
+                                  >
+                                    <span>{s.name}</span>
+                                    <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
+                                      {formatCurrency(s.price)}
+                                    </span>
+                                  </Button>
+                                );
+                              })}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
 
-                      <div className="w-24">
-                        <FormLabel className="text-sm">Quantity</FormLabel>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={service.quantity}
-                          onChange={(e) => {
-                            const newServices = [...services];
-                            newServices[index].quantity = parseInt(e.target.value) || 1;
-                            setServices(newServices);
-                          }}
-                        />
-                      </div>
-
-                      {services.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveService(index)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    {service.serviceId && (
-                      <div className="text-sm text-right text-muted-foreground">
-                        {formatCurrency(
-                          (serviceData.find(s => s.id === service.serviceId)?.price || 0) *
-                          service.quantity
-                        )}
-                      </div>
-                    )}
-
-                    {index < services.length - 1 && (
-                      <Separator className="my-4" />
-                    )}
+                {services.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <div className="text-sm font-medium">Selected Services</div>
+                    {services.map((service) => {
+                      const selectedService = serviceData.find(s => s.id === service.serviceId);
+                      if (!selectedService) return null;
+                      
+                      return (
+                        <div key={service.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span>{selectedService.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {selectedService.category}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium">
+                              {formatCurrency(selectedService.price)}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleServiceSelection(service.serviceId)}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+                )}
               </div>
 
               <FormField
