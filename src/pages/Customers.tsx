@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import {
-  Calendar as CalendarIcon,
   Download,
   Filter,
   Plus,
@@ -40,15 +39,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatCurrency, formatPhoneNumber } from '@/utils';
-import { EditCustomerDialog } from '@/features/customers/EditCustomerDialog';
 import { AddCustomerDialog } from '@/features/customers/AddCustomerDialog';
+import { CustomerDetailsDialog } from '@/features/customers/CustomerDetailsDialog';
 
 export const Customers: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('lastVisit');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Filter and sort customers
@@ -96,16 +94,6 @@ export const Customers: React.FC = () => {
     } else {
       return { label: 'Inactive', className: 'bg-red-100 text-red-800' };
     }
-  };
-
-  const handleEditCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setShowEditDialog(true);
-  };
-
-  const handleSaveCustomer = (updatedCustomer: Partial<Customer>) => {
-    console.log('Saving customer:', updatedCustomer);
-    // In a real app, this would update the backend
   };
 
   return (
@@ -237,7 +225,7 @@ export const Customers: React.FC = () => {
                   <TableRow 
                     key={customer.id} 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleEditCustomer(customer)}
+                    onClick={() => setSelectedCustomer(customer)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -281,16 +269,15 @@ export const Customers: React.FC = () => {
         </div>
       </div>
 
-      <EditCustomerDialog
-        customer={selectedCustomer}
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        onSave={handleSaveCustomer}
-      />
-
       <AddCustomerDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+      />
+
+      <CustomerDetailsDialog
+        customer={selectedCustomer}
+        open={!!selectedCustomer}
+        onOpenChange={(open) => !open && setSelectedCustomer(null)}
       />
     </div>
   );

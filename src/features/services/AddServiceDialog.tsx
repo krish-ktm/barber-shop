@@ -83,6 +83,32 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="haircut">Haircut</SelectItem>
+                      <SelectItem value="beard">Beard</SelectItem>
+                      <SelectItem value="shave">Shave</SelectItem>
+                      <SelectItem value="color">Color</SelectItem>
+                      <SelectItem value="treatment">Treatment</SelectItem>
+                      <SelectItem value="combo">Combo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
@@ -154,32 +180,6 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="haircut">Haircut</SelectItem>
-                      <SelectItem value="beard">Beard</SelectItem>
-                      <SelectItem value="shave">Shave</SelectItem>
-                      <SelectItem value="color">Color</SelectItem>
-                      <SelectItem value="treatment">Treatment</SelectItem>
-                      <SelectItem value="combo">Combo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <DialogFooter>
               <Button type="submit">Add Service</Button>
