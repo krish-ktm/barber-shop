@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Clock, ChevronRight } from 'lucide-react';
+import { ArrowRight, Clock, ChevronRight, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { serviceData } from '@/mocks';
 import { formatCurrency } from '@/utils';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const staggerContainer = {
   animate: {
@@ -79,88 +81,92 @@ export const Services: React.FC = () => {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
-              Premium Services
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Our Services
             </h1>
-            <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              Experience luxury grooming tailored to your style
+            <p className="text-lg text-white/90 max-w-2xl mx-auto">
+              Premium grooming services tailored to your style
             </p>
+            <Button 
+              size="lg" 
+              variant="secondary"
+              className="min-w-[200px]"
+              asChild
+            >
+              <motion.a
+                href="/booking"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Book Now
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </motion.a>
+            </Button>
           </motion.div>
         </div>
       </section>
 
       {/* Services Section */}
-      <section className="py-20">
+      <section className="py-12">
         <div className="container mx-auto px-4">
           <motion.div
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-24"
+            className="space-y-8"
           >
             {Object.entries(groupedServices).map(([category, services], index) => (
-              <Card 
-                key={category} 
-                className="overflow-hidden border-none shadow-xl bg-card/80 backdrop-blur-sm"
-              >
-                <div className="grid lg:grid-cols-2 gap-0">
-                  <motion.div 
-                    className={`relative min-h-[400px] lg:min-h-[600px] ${index % 2 === 0 ? 'lg:order-1' : 'lg:order-2'}`}
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                  >
+              <Card key={category} className="overflow-hidden">
+                <div className="grid md:grid-cols-12 gap-0">
+                  <div className="md:col-span-4 relative h-[200px] md:h-full">
                     <img 
                       src={categoryImages[category as keyof typeof categoryImages]}
                       alt={category}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent lg:hidden" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6 lg:hidden">
-                      <h2 className="text-3xl font-bold text-white capitalize">
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                      <h2 className="text-2xl font-bold text-white capitalize">
                         {category}
                       </h2>
                     </div>
-                  </motion.div>
+                  </div>
 
-                  <div className={`flex flex-col ${index % 2 === 0 ? 'lg:order-2' : 'lg:order-1'}`}>
-                    <div className="p-8 hidden lg:block">
-                      <h2 className="text-3xl font-bold text-foreground capitalize mb-4">
-                        {category}
-                      </h2>
-                      <div className="w-20 h-1 bg-primary rounded-full mb-6" />
-                    </div>
-
-                    <div className="divide-y divide-border">
-                      {services.map((service) => (
-                        <motion.div
-                          key={service.id}
-                          variants={serviceRow}
-                          initial="initial"
-                          animate="animate"
-                          whileHover="hover"
-                          className="px-8 py-6 flex items-center justify-between group cursor-pointer"
-                        >
-                          <div className="flex-1 min-w-0 mr-6">
-                            <div className="flex items-center gap-3">
-                              <h3 className="text-lg font-medium text-foreground group-hover:text-primary transition-colors">
-                                {service.name}
-                              </h3>
+                  <div className="md:col-span-8">
+                    <ScrollArea className="h-[400px]">
+                      <div className="divide-y divide-border">
+                        {services.map((service) => (
+                          <motion.div
+                            key={service.id}
+                            variants={serviceRow}
+                            initial="initial"
+                            animate="animate"
+                            whileHover="hover"
+                            className="p-4 flex items-center justify-between group cursor-pointer hover:bg-muted/50"
+                          >
+                            <div className="flex-1 min-w-0 mr-6">
+                              <div className="flex items-center gap-3">
+                                <Scissors className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                  <h3 className="font-medium group-hover:text-primary transition-colors">
+                                    {service.name}
+                                  </h3>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {service.description}
+                                  </p>
+                                  <div className="flex items-center gap-4 mt-2">
+                                    <Badge variant="secondary" className="text-xs">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      {service.duration} min
+                                    </Badge>
+                                    <span className="text-sm font-medium">
+                                      {formatCurrency(service.price)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {service.description}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center gap-8">
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <Clock className="h-4 w-4 mr-2" />
-                              {service.duration} min
-                            </div>
-                            <div className="w-24 text-right font-semibold text-foreground">
-                              {formatCurrency(service.price)}
-                            </div>
+                            
                             <Button 
                               variant="ghost" 
                               size="icon"
@@ -175,10 +181,10 @@ export const Services: React.FC = () => {
                                 <ChevronRight className="h-5 w-5" />
                               </motion.a>
                             </Button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
                 </div>
               </Card>
@@ -189,7 +195,7 @@ export const Services: React.FC = () => {
 
       {/* CTA Section */}
       <motion.section 
-        className="py-24 bg-primary text-primary-foreground"
+        className="py-16 bg-primary text-primary-foreground"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -197,8 +203,8 @@ export const Services: React.FC = () => {
       >
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-4xl font-bold mb-6">
-              Experience Premium Grooming
+            <h2 className="text-3xl font-bold mb-6">
+              Ready to Experience Premium Grooming?
             </h2>
             <p className="text-lg text-primary-foreground/90 mb-8">
               Book your appointment today and elevate your style
