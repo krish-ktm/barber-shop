@@ -7,7 +7,7 @@ export const serviceData: Service[] = [
     description: 'Traditional haircut with clippers and scissors, includes neck shave.',
     price: 25,
     duration: 30, // minutes
-    category: 'haircut',
+    category: 'haircut'
   },
   {
     id: 'service-2',
@@ -15,7 +15,7 @@ export const serviceData: Service[] = [
     description: 'Precise beard trimming and shaping to maintain your style.',
     price: 15,
     duration: 15, // minutes
-    category: 'beard',
+    category: 'beard'
   },
   {
     id: 'service-3',
@@ -23,7 +23,7 @@ export const serviceData: Service[] = [
     description: 'Luxurious hot towel straight razor shave with essential oils.',
     price: 35,
     duration: 45, // minutes
-    category: 'shave',
+    category: 'shave'
   },
   {
     id: 'service-4',
@@ -31,7 +31,7 @@ export const serviceData: Service[] = [
     description: 'Specialized fade techniques from skin to any desired length.',
     price: 30,
     duration: 45, // minutes
-    category: 'haircut',
+    category: 'haircut'
   },
   {
     id: 'service-5',
@@ -39,7 +39,7 @@ export const serviceData: Service[] = [
     description: 'Complete haircut and beard trim package for the full refresh.',
     price: 40,
     duration: 60, // minutes
-    category: 'combo',
+    category: 'combo'
   },
   {
     id: 'service-6',
@@ -47,7 +47,7 @@ export const serviceData: Service[] = [
     description: 'Haircut specially for children under 12 years old.',
     price: 20,
     duration: 30, // minutes
-    category: 'haircut',
+    category: 'haircut'
   },
   {
     id: 'service-7',
@@ -55,7 +55,7 @@ export const serviceData: Service[] = [
     description: 'Professional hair coloring services using premium products.',
     price: 60,
     duration: 90, // minutes
-    category: 'color',
+    category: 'color'
   },
   {
     id: 'service-8',
@@ -63,7 +63,7 @@ export const serviceData: Service[] = [
     description: 'Premium haircut, hot towel shave, and facial treatment.',
     price: 75,
     duration: 120, // minutes
-    category: 'combo',
+    category: 'combo'
   },
   {
     id: 'service-9',
@@ -71,6 +71,6 @@ export const serviceData: Service[] = [
     description: 'Specialized treatment for damaged or thinning hair.',
     price: 45,
     duration: 60, // minutes
-    category: 'treatment',
-  },
+    category: 'treatment'
+  }
 ];
