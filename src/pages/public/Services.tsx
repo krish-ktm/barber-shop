@@ -17,10 +17,43 @@ const staggerContainer = {
   }
 };
 
-const serviceRow = {
-  initial: { opacity: 0, x: -20 },
+const cardVariants = {
+  initial: { 
+    opacity: 0,
+    y: 20
+  },
   animate: { 
-    opacity: 1, 
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: "easeOut"
+    }
+  }
+};
+
+const imageVariants = {
+  initial: { 
+    scale: 1.1,
+    opacity: 0
+  },
+  animate: { 
+    scale: 1,
+    opacity: 1,
+    transition: {
+      duration: 0.8,
+      ease: "easeOut"
+    }
+  }
+};
+
+const serviceRow = {
+  initial: { 
+    opacity: 0,
+    x: -20
+  },
+  animate: { 
+    opacity: 1,
     x: 0,
     transition: {
       type: "spring",
@@ -81,27 +114,43 @@ export const Services: React.FC = () => {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Our Services
-            </h1>
-            <p className="text-lg text-white/90 max-w-2xl mx-auto">
-              Premium grooming services tailored to your style
-            </p>
-            <Button 
-              size="lg" 
-              variant="secondary"
-              className="min-w-[200px]"
-              asChild
+            <motion.h1 
+              className="text-4xl md:text-5xl font-bold text-white mb-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <motion.a
-                href="/booking"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              Our Services
+            </motion.h1>
+            <motion.p 
+              className="text-lg text-white/90 max-w-2xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              Premium grooming services tailored to your style
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Button 
+                size="lg" 
+                variant="secondary"
+                className="min-w-[200px]"
+                asChild
               >
-                Book Now
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </motion.a>
-            </Button>
+                <motion.a
+                  href="/booking"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Book Now
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </motion.a>
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -116,81 +165,104 @@ export const Services: React.FC = () => {
             className="space-y-8"
           >
             {Object.entries(groupedServices).map(([category, services], index) => (
-              <Card 
-                key={category} 
-                className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10"
+              <motion.div
+                key={category}
+                variants={cardVariants}
+                initial="initial"
+                whileInView="animate"
+                viewport={{ once: true, margin: "-100px" }}
               >
-                <div className="grid md:grid-cols-12 gap-0">
-                  <div className={`md:col-span-6 relative h-[200px] md:h-[500px] ${index % 2 === 0 ? 'md:order-1' : 'md:order-2'}`}>
-                    <img 
-                      src={categoryImages[category as keyof typeof categoryImages]}
-                      alt={category}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-8">
-                      <h2 className="text-2xl font-bold text-white capitalize">
-                        {category}
-                      </h2>
-                    </div>
-                  </div>
+                <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10">
+                  <div className="grid md:grid-cols-12 gap-0">
+                    <motion.div 
+                      className={`md:col-span-6 relative h-[200px] md:h-[500px] ${index % 2 === 0 ? 'md:order-1' : 'md:order-2'}`}
+                      variants={imageVariants}
+                    >
+                      <img 
+                        src={categoryImages[category as keyof typeof categoryImages]}
+                        alt={category}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <motion.div 
+                        className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                      />
+                      <motion.div 
+                        className="absolute bottom-0 left-0 right-0 p-8"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                      >
+                        <h2 className="text-2xl font-bold text-white capitalize">
+                          {category}
+                        </h2>
+                      </motion.div>
+                    </motion.div>
 
-                  <div className={`md:col-span-6 ${index % 2 === 0 ? 'md:order-2' : 'md:order-1'}`}>
-                    <ScrollArea className="h-[400px] md:h-[500px]">
-                      <div className="divide-y divide-border">
-                        {services.map((service) => (
-                          <motion.div
-                            key={service.id}
-                            variants={serviceRow}
-                            initial="initial"
-                            animate="animate"
-                            whileHover="hover"
-                            className="px-8 py-5 flex items-center justify-between group cursor-pointer hover:bg-primary/5 transition-colors duration-200"
-                          >
-                            <div className="flex-1 min-w-0 mr-6">
-                              <div className="flex items-center gap-4">
-                                <Scissors className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                <div>
-                                  <h3 className="font-medium group-hover:text-primary transition-colors">
-                                    {service.name}
-                                  </h3>
-                                  <p className="text-sm text-muted-foreground mt-1 group-hover:text-foreground/80 transition-colors line-clamp-2">
-                                    {service.description}
-                                  </p>
-                                  <div className="flex items-center gap-4 mt-2">
-                                    <Badge variant="secondary" className="text-xs group-hover:bg-primary/10 transition-colors">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      {service.duration} min
-                                    </Badge>
-                                    <span className="text-sm font-medium group-hover:text-primary transition-colors">
-                                      {formatCurrency(service.price)}
-                                    </span>
+                    <div className={`md:col-span-6 ${index % 2 === 0 ? 'md:order-2' : 'md:order-1'}`}>
+                      <ScrollArea className="h-[400px] md:h-[500px]">
+                        <div className="divide-y divide-border">
+                          {services.map((service) => (
+                            <motion.div
+                              key={service.id}
+                              variants={serviceRow}
+                              initial="initial"
+                              animate="animate"
+                              whileHover="hover"
+                              className="px-8 py-5 flex items-center justify-between group cursor-pointer hover:bg-primary/5 transition-colors duration-200"
+                            >
+                              <div className="flex-1 min-w-0 mr-6">
+                                <div className="flex items-center gap-4">
+                                  <motion.div
+                                    whileHover={{ rotate: 15 }}
+                                    transition={{ type: "spring", stiffness: 300 }}
+                                  >
+                                    <Scissors className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                  </motion.div>
+                                  <div>
+                                    <h3 className="font-medium group-hover:text-primary transition-colors">
+                                      {service.name}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground mt-1 group-hover:text-foreground/80 transition-colors line-clamp-2">
+                                      {service.description}
+                                    </p>
+                                    <div className="flex items-center gap-4 mt-2">
+                                      <Badge variant="secondary" className="text-xs group-hover:bg-primary/10 transition-colors">
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        {service.duration} min
+                                      </Badge>
+                                      <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                                        {formatCurrency(service.price)}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                            
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:bg-primary/10"
-                              asChild
-                            >
-                              <motion.a
-                                href="/booking"
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
+                              
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:bg-primary/10"
+                                asChild
                               >
-                                <ChevronRight className="h-5 w-5" />
-                              </motion.a>
-                            </Button>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </ScrollArea>
+                                <motion.a
+                                  href="/booking"
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                >
+                                  <ChevronRight className="h-5 w-5" />
+                                </motion.a>
+                              </Button>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              </motion.div>
             ))}
           </motion.div>
         </div>
@@ -205,29 +277,40 @@ export const Services: React.FC = () => {
         transition={{ duration: 0.6 }}
       >
         <div className="container mx-auto px-4 text-center">
-          <div className="max-w-2xl mx-auto">
+          <motion.div 
+            className="max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
             <h2 className="text-3xl font-bold mb-6">
               Ready to Experience Premium Grooming?
             </h2>
             <p className="text-lg text-primary-foreground/90 mb-8">
               Book your appointment today and elevate your style
             </p>
-            <Button 
-              size="lg" 
-              variant="secondary"
-              className="min-w-[200px]"
-              asChild
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <motion.a
-                href="/booking"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <Button 
+                size="lg" 
+                variant="secondary"
+                className="min-w-[200px]"
+                asChild
               >
-                Book Now
-                <ArrowRight className="h-5 w-5 ml-2" />
-              </motion.a>
-            </Button>
-          </div>
+                <motion.a
+                  href="/booking"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  Book Now
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </motion.a>
+              </Button>
+            </motion.div>
+          </motion.div>
         </div>
       </motion.section>
     </div>
