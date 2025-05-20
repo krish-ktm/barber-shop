@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
-import { Save, Plus, Trash, PlusCircle, MinusCircle } from 'lucide-react';
+import { Save, Plus, Trash, Pencil } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { gstRatesData } from '@/mocks';
 import { GSTRate, GSTComponent } from '@/types';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,10 +34,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
 export const GSTSettings: React.FC = () => {
   const { toast } = useToast();
   const [gstRates, setGstRates] = useState<GSTRate[]>(gstRatesData);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedRate, setSelectedRate] = useState<GSTRate | null>(null);
+  const [newRate, setNewRate] = useState<Partial<GSTRate>>({
+    name: '',
+    components: [{ id: `comp-${Date.now()}`, name: 'GST', rate: 0 }],
+    isActive: false,
+  });
 
   // Function to calculate total rate from components
   const calculateTotalRate = (components: GSTComponent[]): number => {
@@ -33,16 +59,48 @@ export const GSTSettings: React.FC = () => {
   };
 
   const handleAddRate = () => {
-    const newRate: GSTRate = {
+    const rate: GSTRate = {
       id: Date.now().toString(),
-      name: 'New GST Rate',
-      components: [
-        { id: `comp-${Date.now()}`, name: 'GST', rate: 0 }
-      ],
-      isActive: false,
-      totalRate: 0
+      name: newRate.name || 'New GST Rate',
+      components: newRate.components || [{ id: `comp-${Date.now()}`, name: 'GST', rate: 0 }],
+      isActive: newRate.isActive || false,
+      totalRate: calculateTotalRate(newRate.components || []),
     };
-    setGstRates([...gstRates, newRate]);
+
+    setGstRates([...gstRates, rate]);
+    setNewRate({
+      name: '',
+      components: [{ id: `comp-${Date.now()}`, name: 'GST', rate: 0 }],
+      isActive: false,
+    });
+    setIsAddDialogOpen(false);
+    toast({
+      title: 'GST rate added',
+      description: 'The new GST rate has been added successfully.',
+    });
+  };
+
+  const handleEditRate = () => {
+    if (!selectedRate) return;
+
+    const updatedRates = gstRates.map(rate => {
+      if (rate.id === selectedRate.id) {
+        const updatedRate = {
+          ...selectedRate,
+          totalRate: calculateTotalRate(selectedRate.components),
+        };
+        return updatedRate;
+      }
+      return rate;
+    });
+
+    setGstRates(updatedRates);
+    setSelectedRate(null);
+    setIsEditDialogOpen(false);
+    toast({
+      title: 'GST rate updated',
+      description: 'The GST rate has been updated successfully.',
+    });
   };
 
   const handleDeleteRate = (id: string) => {
@@ -53,26 +111,21 @@ export const GSTSettings: React.FC = () => {
     });
   };
 
-  const handleUpdateRate = (id: string, field: keyof GSTRate, value: string | number | boolean | GSTComponent[]) => {
-    setGstRates(gstRates.map(rate => {
-      if (rate.id === id) {
-        const updatedRate = { ...rate, [field]: value };
-        
-        // Recalculate total rate if components were updated
-        if (field === 'components') {
-          const components = value as GSTComponent[];
-          updatedRate.totalRate = calculateTotalRate(components);
-        }
-        
-        return updatedRate;
-      }
-      return rate;
-    }));
+  const handleUpdateComponent = (rateId: string, componentId: string, field: keyof GSTComponent, value: string | number) => {
+    if (!selectedRate) return;
+
+    const updatedComponents = selectedRate.components.map(comp => 
+      comp.id === componentId ? { ...comp, [field]: value } : comp
+    );
+    
+    setSelectedRate({
+      ...selectedRate,
+      components: updatedComponents,
+    });
   };
 
-  const handleAddComponent = (rateId: string) => {
-    const rate = gstRates.find(r => r.id === rateId);
-    if (!rate) return;
+  const handleAddComponent = () => {
+    if (!selectedRate) return;
 
     const newComponent: GSTComponent = {
       id: `comp-${Date.now()}`,
@@ -80,27 +133,16 @@ export const GSTSettings: React.FC = () => {
       rate: 0
     };
 
-    const updatedComponents = [...rate.components, newComponent];
-    handleUpdateRate(rateId, 'components', updatedComponents);
+    setSelectedRate({
+      ...selectedRate,
+      components: [...selectedRate.components, newComponent],
+    });
   };
 
-  const handleUpdateComponent = (rateId: string, componentId: string, field: keyof GSTComponent, value: string | number) => {
-    const rate = gstRates.find(r => r.id === rateId);
-    if (!rate) return;
-
-    const updatedComponents = rate.components.map(comp => 
-      comp.id === componentId ? { ...comp, [field]: value } : comp
-    );
+  const handleDeleteComponent = (componentId: string) => {
+    if (!selectedRate) return;
     
-    handleUpdateRate(rateId, 'components', updatedComponents);
-  };
-
-  const handleDeleteComponent = (rateId: string, componentId: string) => {
-    const rate = gstRates.find(r => r.id === rateId);
-    if (!rate) return;
-    
-    // Don't allow deleting the last component
-    if (rate.components.length <= 1) {
+    if (selectedRate.components.length <= 1) {
       toast({
         title: 'Cannot delete component',
         description: 'A GST rate must have at least one component.',
@@ -109,12 +151,13 @@ export const GSTSettings: React.FC = () => {
       return;
     }
 
-    const updatedComponents = rate.components.filter(comp => comp.id !== componentId);
-    handleUpdateRate(rateId, 'components', updatedComponents);
+    setSelectedRate({
+      ...selectedRate,
+      components: selectedRate.components.filter(comp => comp.id !== componentId),
+    });
   };
 
   const handleSave = () => {
-    // Here you would typically save to your backend
     toast({
       title: 'Settings saved',
       description: 'GST settings have been updated successfully.',
@@ -137,143 +180,271 @@ export const GSTSettings: React.FC = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>GST Rates</CardTitle>
-            <Button onClick={handleAddRate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Rate
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {gstRates.map((rate) => (
-              <div
-                key={rate.id}
-                className="flex flex-col gap-4 p-4 border rounded-lg"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-4 flex-1">
-                    <div className="grid gap-2">
-                      <Label>Rate Name</Label>
-                      <Input
-                        value={rate.name}
-                        onChange={(e) => handleUpdateRate(rate.id, 'name', e.target.value)}
-                        placeholder="Enter rate name"
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={rate.isActive}
-                        onCheckedChange={(checked) => {
-                          // If setting this rate to active, deactivate others
-                          if (checked) {
-                            setGstRates(gstRates.map(r => ({
-                              ...r,
-                              isActive: r.id === rate.id
-                            })));
-                          } else {
-                            handleUpdateRate(rate.id, 'isActive', false);
-                          }
-                        }}
-                      />
-                      <Label>Active</Label>
-                    </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Rate
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New GST Rate</DialogTitle>
+                  <DialogDescription>
+                    Create a new GST rate with its components.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Rate Name</Label>
+                    <Input
+                      value={newRate.name}
+                      onChange={(e) => setNewRate({ ...newRate, name: e.target.value })}
+                      placeholder="Enter rate name"
+                    />
                   </div>
-
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive">
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete GST Rate</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete this GST rate? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeleteRate(rate.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Tax Components</Label>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleAddComponent(rate.id)}
+                  <div className="space-y-2">
+                    <Label>Components</Label>
+                    {newRate.components?.map((component, index) => (
+                      <div key={component.id} className="flex gap-2">
+                        <Input
+                          value={component.name}
+                          onChange={(e) => {
+                            const updatedComponents = [...(newRate.components || [])];
+                            updatedComponents[index] = {
+                              ...component,
+                              name: e.target.value,
+                            };
+                            setNewRate({ ...newRate, components: updatedComponents });
+                          }}
+                          placeholder="Component name"
+                        />
+                        <Input
+                          type="number"
+                          value={component.rate}
+                          onChange={(e) => {
+                            const updatedComponents = [...(newRate.components || [])];
+                            updatedComponents[index] = {
+                              ...component,
+                              rate: parseFloat(e.target.value) || 0,
+                            };
+                            setNewRate({ ...newRate, components: updatedComponents });
+                          }}
+                          placeholder="Rate %"
+                          className="w-24"
+                        />
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newComponent: GSTComponent = {
+                          id: `comp-${Date.now()}`,
+                          name: 'New Component',
+                          rate: 0,
+                        };
+                        setNewRate({
+                          ...newRate,
+                          components: [...(newRate.components || []), newComponent],
+                        });
+                      }}
                     >
-                      <PlusCircle className="h-3.5 w-3.5 mr-1" />
                       Add Component
                     </Button>
                   </div>
-
-                  <div className="space-y-3 mt-2">
-                    {rate.components.map((component) => (
-                      <div key={component.id} className="flex items-end gap-3 bg-muted/40 p-3 rounded-md">
-                        <div className="flex-1">
-                          <Label className="text-xs">Component Name</Label>
-                          <Input
-                            className="mt-1"
-                            value={component.name}
-                            onChange={(e) => handleUpdateComponent(rate.id, component.id, 'name', e.target.value)}
-                            placeholder="e.g., CGST, SGST"
-                          />
-                        </div>
-                        <div className="w-24">
-                          <Label className="text-xs">Rate (%)</Label>
-                          <Input
-                            className="mt-1"
-                            type="number"
-                            value={component.rate}
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value) || 0;
-                              handleUpdateComponent(rate.id, component.id, 'rate', value);
-                            }}
-                            min={0}
-                            max={100}
-                            step={0.1}
-                          />
-                        </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={newRate.isActive}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setGstRates(gstRates.map(rate => ({
+                            ...rate,
+                            isActive: false
+                          })));
+                        }
+                        setNewRate({ ...newRate, isActive: checked });
+                      }}
+                    />
+                    <Label>Active</Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAddRate}>Add Rate</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Components</TableHead>
+                <TableHead>Total Rate</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {gstRates.map((rate) => (
+                <TableRow key={rate.id}>
+                  <TableCell className="font-medium">{rate.name}</TableCell>
+                  <TableCell>
+                    {rate.components.map((comp, index) => (
+                      <div key={comp.id} className="text-sm text-muted-foreground">
+                        {comp.name}: {comp.rate}%
+                      </div>
+                    ))}
+                  </TableCell>
+                  <TableCell>{rate.totalRate}%</TableCell>
+                  <TableCell>
+                    <Badge variant={rate.isActive ? "default" : "secondary"}>
+                      {rate.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Dialog open={isEditDialogOpen && selectedRate?.id === rate.id} onOpenChange={setIsEditDialogOpen}>
+                      <DialogTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-destructive"
-                          onClick={() => handleDeleteComponent(rate.id, component.id)}
-                          disabled={rate.components.length <= 1}
+                          onClick={() => setSelectedRate(rate)}
                         >
-                          <MinusCircle className="h-4 w-4" />
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center border-t pt-3 mt-2">
-                  <span className="font-medium">Total Rate:</span>
-                  <span className="text-lg font-semibold">{rate.totalRate}%</span>
-                </div>
-              </div>
-            ))}
-
-            {gstRates.length === 0 && (
-              <div className="text-center py-6 text-muted-foreground">
-                <p>No GST rates configured</p>
-                <p className="text-sm">Add a new rate to get started</p>
-              </div>
-            )}
-          </div>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit GST Rate</DialogTitle>
+                          <DialogDescription>
+                            Modify the GST rate and its components.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label>Rate Name</Label>
+                            <Input
+                              value={selectedRate?.name}
+                              onChange={(e) => setSelectedRate(selectedRate ? {
+                                ...selectedRate,
+                                name: e.target.value,
+                              } : null)}
+                              placeholder="Enter rate name"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Components</Label>
+                            {selectedRate?.components.map((component) => (
+                              <div key={component.id} className="flex gap-2">
+                                <Input
+                                  value={component.name}
+                                  onChange={(e) => handleUpdateComponent(
+                                    rate.id,
+                                    component.id,
+                                    'name',
+                                    e.target.value
+                                  )}
+                                  placeholder="Component name"
+                                />
+                                <Input
+                                  type="number"
+                                  value={component.rate}
+                                  onChange={(e) => handleUpdateComponent(
+                                    rate.id,
+                                    component.id,
+                                    'rate',
+                                    parseFloat(e.target.value) || 0
+                                  )}
+                                  placeholder="Rate %"
+                                  className="w-24"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteComponent(component.id)}
+                                  disabled={selectedRate.components.length <= 1}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleAddComponent}
+                            >
+                              Add Component
+                            </Button>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={selectedRate?.isActive}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setGstRates(gstRates.map(r => ({
+                                    ...r,
+                                    isActive: r.id === rate.id
+                                  })));
+                                }
+                                setSelectedRate(selectedRate ? {
+                                  ...selectedRate,
+                                  isActive: checked,
+                                } : null);
+                              }}
+                            />
+                            <Label>Active</Label>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleEditRate}>Save Changes</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive">
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete GST Rate</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this GST rate? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteRate(rate.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {gstRates.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                    <p>No GST rates configured</p>
+                    <p className="text-sm">Add a new rate to get started</p>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
