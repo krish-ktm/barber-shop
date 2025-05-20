@@ -200,22 +200,26 @@ export const Home: React.FC = () => {
                 {
                   icon: Shield,
                   title: "Expert Barbers",
-                  description: "Our team of skilled professionals brings years of experience to every cut"
+                  description: "Our team of skilled professionals brings years of experience to every cut",
+                  image: "https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg"
                 },
                 {
                   icon: Gem,
                   title: "Premium Products",
-                  description: "We use only the finest grooming products for the best results"
+                  description: "We use only the finest grooming products for the best results",
+                  image: "https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg"
                 },
                 {
                   icon: Heart,
                   title: "Personalized Service",
-                  description: "Tailored grooming experience to match your unique style"
+                  description: "Tailored grooming experience to match your unique style",
+                  image: "https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg"
                 },
                 {
                   icon: BadgeCheck,
                   title: "Satisfaction Guaranteed",
-                  description: "Your satisfaction is our top priority, always"
+                  description: "Your satisfaction is our top priority, always",
+                  image: "https://images.pexels.com/photos/1813272/pexels-photo-1813272.jpeg"
                 }
               ].map((feature, index) => (
                 <motion.div
@@ -224,8 +228,16 @@ export const Home: React.FC = () => {
                   whileHover="hover"
                   viewport={{ once: true }}
                 >
-                  <Card className="h-full border-2 hover:border-primary/50 transition-colors">
-                    <CardContent className="p-6">
+                  <Card className="h-full border-2 hover:border-primary/50 transition-colors overflow-hidden">
+                    <div className="aspect-[4/3] relative overflow-hidden">
+                      <img 
+                        src={feature.image} 
+                        alt={feature.title}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+                    </div>
+                    <CardContent className="p-6 relative">
                       <div className="flex flex-col items-center text-center space-y-4">
                         <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
                           <feature.icon className="h-7 w-7 text-primary" />
@@ -240,6 +252,149 @@ export const Home: React.FC = () => {
                 </motion.div>
               ))}
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-2 gap-12 items-center"
+          >
+            <motion.div
+              variants={{
+                initial: { opacity: 0, x: -50 },
+                animate: { 
+                  opacity: 1, 
+                  x: 0,
+                  transition: {
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 20
+                  }
+                }
+              }}
+              className="relative"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  className="aspect-[4/5] relative rounded-lg overflow-hidden"
+                >
+                  <img
+                    src="https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg"
+                    alt="Barber at work"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  className="aspect-[4/5] relative rounded-lg overflow-hidden mt-8"
+                >
+                  <img
+                    src="https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg"
+                    alt="Barber tools"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </motion.div>
+              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5 }}
+                className="absolute -bottom-8 -right-8 bg-white rounded-lg shadow-xl p-6 max-w-[240px]"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Award className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">15+</div>
+                    <div className="text-sm text-muted-foreground">Years of Excellence</div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-primary" />
+                    <span className="text-sm">4.9 Average Rating</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span className="text-sm">5000+ Happy Clients</span>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            <motion.div
+              variants={{
+                initial: { opacity: 0, x: 50 },
+                animate: { 
+                  opacity: 1, 
+                  x: 0,
+                  transition: {
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 20
+                  }
+                }
+              }}
+              className="space-y-6"
+            >
+              <Badge>About Us</Badge>
+              <h2 className="text-3xl md:text-4xl font-bold leading-tight">
+                A Legacy of Excellence in
+                <span className="block">Modern Grooming</span>
+              </h2>
+              <div className="space-y-4 text-muted-foreground">
+                <p>
+                  Since 2010, Modern Cuts has been redefining the art of men's grooming. 
+                  What started as a single chair has grown into a premium destination for 
+                  discerning gentlemen who appreciate quality, style, and exceptional service.
+                </p>
+                <p>
+                  Our journey is built on a foundation of expertise, innovation, and an 
+                  unwavering commitment to client satisfaction. Every cut, every shave, 
+                  and every service is delivered with precision and personalized attention.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-6 pt-6">
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold">10+</div>
+                  <div className="text-sm text-muted-foreground">Expert Barbers</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold">15k+</div>
+                  <div className="text-sm text-muted-foreground">Haircuts Done</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold">98%</div>
+                  <div className="text-sm text-muted-foreground">Client Satisfaction</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold">12+</div>
+                  <div className="text-sm text-muted-foreground">Industry Awards</div>
+                </div>
+              </div>
+              <div className="pt-6">
+                <Button size="lg" asChild>
+                  <motion.a
+                    href="/about"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Learn More About Us
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </motion.a>
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -626,3 +781,4 @@ export const Home: React.FC = () => {
     </div>
   );
 };
+
