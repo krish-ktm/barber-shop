@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Clock, Star } from 'lucide-react';
+import { ArrowRight, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,7 +58,7 @@ export const Services: React.FC = () => {
   return (
     <div>
       {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
         {/* Background Image with Parallax Effect */}
         <motion.div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -98,63 +98,6 @@ export const Services: React.FC = () => {
             >
               Experience the art of grooming with our expert barbers
             </motion.p>
-            
-            <motion.div
-              variants={fadeIn}
-              className="flex flex-wrap gap-4 justify-center"
-            >
-              <Button 
-                size="lg" 
-                className="text-lg px-8 h-12"
-                asChild
-              >
-                <motion.a 
-                  href="#services"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  View Services
-                </motion.a>
-              </Button>
-              
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="text-lg px-8 h-12 bg-white/10 hover:bg-white/20 text-white border-white/20"
-                asChild
-              >
-                <motion.a 
-                  href="/booking"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Book Now
-                  <ArrowRight className="h-5 w-5 ml-2" />
-                </motion.a>
-              </Button>
-            </motion.div>
-
-            {/* Stats */}
-            <motion.div 
-              variants={fadeIn}
-              className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16"
-            >
-              {[
-                { value: '10+', label: 'Expert Barbers' },
-                { value: '5000+', label: 'Happy Clients' },
-                { value: '4.9', label: 'Rating' },
-                { value: '15+', label: 'Years Experience' },
-              ].map((stat, index) => (
-                <motion.div
-                  key={index}
-                  className="text-white/90"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <div className="text-3xl md:text-4xl font-bold mb-2">{stat.value}</div>
-                  <div className="text-sm md:text-base text-white/70">{stat.label}</div>
-                </motion.div>
-              ))}
-            </motion.div>
           </motion.div>
         </div>
 
@@ -174,20 +117,46 @@ export const Services: React.FC = () => {
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-16"
+            className="space-y-32"
           >
-            {Object.entries(groupedServices).map(([category, services]) => (
+            {Object.entries(groupedServices).map(([category, services], index) => (
               <motion.div 
                 key={category}
                 variants={fadeIn}
-                className="space-y-8"
+                className="grid lg:grid-cols-2 gap-12 items-center"
               >
-                <div className="flex items-center gap-4">
-                  <h2 className="text-3xl font-bold capitalize">{category}</h2>
-                  <div className="flex-1 border-t border-border" />
-                </div>
-                
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Image Section */}
+                <motion.div
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                  className={`relative h-[600px] rounded-2xl overflow-hidden ${index % 2 === 0 ? 'lg:order-1' : 'lg:order-2'}`}
+                >
+                  <img
+                    src={`https://images.pexels.com/photos/${1570807 + index}/pexels-photo-${1570807 + index}.jpeg`}
+                    alt={category}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+                    <Badge variant="outline" className="mb-4 text-lg px-6 py-2 bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                      {category}
+                    </Badge>
+                    <h2 className="text-4xl font-bold capitalize">
+                      Premium {category} Services
+                    </h2>
+                  </div>
+                </motion.div>
+
+                {/* Services List */}
+                <motion.div
+                  initial={{ opacity: 0, x: index % 2 === 0 ? 50 : -50 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                  className={`space-y-8 ${index % 2 === 0 ? 'lg:order-2' : 'lg:order-1'}`}
+                >
                   {services.map((service) => (
                     <motion.div
                       key={service.id}
@@ -197,55 +166,64 @@ export const Services: React.FC = () => {
                       whileHover="hover"
                       viewport={{ once: true }}
                     >
-                      <Card className="group h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
-                        <div className="p-6 flex flex-col h-full">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="space-y-2">
-                              <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">
-                                {service.name}
-                              </h3>
-                              <div className="flex items-center gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    className="h-4 w-4 fill-yellow-400 text-yellow-400"
-                                  />
-                                ))}
+                      <Card className="group overflow-hidden border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-xl">
+                        <div className="p-6">
+                          <div className="flex flex-col space-y-4">
+                            {/* Service Header */}
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                <h3 className="text-2xl font-semibold group-hover:text-primary transition-colors">
+                                  {service.name}
+                                </h3>
+                                <div className="flex items-center gap-4">
+                                  <Badge variant="secondary" className="text-base px-4 py-1">
+                                    {formatCurrency(service.price)}
+                                  </Badge>
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <Clock className="h-4 w-4 mr-2" />
+                                    {service.duration} min
+                                  </div>
+                                </div>
                               </div>
-                              <p className="text-muted-foreground text-sm line-clamp-2">
-                                {service.description}
-                              </p>
                             </div>
-                            <Badge variant="secondary" className="shrink-0">
-                              {formatCurrency(service.price)}
-                            </Badge>
-                          </div>
-                          
-                          <div className="mt-auto pt-4 flex items-center justify-between">
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <Clock className="h-4 w-4 mr-1" />
-                              {service.duration} min
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              asChild
-                            >
-                              <motion.a
-                                href="/booking"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+
+                            {/* Service Description */}
+                            <p className="text-muted-foreground text-base leading-relaxed">
+                              {service.description}
+                            </p>
+
+                            {/* Service Footer */}
+                            <div className="flex items-center justify-between pt-4 border-t">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-sm">
+                                  {service.category}
+                                </Badge>
+                                <Badge variant="outline" className="text-sm">
+                                  Popular
+                                </Badge>
+                              </div>
+                              <Button 
+                                variant="default" 
+                                size="sm"
+                                className="opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                asChild
                               >
-                                Book Now
-                                <ArrowRight className="h-4 w-4 ml-2" />
-                              </motion.a>
-                            </Button>
+                                <motion.a
+                                  href="/booking"
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  Book Now
+                                  <ArrowRight className="h-4 w-4 ml-2" />
+                                </motion.a>
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </Card>
                     </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </motion.div>
             ))}
           </motion.div>
@@ -254,7 +232,7 @@ export const Services: React.FC = () => {
 
       {/* CTA Section */}
       <motion.section 
-        className="py-20 bg-primary text-primary-foreground"
+        className="py-24 bg-primary text-primary-foreground"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -265,18 +243,18 @@ export const Services: React.FC = () => {
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-8"
+            className="max-w-3xl mx-auto space-y-8"
           >
             <motion.h2 
               variants={fadeIn}
-              className="text-3xl md:text-4xl font-bold mb-6"
+              className="text-4xl md:text-5xl font-bold mb-6"
             >
-              Ready to Look Your Best?
+              Ready to Transform Your Look?
             </motion.h2>
             
             <motion.p 
               variants={fadeIn}
-              className="text-primary-foreground/80 text-lg max-w-2xl mx-auto mb-8"
+              className="text-primary-foreground/80 text-xl max-w-2xl mx-auto mb-8"
             >
               Book your appointment now and experience our premium grooming services
             </motion.p>
@@ -285,7 +263,7 @@ export const Services: React.FC = () => {
               <Button 
                 size="lg" 
                 variant="secondary"
-                className="min-w-[200px]"
+                className="min-w-[250px] h-14 text-lg"
                 asChild
               >
                 <motion.a
@@ -293,8 +271,8 @@ export const Services: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Book Appointment
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  Book Your Appointment
+                  <ArrowRight className="h-5 w-5 ml-2" />
                 </motion.a>
               </Button>
             </motion.div>
