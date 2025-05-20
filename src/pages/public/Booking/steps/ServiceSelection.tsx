@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Star, BadgeCheck } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { serviceData } from '@/mocks';
 import { formatCurrency } from '@/utils';
 import { useBooking } from '../BookingContext';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface ServiceSelectionProps {
   onNext: () => void;
@@ -14,6 +19,7 @@ interface ServiceSelectionProps {
 
 export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
   const { selectedServices, setSelectedServices } = useBooking();
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   // Group services by category
   const groupedServices = serviceData.reduce((acc, service) => {
@@ -30,6 +36,17 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
         ? selectedServices.filter(s => s.id !== service.id)
         : [...selectedServices, service]
     );
+  };
+
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  const getSelectedServicesCount = (category: string) => {
+    return selectedServices.filter(service => service.category === category).length;
   };
 
   return (
@@ -56,82 +73,71 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
         }}
         initial="initial"
         animate="animate"
-        className="space-y-8"
+        className="space-y-4"
       >
-        {Object.entries(groupedServices).map(([category, services]) => (
-          <div key={category} className="space-y-4">
-            <h3 className="text-lg font-semibold capitalize">{category}</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              {services.map((service) => (
-                <motion.div
-                  key={service.id}
-                  variants={{
-                    initial: { opacity: 0, y: 20 },
-                    animate: { opacity: 1, y: 0 }
-                  }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Card
-                    className={`cursor-pointer transition-all duration-200 ${
-                      selectedServices.some(s => s.id === service.id)
-                        ? 'border-primary bg-primary/5 shadow-lg'
-                        : 'hover:border-primary/50 hover:bg-muted/50'
-                    }`}
-                    onClick={() => handleServiceToggle(service)}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h4 className="font-medium">{service.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {service.description}
-                          </p>
+        {Object.entries(groupedServices).map(([category, services]) => {
+          const selectedCount = getSelectedServicesCount(category);
+          return (
+            <Collapsible
+              key={category}
+              open={openCategories[category]}
+              onOpenChange={() => toggleCategory(category)}
+              className="border rounded-lg"
+            >
+              <CollapsibleTrigger className="flex w-full items-center justify-between p-4 hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium capitalize">
+                    {category}
+                  </span>
+                  {selectedCount > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedCount} selected
+                    </Badge>
+                  )}
+                </div>
+                {openCategories[category] ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="p-4 pt-0">
+                <div className="grid gap-2">
+                  {services.map((service) => (
+                    <motion.div
+                      key={service.id}
+                      variants={{
+                        initial: { opacity: 0, y: 20 },
+                        animate: { opacity: 1, y: 0 }
+                      }}
+                    >
+                      <Button
+                        variant={selectedServices.some(s => s.id === service.id) ? "default" : "outline"}
+                        className="w-full justify-between group"
+                        onClick={() => handleServiceToggle(service)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{service.name}</span>
+                          <span className={`text-sm ${
+                            selectedServices.some(s => s.id === service.id)
+                              ? "text-primary-foreground/80"
+                              : "text-muted-foreground"
+                          }`}>
+                            {service.duration} min
+                          </span>
                         </div>
-                        <Badge variant="secondary" className="ml-2 shrink-0">
+                        <span className={selectedServices.some(s => s.id === service.id) ? "text-primary-foreground" : "text-muted-foreground"}>
                           {formatCurrency(service.price)}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 mt-4">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4 mr-1" />
-                          {service.duration} min
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Star className="h-4 w-4 mr-1" />
-                          4.9
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <BadgeCheck className="h-4 w-4 mr-1" />
-                          Popular
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        ))}
+                        </span>
+                      </Button>
+                    </motion.div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
       </motion.div>
-
-      {selectedServices.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="sticky bottom-0 bg-background border-t p-4 mt-8"
-        >
-          <div className="flex items-center justify-between max-w-4xl mx-auto">
-            <div>
-              <div className="font-medium">Selected Services ({selectedServices.length})</div>
-              <div className="text-sm text-muted-foreground">
-                Total: {formatCurrency(selectedServices.reduce((sum, service) => sum + service.price, 0))}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
     </motion.div>
   );
 };

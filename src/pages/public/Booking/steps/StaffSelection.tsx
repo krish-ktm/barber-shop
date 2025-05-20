@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { staffData } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useBooking } from '../BookingContext';
 
@@ -54,45 +54,44 @@ export const StaffSelection: React.FC<StaffSelectionProps> = () => {
               initial: { opacity: 0, y: 20 },
               animate: { opacity: 1, y: 0 }
             }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
           >
-            <Card
-              className={`cursor-pointer transition-all duration-200 ${
-                selectedStaffId === staff.id
-                  ? 'border-primary bg-primary/5 shadow-lg'
-                  : 'hover:border-primary/50 hover:bg-muted/50'
-              }`}
+            <Button
+              variant={selectedStaffId === staff.id ? "default" : "outline"}
+              className="w-full h-auto p-4 justify-between group"
               onClick={() => setSelectedStaffId(staff.id)}
             >
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={staff.image} alt={staff.name} />
-                    <AvatarFallback>
-                      {staff.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{staff.name}</div>
-                    <div className="text-sm text-muted-foreground">{staff.position}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={staff.isAvailable ? "default" : "secondary"}>
-                        {staff.isAvailable ? 'Available' : 'Unavailable'}
-                      </Badge>
-                    </div>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={staff.image} />
+                  <AvatarFallback>
+                    {staff.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-left">
+                  <div className="font-medium">{staff.name}</div>
+                  <div className={`text-sm ${
+                    selectedStaffId === staff.id
+                      ? "text-primary-foreground/80"
+                      : "text-muted-foreground"
+                  }`}>
+                    {staff.position}
                   </div>
                 </div>
-                
-                <p className="text-sm text-muted-foreground mt-4 line-clamp-2">
-                  {staff.bio}
-                </p>
-              </CardContent>
-            </Card>
+              </div>
+              <Badge 
+                variant={selectedStaffId === staff.id ? "secondary" : "outline"}
+                className={`${
+                  selectedStaffId === staff.id 
+                    ? "bg-primary-foreground/10 text-primary-foreground" 
+                    : "text-muted-foreground"
+                }`}
+              >
+                {staff.isAvailable ? 'Available' : 'Unavailable'}
+              </Badge>
+            </Button>
           </motion.div>
         ))}
       </motion.div>
