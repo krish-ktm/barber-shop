@@ -17,6 +17,10 @@ export const staffData: Staff[] = [
       'service-10', // Buzz Cut
       'service-15', // Senior Haircut
       'service-21', // Designer Fade
+      'service-6', // Kids Haircut
+      'service-2', // Beard Trim
+      'service-11', // Beard Styling
+      'service-22', // Beard Wash & Treatment
     ],
     workingHours: {
       monday: [{ start: '09:00', end: '17:00' }],
@@ -50,6 +54,10 @@ export const staffData: Staff[] = [
       'service-17', // Head Shave
       'service-22', // Beard Wash & Treatment
       'service-23', // Traditional Shave
+      'service-5', // Hair & Beard Combo
+      'service-1', // Classic Haircut
+      'service-4', // Fade Haircut
+      'service-10', // Buzz Cut
     ],
     workingHours: {
       monday: [{ start: '09:00', end: '17:00' }],
@@ -79,6 +87,13 @@ export const staffData: Staff[] = [
       'service-13', // Highlights
       'service-18', // Balayage
       'service-24', // Root Touch-Up
+      'service-8', // Deluxe Package
+      'service-20', // Premium Combo
+      'service-9', // Hair Treatment
+      'service-14', // Keratin Treatment
+      'service-19', // Scalp Treatment
+      'service-1', // Classic Haircut
+      'service-4', // Fade Haircut
     ],
     workingHours: {
       monday: [{ start: '10:00', end: '18:00' }],
@@ -108,6 +123,11 @@ export const staffData: Staff[] = [
       'service-6', // Kids Haircut
       'service-10', // Buzz Cut
       'service-15', // Senior Haircut
+      'service-4', // Fade Haircut
+      'service-21', // Designer Fade
+      'service-2', // Beard Trim
+      'service-11', // Beard Styling
+      'service-22', // Beard Wash & Treatment
     ],
     workingHours: {
       monday: [],
@@ -121,7 +141,7 @@ export const staffData: Staff[] = [
     commissionPercentage: 35,
     totalEarnings: 18720,
     totalAppointments: 215,
-    isAvailable: false,
+    isAvailable: true,
   },
   {
     id: 'staff-5',
@@ -138,6 +158,13 @@ export const staffData: Staff[] = [
       'service-14', // Keratin Treatment
       'service-19', // Scalp Treatment
       'service-20', // Premium Combo
+      'service-7', // Hair Coloring
+      'service-13', // Highlights
+      'service-18', // Balayage
+      'service-1', // Classic Haircut
+      'service-4', // Fade Haircut
+      'service-2', // Beard Trim
+      'service-11', // Beard Styling
     ],
     workingHours: {
       monday: [{ start: '12:00', end: '20:00' }],
