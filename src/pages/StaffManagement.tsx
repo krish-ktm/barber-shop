@@ -15,24 +15,28 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { staffData } from '@/mocks';
+import { Staff } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 export const StaffManagement: React.FC = () => {
+  const [staff, setStaff] = useState<Staff[]>(staffData);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filterAvailability, setFilterAvailability] = useState<string>('all');
+  const { toast } = useToast();
 
   // Filter and sort staff
-  const filteredStaff = staffData
-    .filter(staff => {
+  const filteredStaff = staff
+    .filter(staffMember => {
       const searchLower = searchQuery.toLowerCase();
       const availabilityMatch = filterAvailability === 'all' || 
-        (filterAvailability === 'available' ? staff.isAvailable : !staff.isAvailable);
+        (filterAvailability === 'available' ? staffMember.isAvailable : !staffMember.isAvailable);
       
       return (searchQuery === '' || 
-        staff.name.toLowerCase().includes(searchLower) ||
-        staff.email.toLowerCase().includes(searchLower) ||
-        staff.phone.includes(searchQuery)) && availabilityMatch;
+        staffMember.name.toLowerCase().includes(searchLower) ||
+        staffMember.email.toLowerCase().includes(searchLower) ||
+        staffMember.phone.includes(searchQuery)) && availabilityMatch;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -51,6 +55,22 @@ export const StaffManagement: React.FC = () => {
     setSearchQuery('');
     setSortBy('name');
     setFilterAvailability('all');
+  };
+
+  const handleAddStaff = (newStaff: Staff) => {
+    setStaff(prev => [...prev, newStaff]);
+    toast({
+      title: 'Staff member added',
+      description: `${newStaff.name} has been added to your team.`,
+    });
+  };
+
+  const handleUpdateStaff = (updatedStaff: Staff) => {
+    setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
+    toast({
+      title: 'Staff profile updated',
+      description: `${updatedStaff.name}'s profile has been updated.`,
+    });
   };
 
   return (
@@ -99,8 +119,8 @@ export const StaffManagement: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Staff</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="unavailable">Unavailable</SelectItem>
+                  <SelectItem value="available">Active</SelectItem>
+                  <SelectItem value="unavailable">Inactive</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -126,13 +146,14 @@ export const StaffManagement: React.FC = () => {
             </Badge>
           </div>
 
-          <StaffList staff={filteredStaff} />
+          <StaffList staff={filteredStaff} onUpdateStaff={handleUpdateStaff} />
         </div>
       </div>
 
       <AddStaffDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+        onAdd={handleAddStaff}
       />
     </div>
   );

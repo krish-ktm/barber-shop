@@ -35,6 +35,7 @@ import { Staff } from '@/types';
 import { Switch } from '@/components/ui/switch';
 
 const formSchema = z.object({
+  id: z.string(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
@@ -45,76 +46,60 @@ const formSchema = z.object({
   isActive: z.boolean(),
 });
 
-interface AddStaffDialogProps {
+interface EditStaffDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd?: (newStaff: Staff) => void;
+  staff: Staff;
+  onUpdate: (updatedStaff: Staff) => void;
 }
 
-export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
+export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
   open,
   onOpenChange,
-  onAdd,
+  staff,
+  onUpdate,
 }) => {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
-      position: '',
-      bio: '',
-      services: [],
-      commissionPercentage: 40,
-      isActive: true,
+      id: staff?.id || '',
+      name: staff?.name || '',
+      email: staff?.email || '',
+      phone: staff?.phone || '',
+      position: staff?.position || '',
+      bio: staff?.bio || '',
+      services: staff?.services || [],
+      commissionPercentage: staff?.commissionPercentage || 0,
+      isActive: staff?.isAvailable || false,
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Create a new staff member object
-    const newStaff: Staff = {
+    // Create updated staff object (preserving other properties not in the form)
+    const updatedStaff = {
+      ...staff,
       ...values,
-      id: `staff-${Date.now()}`, // Generate a unique ID (in a real app this would be from the backend)
-      role: 'staff',
-      image: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg', // Default image
-      workingHours: {
-        monday: [],
-        tuesday: [],
-        wednesday: [],
-        thursday: [],
-        friday: [],
-        saturday: [],
-        sunday: [],
-      },
-      totalEarnings: 0,
-      totalAppointments: 0,
-      isAvailable: values.isActive, // Map isActive to isAvailable
+      isAvailable: values.isActive,
     };
-
-    if (onAdd) {
-      onAdd(newStaff);
-    } else {
-      // If no onAdd handler provided, just log
-      console.log(newStaff);
-    }
+    
+    onUpdate(updatedStaff);
     
     toast({
-      title: 'Staff member added',
-      description: 'New staff member has been added successfully.',
+      title: 'Staff profile updated',
+      description: 'Staff profile has been updated successfully.',
     });
     
     onOpenChange(false);
-    form.reset();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Add New Staff Member</DialogTitle>
+          <DialogTitle>Edit Staff Profile</DialogTitle>
           <DialogDescription>
-            Add a new staff member to your barber shop. Fill in all the required information.
+            Edit the profile information for {staff?.name}.
           </DialogDescription>
         </DialogHeader>
 
@@ -299,9 +284,9 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
         </ScrollArea>
 
         <DialogFooter className="mt-6">
-          <Button onClick={form.handleSubmit(onSubmit)}>Add Staff Member</Button>
+          <Button onClick={form.handleSubmit(onSubmit)}>Update Profile</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
+}; 
