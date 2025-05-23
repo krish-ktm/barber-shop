@@ -2,22 +2,57 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BookingProvider, useBooking } from './BookingContext';
 import { ServiceStaffTabs } from './steps/ServiceStaffTabs';
+import { SecondSelectionStep } from './steps/SecondSelectionStep';
 import { DateTimeSelection } from './steps/DateTimeSelection';
 import { CustomerDetails } from './steps/CustomerDetails';
 import { BookingConfirmation } from './steps/BookingConfirmation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Calendar, CheckCircle2, Info, Scissors } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, CheckCircle2, Info, Scissors, Users } from 'lucide-react';
 import { formatCurrency } from '@/utils';
 
 const BookingContent: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const { selectedServices, totalPrice } = useBooking();
+  const { 
+    selectedServices, 
+    totalPrice, 
+    bookingFlow, 
+    setBookingFlow,
+    setSelectedServices,
+    setSelectedStaffId,
+    setFirstSelection
+  } = useBooking();
 
   const steps = [
-    { id: 'selection', title: 'Services & Staff', icon: Scissors, component: ServiceStaffTabs },
-    { id: 'datetime', title: 'Pick Date & Time', icon: Calendar, component: DateTimeSelection },
-    { id: 'details', title: 'Your Details', icon: Info, component: CustomerDetails },
-    { id: 'confirm', title: 'Confirm', icon: CheckCircle2, component: BookingConfirmation },
+    { 
+      id: 'selection', 
+      title: 'Choose Booking Method', 
+      icon: Scissors, 
+      component: ServiceStaffTabs 
+    },
+    { 
+      id: 'second-selection', 
+      title: bookingFlow === 'service-first' ? 'Choose Staff' : 'Choose Services',
+      icon: Users, 
+      component: SecondSelectionStep 
+    },
+    { 
+      id: 'datetime', 
+      title: 'Pick Date & Time', 
+      icon: Calendar, 
+      component: DateTimeSelection 
+    },
+    { 
+      id: 'details', 
+      title: 'Your Details', 
+      icon: Info, 
+      component: CustomerDetails 
+    },
+    { 
+      id: 'confirm', 
+      title: 'Confirm', 
+      icon: CheckCircle2, 
+      component: BookingConfirmation 
+    },
   ];
 
   const CurrentStepComponent = steps[currentStep].component;
@@ -30,16 +65,19 @@ const BookingContent: React.FC = () => {
 
   const handleBack = () => {
     if (currentStep > 0) {
+      if (currentStep === 1) {
+        setBookingFlow(null);
+      }
       setCurrentStep(currentStep - 1);
     }
   };
 
   return (
-    <div className="container max-w-4xl mx-auto py-8">
+    <div className="container max-w-4xl mx-auto py-6 md:py-8 px-4 md:px-6">
       <section className="space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Book an Appointment</h1>
-          <p className="text-muted-foreground">
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold">Book an Appointment</h1>
+          <p className="text-muted-foreground text-lg">
             Schedule your next visit with us
           </p>
         </div>
@@ -117,7 +155,7 @@ const BookingContent: React.FC = () => {
         </div>
 
         {/* Mobile Step Indicator */}
-        <div className="md:hidden mb-6">
+        <div className="md:hidden mb-6 px-2">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
@@ -145,23 +183,22 @@ const BookingContent: React.FC = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="bg-card border rounded-lg p-6"
+            className="bg-card border rounded-lg p-4 sm:p-5 md:p-6"
           >
             <div className="space-y-6">
               <CurrentStepComponent onNext={handleNext} onBack={handleBack} />
 
-              <div className="flex items-center justify-between gap-4">
-                <Button
-                  variant="outline"
-                  onClick={handleBack}
-                  disabled={currentStep === 0}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
+              {currentStep > 0 && currentStep !== 1 && (
+                <div className="flex items-center justify-between gap-4 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={handleBack}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
 
-                <div className="flex items-center gap-6 flex-1 justify-end">
-                  {currentStep === 0 && selectedServices.length > 0 && (
+                  {currentStep === 1 && selectedServices.length > 0 && (
                     <div className="text-right">
                       <div className="font-medium">Selected Services ({selectedServices.length})</div>
                       <div className="text-sm text-muted-foreground">
@@ -169,23 +206,8 @@ const BookingContent: React.FC = () => {
                       </div>
                     </div>
                   )}
-
-                  {currentStep < steps.length - 1 && (
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Button 
-                        onClick={handleNext}
-                        disabled={currentStep === 0 && selectedServices.length === 0}
-                      >
-                        Next
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </motion.div>
-                  )}
                 </div>
-              </div>
+              )}
             </div>
           </motion.div>
         </div>

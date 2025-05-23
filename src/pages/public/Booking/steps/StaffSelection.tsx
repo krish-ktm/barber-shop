@@ -5,21 +5,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useBooking } from '../BookingContext';
+import { Scissors, User } from 'lucide-react';
 
-interface StaffSelectionProps {
-  onNext: () => void;
-  onBack: () => void;
-}
+export const StaffSelection: React.FC = () => {
+  const { selectedStaffId, setSelectedStaffId, selectedServices, bookingFlow } = useBooking();
 
-export const StaffSelection: React.FC<StaffSelectionProps> = () => {
-  const { selectedStaffId, setSelectedStaffId, selectedServices } = useBooking();
-
-  // Filter staff who can perform all selected services
-  const availableStaff = staffData.filter(staff =>
-    selectedServices.every(service =>
-      staff.services.includes(service.id)
-    )
-  );
+  // Filter staff by selected services if in service-first flow
+  const availableStaff = bookingFlow === 'service-first' && selectedServices.length > 0
+    ? staffData.filter(staff =>
+        selectedServices.every(service => staff.services.includes(service.id))
+      )
+    : staffData;
 
   return (
     <motion.div
@@ -34,79 +30,74 @@ export const StaffSelection: React.FC<StaffSelectionProps> = () => {
           Select a staff member for your appointment
         </p>
       </div>
-
-      <motion.div
-        variants={{
-          animate: {
-            transition: {
-              staggerChildren: 0.1
-            }
-          }
-        }}
-        initial="initial"
-        animate="animate"
-        className="grid md:grid-cols-2 gap-4"
-      >
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
         {availableStaff.map((staff) => (
-          <motion.div
+          <Button
             key={staff.id}
-            variants={{
-              initial: { opacity: 0, y: 20 },
-              animate: { opacity: 1, y: 0 }
-            }}
+            variant={selectedStaffId === staff.id ? "default" : "outline"}
+            className={`w-full h-auto p-3 text-left flex items-start gap-3 ${selectedStaffId === staff.id ? "" : "hover:border-primary/50"}`}
+            onClick={() => setSelectedStaffId(staff.id)}
           >
-            <Button
-              variant={selectedStaffId === staff.id ? "default" : "outline"}
-              className="w-full h-auto p-4 justify-between group"
-              onClick={() => setSelectedStaffId(staff.id)}
-            >
-              <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={staff.image} />
-                  <AvatarFallback>
-                    {staff.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="text-left">
-                  <div className="font-medium">{staff.name}</div>
-                  <div className={`text-sm ${
-                    selectedStaffId === staff.id
-                      ? "text-primary-foreground/80"
-                      : "text-muted-foreground"
-                  }`}>
-                    {staff.position}
-                  </div>
-                </div>
+            <Avatar className="h-12 w-12 border shrink-0 mt-0.5">
+              <AvatarImage src={staff.image} alt={staff.name} />
+              <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0 flex-1">
+              <div className="flex items-center justify-between w-full">
+                <span className={`font-medium truncate ${selectedStaffId === staff.id ? "text-primary-foreground" : ""}`}>
+                  {staff.name}
+                </span>
+                <Badge 
+                  variant={selectedStaffId === staff.id ? "outline" : "secondary"} 
+                  className={`shrink-0 ${selectedStaffId === staff.id ? "border-primary-foreground/30 text-primary-foreground" : ""}`}
+                >
+                  {staff.isAvailable ? 'Available' : 'Limited'}
+                </Badge>
               </div>
-              <Badge 
-                variant={selectedStaffId === staff.id ? "secondary" : "outline"}
-                className={`${
-                  selectedStaffId === staff.id 
-                    ? "bg-primary-foreground/10 text-primary-foreground" 
-                    : "text-muted-foreground"
-                }`}
-              >
-                {staff.isAvailable ? 'Available' : 'Unavailable'}
-              </Badge>
-            </Button>
-          </motion.div>
+              <span className={`text-xs truncate ${selectedStaffId === staff.id 
+                ? "text-primary-foreground" 
+                : "text-muted-foreground"
+              }`}>
+                {staff.position}
+              </span>
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                <Badge 
+                  variant="outline"
+                  className={`text-xs py-0 h-5 px-1.5 flex items-center gap-1 ${
+                    selectedStaffId === staff.id 
+                      ? "border-primary-foreground/30 text-primary-foreground" 
+                      : ""
+                  }`}
+                >
+                  <Scissors className="h-2.5 w-2.5" />
+                  <span>{staff.services.length}</span>
+                </Badge>
+                {selectedServices.length > 0 && bookingFlow === 'service-first' && (
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-xs ${
+                      selectedStaffId === staff.id 
+                        ? "bg-primary-foreground/20 text-primary-foreground" 
+                        : ""
+                    }`}
+                  >
+                    All selected services
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </Button>
         ))}
-      </motion.div>
+      </div>
 
       {availableStaff.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-8"
-        >
+        <div className="text-center py-8 border rounded-lg p-4">
           <p className="text-muted-foreground">
             No staff members available for the selected services.
             Please choose different services or try another time.
           </p>
-        </motion.div>
+        </div>
       )}
     </motion.div>
   );

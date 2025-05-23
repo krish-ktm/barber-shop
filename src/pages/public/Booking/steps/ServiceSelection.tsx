@@ -1,28 +1,27 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { serviceData } from '@/mocks';
-import { formatCurrency } from '@/utils';
 import { useBooking } from '../BookingContext';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Button } from '@/components/ui/button';
+import { serviceData, staffData } from '@/mocks';
+import { ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/utils';
 
-interface ServiceSelectionProps {
-  onNext: () => void;
-  onBack: () => void;
-}
-
-export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
-  const { selectedServices, setSelectedServices } = useBooking();
+export const ServiceSelection: React.FC = () => {
+  const { selectedServices, setSelectedServices, selectedStaffId, bookingFlow } = useBooking();
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
+  // Filter services based on selected staff if in staff-first flow
+  const filteredServices = bookingFlow === 'staff-first' && selectedStaffId
+    ? serviceData.filter(service => {
+        const selectedStaff = staffData.find(staff => staff.id === selectedStaffId);
+        return selectedStaff ? selectedStaff.services.includes(service.id) : false;
+      })
+    : serviceData;
+
   // Group services by category
-  const groupedServices = serviceData.reduce((acc, service) => {
+  const groupedServices = filteredServices.reduce((acc, service) => {
     if (!acc[service.category]) {
       acc[service.category] = [];
     }
@@ -63,19 +62,15 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
         </p>
       </div>
 
-      <motion.div 
-        variants={{
-          animate: {
-            transition: {
-              staggerChildren: 0.1
-            }
-          }
-        }}
-        initial="initial"
-        animate="animate"
-        className="space-y-4"
-      >
-        {Object.entries(groupedServices).map(([category, services]) => {
+      {Object.keys(groupedServices).length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            No services available for the selected staff member.
+            Please choose a different staff member.
+          </p>
+        </div>
+      ) : (
+        Object.entries(groupedServices).map(([category, services]) => {
           const selectedCount = getSelectedServicesCount(category);
           return (
             <Collapsible
@@ -86,13 +81,13 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
             >
               <CollapsibleTrigger className="flex w-full items-center justify-between p-4 hover:bg-muted/50">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium capitalize">
-                    {category}
+                  <span className="font-medium">
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
                   </span>
                   {selectedCount > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {selectedCount} selected
-                    </Badge>
+                    <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                      {selectedCount}
+                    </span>
                   )}
                 </div>
                 {openCategories[category] ? (
@@ -101,43 +96,38 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
                   <ChevronRight className="h-4 w-4" />
                 )}
               </CollapsibleTrigger>
-              <CollapsibleContent className="p-4 pt-0">
-                <div className="grid gap-2">
-                  {services.map((service) => (
-                    <motion.div
-                      key={service.id}
-                      variants={{
-                        initial: { opacity: 0, y: 20 },
-                        animate: { opacity: 1, y: 0 }
-                      }}
-                    >
+              <CollapsibleContent className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
+                  {services.map((service) => {
+                    const isSelected = selectedServices.some(s => s.id === service.id);
+                    return (
                       <Button
-                        variant={selectedServices.some(s => s.id === service.id) ? "default" : "outline"}
-                        className="w-full justify-between group"
+                        key={service.id}
+                        variant={isSelected ? "default" : "outline"}
+                        className={`w-full p-3 h-auto text-left flex flex-col ${isSelected ? "" : "hover:border-primary/50"}`}
                         onClick={() => handleServiceToggle(service)}
                       >
-                        <div className="flex items-center gap-2">
-                          <span>{service.name}</span>
-                          <span className={`text-sm ${
-                            selectedServices.some(s => s.id === service.id)
-                              ? "text-primary-foreground/80"
-                              : "text-muted-foreground"
-                          }`}>
-                            {service.duration} min
+                        <div className="flex items-start justify-between w-full">
+                          <div className="flex flex-col">
+                            <span className="font-medium truncate max-w-[180px] sm:max-w-[250px]">{service.name}</span>
+                            <div className="flex items-center gap-1 mt-1">
+                              <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="text-xs text-muted-foreground">{service.duration} min</span>
+                            </div>
+                          </div>
+                          <span className={`text-base font-medium shrink-0 ${isSelected ? "text-primary-foreground" : ""}`}>
+                            {formatCurrency(service.price)}
                           </span>
                         </div>
-                        <span className={selectedServices.some(s => s.id === service.id) ? "text-primary-foreground" : "text-muted-foreground"}>
-                          {formatCurrency(service.price)}
-                        </span>
                       </Button>
-                    </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CollapsibleContent>
             </Collapsible>
           );
-        })}
-      </motion.div>
+        })
+      )}
     </motion.div>
   );
 };
