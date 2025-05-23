@@ -28,6 +28,7 @@ import { Services as PublicServices } from './pages/public/Services';
 import { Gallery } from './pages/public/Gallery';
 import { Contact } from './pages/public/Contact';
 import { Booking } from './pages/public/Booking';
+import { Barbers } from './pages/public/Barbers';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
           <Route index element={<Home />} />
           <Route path="about" element={<About />} />
           <Route path="services" element={<PublicServices />} />
+          <Route path="barbers" element={<Barbers />} />
           <Route path="gallery" element={<Gallery />} />
           <Route path="contact" element={<Contact />} />
           <Route path="booking" element={<Booking />} />
