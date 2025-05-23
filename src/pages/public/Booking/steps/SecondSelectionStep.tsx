@@ -39,7 +39,7 @@ export const SecondSelectionStep: React.FC<SecondSelectionStepProps> = ({ onNext
             Select a staff member who can perform your chosen services
           </p>
         </div>
-        <StaffSelection />
+        <StaffSelection hideHeading={true} />
       </div>
     );
   };
@@ -53,7 +53,7 @@ export const SecondSelectionStep: React.FC<SecondSelectionStepProps> = ({ onNext
             Select services you'd like to book with your chosen staff member
           </p>
         </div>
-        <ServiceSelection />
+        <ServiceSelection hideHeading={true} />
       </div>
     );
   };

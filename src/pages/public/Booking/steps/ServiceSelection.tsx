@@ -8,7 +8,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils';
 
-export const ServiceSelection: React.FC = () => {
+interface ServiceSelectionProps {
+  hideHeading?: boolean;
+}
+
+export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading = false }) => {
   const { selectedServices, setSelectedServices, selectedStaffId, bookingFlow } = useBooking();
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
@@ -55,12 +59,14 @@ export const ServiceSelection: React.FC = () => {
       exit={{ opacity: 0 }}
       className="space-y-6"
     >
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Choose Your Services</h2>
-        <p className="text-muted-foreground">
-          Select one or more services you'd like to book
-        </p>
-      </div>
+      {!hideHeading && (
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold">Choose Your Services</h2>
+          <p className="text-muted-foreground">
+            Select one or more services you'd like to book
+          </p>
+        </div>
+      )}
 
       {Object.keys(groupedServices).length === 0 ? (
         <div className="text-center py-8">

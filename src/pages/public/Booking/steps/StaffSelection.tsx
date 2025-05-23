@@ -7,7 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { useBooking } from '../BookingContext';
 import { Scissors, User } from 'lucide-react';
 
-export const StaffSelection: React.FC = () => {
+interface StaffSelectionProps {
+  hideHeading?: boolean;
+}
+
+export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = false }) => {
   const { selectedStaffId, setSelectedStaffId, selectedServices, bookingFlow } = useBooking();
 
   // Filter staff by selected services if in service-first flow
@@ -24,12 +28,14 @@ export const StaffSelection: React.FC = () => {
       exit={{ opacity: 0 }}
       className="space-y-6"
     >
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Choose Your Barber</h2>
-        <p className="text-muted-foreground">
-          Select a staff member for your appointment
-        </p>
-      </div>
+      {!hideHeading && (
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold">Choose Your Barber</h2>
+          <p className="text-muted-foreground">
+            Select a staff member for your appointment
+          </p>
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
         {availableStaff.map((staff) => (
