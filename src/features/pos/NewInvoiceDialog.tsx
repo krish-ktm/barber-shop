@@ -73,7 +73,7 @@ const formSchema = z.object({
   discountType: z.enum(['none', 'percentage', 'fixed']).default('none'),
   discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
   tipAmount: z.number().min(0, 'Tip cannot be negative'),
-  paymentMethod: z.enum(['cash', 'card', 'mobile', 'pending']).default('cash'),
+  paymentMethod: z.enum(['cash', 'card', 'mobile']).default('cash'),
   gstRates: z.array(z.string()).min(1, 'Please select at least one GST rate'),
   notes: z.string().optional(),
 });
@@ -746,7 +746,6 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                         <SelectItem value="cash">Cash</SelectItem>
                         <SelectItem value="card">Card</SelectItem>
                         <SelectItem value="mobile">Mobile Payment</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
