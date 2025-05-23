@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,8 +39,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { staffData, serviceData } from '@/mocks';
-import { createTimeSlots } from '@/utils';
+import { createTimeSlots } from '@/utils/dates';
 import { useToast } from '@/hooks/use-toast';
+import { businessHoursData } from '@/mocks';
+import { ServicePicker } from './ServicePicker';
 
 const formSchema = z.object({
   customerName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -82,10 +84,21 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
     },
   });
 
+  // Get the formatted date for time slot creation
+  const selectedDateValue = form.watch('date');
+  const formattedDate = selectedDateValue 
+    ? format(selectedDateValue instanceof Date ? selectedDateValue : parseISO(selectedDateValue), 'yyyy-MM-dd')
+    : '';
+
   // Get available time slots
-  const timeSlots = createTimeSlots('09:00', '20:00', 30, [
-    { start: '12:00', end: '13:00' },
-  ]);
+  const timeSlots = createTimeSlots(
+    '09:00', 
+    '20:00', 
+    30, 
+    [{ start: '12:00', end: '13:00' }],
+    businessHoursData.shopClosures,
+    formattedDate
+  );
 
   // Calculate total duration and price
   const calculateTotals = () => {

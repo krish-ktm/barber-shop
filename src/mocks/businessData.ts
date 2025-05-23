@@ -1,5 +1,5 @@
 import { BusinessHours, DashboardStats, Log, RevenueData, ServicePerformance, StaffPerformance } from '@/types';
-import { format, subDays } from 'date-fns';
+import { format, subDays, addDays } from 'date-fns';
 
 // Business hours and configuration
 export const businessHoursData: BusinessHours = {
@@ -19,6 +19,28 @@ export const businessHoursData: BusinessHours = {
     },
   ],
   daysOff: [0], // Sunday
+  shopClosures: [
+    {
+      id: 'closure-1',
+      date: format(addDays(new Date(), 5), 'yyyy-MM-dd'), // 5 days from now
+      reason: 'Staff Training Day',
+      isFullDay: true
+    },
+    {
+      id: 'closure-2',
+      date: format(addDays(new Date(), 15), 'yyyy-MM-dd'), // 15 days from now
+      reason: 'Public Holiday',
+      isFullDay: true
+    },
+    {
+      id: 'closure-3',
+      date: format(addDays(new Date(), 22), 'yyyy-MM-dd'), // 22 days from now
+      reason: 'Renovation Work',
+      isFullDay: false,
+      startTime: '14:00',
+      endTime: '20:00'
+    }
+  ]
 };
 
 // Dashboard statistics

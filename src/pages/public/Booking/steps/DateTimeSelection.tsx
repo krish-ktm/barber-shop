@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
+import { format, addDays, startOfDay } from 'date-fns';
 import { Clock } from 'lucide-react';
 import { Calendar } from './Fullcalendar';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { createTimeSlots } from '@/utils';
+import { createTimeSlots, isShopClosed } from '@/utils/dates';
 import { useBooking } from '../BookingContext';
+import { businessHoursData } from '@/mocks';
 
 interface DateTimeSelectionProps {
   onNext: () => void;
@@ -22,9 +23,15 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
   const { selectedDate, setSelectedDate, selectedTime, setSelectedTime, totalDuration } = useBooking();
 
   // Get available time slots
-  const timeSlots = createTimeSlots('09:00', '20:00', 30, [
-    { start: '12:00', end: '13:00' },
-  ]);
+  const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+  const timeSlots = createTimeSlots(
+    '09:00',
+    '20:00',
+    30, 
+    [{ start: '12:00', end: '13:00' }],
+    businessHoursData.shopClosures,
+    formattedDate
+  );
 
   // Generate a consistent random seed based on the selected date
   const getDateSeed = (date: Date) => {
@@ -52,10 +59,42 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
       }
     }
 
+    // Check if the shop is closed on this date and time
+    if (isShopClosed(formattedDate, businessHoursData.shopClosures, time)) {
+      return false;
+    }
+
     // Use the date seed to generate consistent availability
     const seed = getDateSeed(selectedDate);
     const slotIndex = timeSlots.indexOf(time);
     return (seed + slotIndex) % 3 !== 0; // Makes roughly 1/3 of slots unavailable
+  };
+  
+  // Check if a date should be disabled in the calendar
+  const isDateDisabled = (date: Date) => {
+    // Disable dates in the past
+    if (date < startOfDay(new Date())) {
+      return true;
+    }
+    
+    // Disable dates too far in the future (30 days)
+    if (date > addDays(new Date(), 30)) {
+      return true;
+    }
+    
+    // Disable weekly days off (Sunday in this case)
+    const dayOfWeek = date.getDay(); // 0 is Sunday
+    if (businessHoursData.daysOff.includes(dayOfWeek)) {
+      return true;
+    }
+    
+    // Disable full-day shop closures
+    const dateStr = format(date, 'yyyy-MM-dd');
+    if (isShopClosed(dateStr, businessHoursData.shopClosures)) {
+      return true;
+    }
+    
+    return false;
   };
 
   return (
@@ -90,11 +129,7 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 className="w-full"
-                disabled={(date) => {
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  return date < today || date.getDay() === 0;
-                }}
+                disabled={isDateDisabled}
               />
             </div>
           </div>

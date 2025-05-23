@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
+import { format, isAfter, parseISO } from 'date-fns';
 import {
   Bell,
   Building2,
@@ -11,6 +11,12 @@ import {
   Settings as SettingsIcon,
   Smartphone,
   User,
+  Calendar,
+  X,
+  Clock,
+  Plus,
+  Edit,
+  Trash
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
@@ -28,6 +34,19 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { ShopClosure } from '@/types';
+import { businessHoursData } from '@/mocks';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 export const Settings: React.FC = () => {
   const { toast } = useToast();
@@ -77,12 +96,104 @@ export const Settings: React.FC = () => {
     taxRate: 7.5,
   });
 
+  // Shop Closures
+  const [shopClosures, setShopClosures] = useState<ShopClosure[]>(businessHoursData.shopClosures || []);
+  const [isClosureDialogOpen, setIsClosureDialogOpen] = useState(false);
+  const [currentClosure, setCurrentClosure] = useState<ShopClosure | null>(null);
+  const [newClosure, setNewClosure] = useState<Partial<ShopClosure>>({
+    date: format(new Date(), 'yyyy-MM-dd'),
+    reason: '',
+    isFullDay: true,
+    startTime: '09:00',
+    endTime: '17:00',
+  });
+
   const handleSave = () => {
     toast({
       title: 'Settings saved',
       description: 'Your settings have been updated successfully.',
     });
   };
+
+  const handleAddClosure = () => {
+    setCurrentClosure(null);
+    setNewClosure({
+      date: format(new Date(), 'yyyy-MM-dd'),
+      reason: '',
+      isFullDay: true,
+      startTime: '09:00',
+      endTime: '17:00',
+    });
+    setIsClosureDialogOpen(true);
+  };
+
+  const handleEditClosure = (closure: ShopClosure) => {
+    setCurrentClosure(closure);
+    setNewClosure({ ...closure });
+    setIsClosureDialogOpen(true);
+  };
+
+  const handleDeleteClosure = (closureId: string) => {
+    setShopClosures(shopClosures.filter(closure => closure.id !== closureId));
+    toast({
+      title: 'Closure deleted',
+      description: 'Shop closure date has been removed.',
+    });
+  };
+
+  const handleSaveClosure = () => {
+    if (!newClosure.date || !newClosure.reason) {
+      toast({
+        title: 'Missing information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!newClosure.isFullDay && (!newClosure.startTime || !newClosure.endTime)) {
+      toast({
+        title: 'Missing time information',
+        description: 'Please specify start and end times for partial day closures.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (currentClosure) {
+      // Edit existing closure
+      setShopClosures(
+        shopClosures.map(closure =>
+          closure.id === currentClosure.id
+            ? { ...newClosure, id: currentClosure.id } as ShopClosure
+            : closure
+        )
+      );
+      toast({
+        title: 'Closure updated',
+        description: 'Shop closure date has been updated successfully.',
+      });
+    } else {
+      // Add new closure
+      const id = `closure-${Date.now()}`;
+      setShopClosures([...shopClosures, { ...newClosure, id } as ShopClosure]);
+      toast({
+        title: 'Closure added',
+        description: 'New shop closure date has been added successfully.',
+      });
+    }
+    setIsClosureDialogOpen(false);
+  };
+
+  // Sort closures by date (closest first)
+  const sortedClosures = [...shopClosures].sort((a, b) => {
+    return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+  });
+
+  // Filter out past closures
+  const upcomingClosures = sortedClosures.filter(closure => 
+    isAfter(parseISO(closure.date), new Date())
+  );
 
   return (
     <div className="space-y-6">
@@ -113,6 +224,10 @@ export const Settings: React.FC = () => {
           <TabsTrigger value="payment">
             <CreditCard className="h-4 w-4 mr-2" />
             Payment
+          </TabsTrigger>
+          <TabsTrigger value="closures">
+            <Calendar className="h-4 w-4 mr-2" />
+            Shop Closures
           </TabsTrigger>
           <TabsTrigger value="system">
             <SettingsIcon className="h-4 w-4 mr-2" />
@@ -565,6 +680,148 @@ export const Settings: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="closures">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Shop Closure Dates</CardTitle>
+                <Button size="sm" onClick={handleAddClosure}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Closure
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {upcomingClosures.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No upcoming shop closure dates
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {upcomingClosures.map((closure) => (
+                      <div 
+                        key={closure.id} 
+                        className="border rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between space-y-3 md:space-y-0"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span className="font-medium">
+                              {format(parseISO(closure.date), 'MMM dd, yyyy')}
+                            </span>
+                            {closure.isFullDay ? (
+                              <Badge variant="secondary" className="ml-2">Full Day</Badge>
+                            ) : (
+                              <Badge variant="outline" className="ml-2">
+                                {closure.startTime} - {closure.endTime}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{closure.reason}</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={() => handleEditClosure(closure)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => handleDeleteClosure(closure.id)}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Shop Closure Dialog */}
+            <Dialog open={isClosureDialogOpen} onOpenChange={setIsClosureDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {currentClosure ? 'Edit Shop Closure' : 'Add Shop Closure'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Configure shop closure dates to prevent bookings.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="closure-date">Date</Label>
+                    <Input
+                      id="closure-date"
+                      type="date"
+                      value={newClosure.date}
+                      onChange={(e) => setNewClosure({ ...newClosure, date: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="closure-reason">Reason</Label>
+                    <Input
+                      id="closure-reason"
+                      value={newClosure.reason}
+                      onChange={(e) => setNewClosure({ ...newClosure, reason: e.target.value })}
+                      placeholder="e.g. Public Holiday, Renovation, Staff Training"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Full Day Closure</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Close the shop for the entire day
+                      </p>
+                    </div>
+                    <Switch
+                      checked={newClosure.isFullDay}
+                      onCheckedChange={(checked) => 
+                        setNewClosure({ ...newClosure, isFullDay: checked })
+                      }
+                    />
+                  </div>
+
+                  {!newClosure.isFullDay && (
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="grid gap-2">
+                        <Label htmlFor="start-time">Start Time</Label>
+                        <Input
+                          id="start-time"
+                          type="time"
+                          value={newClosure.startTime}
+                          onChange={(e) => setNewClosure({ ...newClosure, startTime: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="end-time">End Time</Label>
+                        <Input
+                          id="end-time"
+                          type="time"
+                          value={newClosure.endTime}
+                          onChange={(e) => setNewClosure({ ...newClosure, endTime: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsClosureDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSaveClosure}>
+                    {currentClosure ? 'Update' : 'Add'} Closure
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="system">

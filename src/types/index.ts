@@ -123,6 +123,15 @@ export interface Customer {
   createdAt: string; // ISO date string
 }
 
+export interface ShopClosure {
+  id: string;
+  date: string; // ISO date string
+  reason: string;
+  isFullDay: boolean;
+  startTime?: string; // format: "HH:MM", only if isFullDay is false
+  endTime?: string; // format: "HH:MM", only if isFullDay is false
+}
+
 export interface BusinessHours {
   openingTime: string; // format: "HH:MM"
   closingTime: string; // format: "HH:MM"
@@ -133,6 +142,7 @@ export interface BusinessHours {
     end: string; // format: "HH:MM"
   }[];
   daysOff: number[]; // 0 = Sunday, 6 = Saturday
+  shopClosures: ShopClosure[]; // Special closure dates
 }
 
 export interface Log {
