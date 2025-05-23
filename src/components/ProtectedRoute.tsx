@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'staff';
+  requiredRole?: 'admin' | 'staff' | 'billing';
 }
 
 export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
@@ -18,7 +18,11 @@ export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) 
   if (requiredRole && userRole !== requiredRole) {
     // Redirect admins to admin dashboard
     if (userRole === 'admin') {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+    // Redirect billing users to POS page
+    if (userRole === 'billing') {
+      return <Navigate to="/billing/pos" replace />;
     }
     // Redirect staff to staff dashboard
     if (userRole === 'staff') {

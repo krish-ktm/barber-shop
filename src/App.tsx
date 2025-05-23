@@ -21,6 +21,11 @@ import { StaffAppointments } from './pages/staff/Appointments';
 import { StaffProfile } from './pages/staff/Profile';
 import { StaffLayout } from './components/layout/StaffLayout';
 
+// Billing Routes
+import { BillingLayout } from './components/layout/BillingLayout';
+import { BillingDashboard } from './pages/billing/Dashboard';
+import { BillingPOS } from './pages/billing/POS';
+
 // Public Routes
 import { PublicLayout } from './components/layout/PublicLayout';
 import { Home } from './pages/public/Home';
@@ -86,6 +91,21 @@ function App() {
           <Route path="appointments" element={<StaffAppointments />} />
           <Route path="profile" element={<StaffProfile />} />
           <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
+        </Route>
+
+        {/* Billing Routes */}
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute requiredRole="billing">
+              <BillingLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/billing/dashboard" replace />} />
+          <Route path="dashboard" element={<BillingDashboard />} />
+          <Route path="pos" element={<BillingPOS />} />
+          <Route path="*" element={<Navigate to="/billing/pos" replace />} />
         </Route>
       </Routes>
       <Toaster />

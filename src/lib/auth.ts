@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type UserRole = 'admin' | 'staff' | null;
+export type UserRole = 'admin' | 'staff' | 'billing' | null;
 
 interface AuthState {
   isAuthenticated: boolean;

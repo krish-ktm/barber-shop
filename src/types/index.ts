@@ -1,6 +1,6 @@
 // Type definitions for the Barber Shop Management System
 
-export type UserRole = 'admin' | 'staff';
+export type UserRole = 'admin' | 'staff' | 'billing';
 
 export interface User {
   id: string;

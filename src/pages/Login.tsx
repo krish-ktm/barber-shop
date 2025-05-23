@@ -49,6 +49,8 @@ export const Login: React.FC = () => {
         navigate(from || '/admin/dashboard', { replace: true });
       } else if (userRole === 'staff') {
         navigate(from || '/staff/dashboard', { replace: true });
+      } else if (userRole === 'billing') {
+        navigate(from || '/billing/pos', { replace: true });
       }
     }
   }, [isAuthenticated, userRole, navigate, location]);
@@ -65,6 +67,12 @@ export const Login: React.FC = () => {
       toast({
         title: 'Success',
         description: 'Welcome back, Staff Member!',
+      });
+    } else if (values.email === 'billing@barbershop.com' && values.password === 'billing123') {
+      login('billing');
+      toast({
+        title: 'Success',
+        description: 'Welcome back, Billing User!',
       });
     } else {
       toast({
@@ -141,6 +149,11 @@ export const Login: React.FC = () => {
               <strong>Staff Access</strong>
               <div>Email: staff@barbershop.com</div>
               <div>Password: staff123</div>
+            </div>
+            <div className="pt-2">
+              <strong>Billing Access</strong>
+              <div>Email: billing@barbershop.com</div>
+              <div>Password: billing123</div>
             </div>
           </div>
         </CardFooter>
