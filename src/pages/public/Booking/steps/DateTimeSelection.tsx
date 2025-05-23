@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { format, addDays, startOfDay } from 'date-fns';
-import { Clock } from 'lucide-react';
+import { Clock, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Calendar } from './Fullcalendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,7 +19,7 @@ interface DateTimeSelectionProps {
   onBack: () => void;
 }
 
-export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
+export const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({ onNext, onBack }) => {
   const { selectedDate, setSelectedDate, selectedTime, setSelectedTime, totalDuration } = useBooking();
 
   // Get available time slots
@@ -96,6 +96,9 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
     
     return false;
   };
+
+  // Check if the user can proceed to the next step
+  const canProceed = selectedDate && selectedTime;
 
   return (
     <motion.div
@@ -181,6 +184,24 @@ export const DateTimeSelection: React.FC<DateTimeSelectionProps> = () => {
             </div>
           </div>
         </motion.div>
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="flex justify-between items-center pt-6 mt-6 border-t">
+        <Button 
+          variant="outline" 
+          onClick={onBack}
+          className="px-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+        </Button>
+        <Button 
+          onClick={onNext} 
+          disabled={!canProceed}
+          className="px-6"
+        >
+          Next <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
       </div>
     </motion.div>
   );
