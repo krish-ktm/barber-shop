@@ -19,6 +19,7 @@ import { ProductsPage } from '@/features/admin/products/ProductsPage';
 import { StaffDashboard } from './pages/staff/Dashboard';
 import { StaffAppointments } from './pages/staff/Appointments';
 import { StaffProfile } from './pages/staff/Profile';
+import { StaffWorkingHours } from './pages/staff/WorkingHours';
 import { StaffLayout } from './components/layout/StaffLayout';
 
 // Billing Routes
@@ -90,6 +91,7 @@ function App() {
           <Route path="dashboard" element={<StaffDashboard />} />
           <Route path="appointments" element={<StaffAppointments />} />
           <Route path="profile" element={<StaffProfile />} />
+          <Route path="working-hours" element={<StaffWorkingHours />} />
           <Route path="*" element={<Navigate to="/staff/dashboard" replace />} />
         </Route>
 

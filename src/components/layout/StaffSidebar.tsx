@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   Calendar, 
   Home,
-  User
+  User,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,11 @@ export const StaffSidebar: React.FC = () => {
       icon: <Calendar size={18} />,
       label: 'Appointments',
       href: '/staff/appointments',
+    },
+    {
+      icon: <Clock size={18} />,
+      label: 'Working Hours',
+      href: '/staff/working-hours',
     },
     {
       icon: <User size={18} />,

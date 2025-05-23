@@ -8,8 +8,10 @@ import {
   User,
   Plus,
   Trash,
-  Edit
+  Edit,
+  ExternalLink
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout';
 import { staffData } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -258,290 +260,100 @@ export const StaffProfile: React.FC = () => {
                 </Badge>
                 <Badge variant="outline">{staff.commissionPercentage}% Commission</Badge>
               </div>
-
-              <div className="w-full space-y-4">
-                <div className="flex items-center justify-between py-2 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CalendarIcon className="h-4 w-4" />
-                    <span>Member since</span>
-                  </div>
-                  <span className="text-sm">Jan 2024</span>
+              
+              <div className="grid grid-cols-2 gap-4 w-full mb-4">
+                <div className="text-center">
+                  <p className="text-2xl font-semibold">{staff.totalAppointments}</p>
+                  <p className="text-xs text-muted-foreground">Appointments</p>
                 </div>
-
-                <div className="flex items-center justify-between py-2 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Scissors className="h-4 w-4" />
-                    <span>Services</span>
-                  </div>
-                  <span className="text-sm">{staff.services.length}</span>
+                <div className="text-center">
+                  <p className="text-2xl font-semibold">
+                    {formatCurrency(staff.totalEarnings).replace('$', '')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Earnings</p>
                 </div>
-
-                <div className="flex items-center justify-between py-2 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    <span>Appointments</span>
-                  </div>
-                  <span className="text-sm">{staff.totalAppointments}</span>
-                </div>
-
-                <div className="flex items-center justify-between py-2 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <DollarSign className="h-4 w-4" />
-                    <span>Total Earnings</span>
-                  </div>
-                  <span className="text-sm">{formatCurrency(staff.totalEarnings)}</span>
+              </div>
+              
+              <div className="text-sm text-left w-full space-y-2">
+                <p className="font-medium">Services:</p>
+                <div className="flex flex-wrap gap-1">
+                  {staff.services.map((service, i) => (
+                    <Badge variant="secondary" key={i}>
+                      {service}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Profile Details */}
-        <div className="md:col-span-8 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>Phone</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>Bio</Label>
-                  <Textarea
-                    value={formData.bio}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    className="resize-none"
-                    rows={4}
-                  />
-                </div>
+        {/* Contact Information */}
+        <Card className="md:col-span-8">
+          <CardHeader>
+            <CardTitle>Contact Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Working Hours</CardTitle>
-              <CardDescription>
-                Manage your availability for appointments
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
-                {dayNames.map((day) => (
-                  <Card key={day} className="border shadow-sm overflow-hidden">
-                    <CardHeader className="bg-muted/40 p-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base capitalize">{day}</CardTitle>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => openAddDialog(day)}
-                                className="h-8 px-2"
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Add
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Add new time slot</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      {workingHours[day].length > 0 && !workingHours[day].every(slot => slot.isBreak) && (
-                        <CardDescription className="mt-1">
-                          Total: {calculateDayTotalHours(day)}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent className="p-3 max-h-[200px] overflow-y-auto">
-                      {workingHours[day].length > 0 ? (
-                        <div className="space-y-2">
-                          {workingHours[day].map((slot, index) => (
-                            <div 
-                              key={index} 
-                              className={`flex items-center justify-between p-2 rounded-md border ${slot.isBreak ? 'bg-muted/30' : 'bg-card'}`}
-                            >
-                              <div className="flex items-center flex-1 min-w-0">
-                                <Clock className={`h-4 w-4 mr-2 ${slot.isBreak ? 'text-muted-foreground' : 'text-primary'}`} />
-                                <span className="text-sm truncate">
-                                  {formatTimeSlotDisplay(slot)}
-                                  {slot.isBreak && <Badge variant="outline" className="ml-2 text-xs">Break</Badge>}
-                                </span>
-                              </div>
-                              <div className="flex items-center ml-2 flex-shrink-0">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => openEditDialog(day, slot)}
-                                  className="h-7 w-7"
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </Button>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon"
-                                      className="h-7 w-7"
-                                    >
-                                      <Trash className="h-3.5 w-3.5 text-destructive" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Time Slot</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete this time slot? This action cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDeleteTimeSlot(day, slot)}>
-                                        Delete
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground p-2 text-center bg-muted/20 rounded-md">
-                          No hours set (day off)
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+              
+              <div className="grid gap-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
               </div>
-
-              {/* Time slot dialog */}
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {isEditMode ? "Edit Time Slot" : "Add Time Slot"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Set your working hours for <span className="capitalize font-medium">{selectedDay}</span>
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Quick select:</Label>
-                      <div className="grid grid-cols-1 gap-2">
-                        {quickTimeSlots.map((preset, idx) => (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            className={`justify-start h-auto py-2 px-3 text-left ${
-                              timeSlotForm.start === preset.start && 
-                              timeSlotForm.end === preset.end && 
-                              timeSlotForm.isBreak === preset.isBreak 
-                                ? 'border-primary' 
-                                : ''
-                            }`}
-                            onClick={() => handleQuickTimeSlotSelect(preset)}
-                          >
-                            <div>
-                              <div className="font-medium">{preset.label}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {preset.isBreak ? 'Break Time' : 'Working Hours'}
-                              </div>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Custom time:</Label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="start-time" className="text-xs">Start Time</Label>
-                          <Input
-                            id="start-time"
-                            type="time"
-                            value={timeSlotForm.start}
-                            onChange={(e) => setTimeSlotForm({ ...timeSlotForm, start: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="end-time" className="text-xs">End Time</Label>
-                          <Input
-                            id="end-time"
-                            type="time"
-                            value={timeSlotForm.end}
-                            onChange={(e) => setTimeSlotForm({ ...timeSlotForm, end: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="is-break"
-                        checked={timeSlotForm.isBreak || false}
-                        onCheckedChange={(checked) => setTimeSlotForm({ ...timeSlotForm, isBreak: checked })}
-                      />
-                      <Label htmlFor="is-break">Mark as break time</Label>
-                    </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddTimeSlot}>
-                      {isEditMode ? 'Update' : 'Add'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Services</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                {staff.services.map((serviceId) => (
-                  <div
-                    key={serviceId}
-                    className="flex items-center p-3 border rounded-lg"
-                  >
-                    <Scissors className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>Service {serviceId}</span>
-                  </div>
-                ))}
+              
+              <div className="grid gap-2">
+                <Label htmlFor="bio">Biography</Label>
+                <Textarea
+                  id="bio"
+                  value={formData.bio}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  rows={4}
+                  placeholder="Tell us about yourself..."
+                />
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Working Hours Link Card */}
+        <Card className="md:col-span-12">
+          <CardHeader className="pb-4">
+            <CardTitle>Working Hours</CardTitle>
+            <CardDescription>
+              Manage your availability for appointments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <p className="text-sm">Configure your working schedule and breaks for each day of the week.</p>
+                <p className="text-sm text-muted-foreground">
+                  Your current schedule has {Object.values(staff.workingHours).flat().filter(slot => !slot.isBreak).length} time slots 
+                  across {Object.values(staff.workingHours).filter(day => day.length > 0).length} days.
+                </p>
+              </div>
+              <Button asChild>
+                <Link to="/staff/working-hours">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Manage Working Hours
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
