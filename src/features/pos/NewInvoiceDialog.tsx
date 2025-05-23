@@ -44,6 +44,26 @@ import {
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Import mock products data
+const mockProducts = [
+  {
+    id: '1',
+    name: 'Premium Hair Gel',
+    category: 'Styling',
+    price: 24.99,
+    stock: 50,
+    status: 'active',
+  },
+  {
+    id: '2',
+    name: 'Beard Oil',
+    category: 'Beard Care',
+    price: 19.99,
+    stock: 30,
+    status: 'active',
+  },
+];
+
 const formSchema = z.object({
   customerPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
   staffId: z.string().min(1, 'Please select a staff member'),
@@ -74,11 +94,13 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [services, setServices] = useState<Array<{ id: string; serviceId: string }>>([]);
+  const [products, setProducts] = useState<Array<{ id: string; productId: string; quantity: number }>>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'new'>('search');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
 
   // Get default active GST rate
   const defaultGstRate = gstRatesData.find(rate => rate.isActive)?.id || '';
@@ -137,10 +159,17 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
   };
 
   const calculateSubtotal = () => {
-    return services.reduce((total, service) => {
+    const servicesTotal = services.reduce((total, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
       return total + (selectedService?.price || 0);
     }, 0);
+
+    const productsTotal = products.reduce((sum, product) => {
+      const selectedProduct = mockProducts.find(p => p.id === product.productId);
+      return sum + ((selectedProduct?.price || 0) * product.quantity);
+    }, 0);
+
+    return servicesTotal + productsTotal;
   };
 
   const handleServiceSelection = (serviceId: string) => {
@@ -170,6 +199,32 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       ...prev,
       [category]: !prev[category]
     }));
+  };
+
+  const handleProductSelection = (productId: string) => {
+    if (!productId) return;
+    
+    // Add new product with quantity 1
+    setProducts([...products, { id: Date.now().toString(), productId, quantity: 1 }]);
+    
+    // Reset the selected product
+    setSelectedProductId('');
+  };
+
+  const handleProductQuantityChange = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      // Remove product if quantity is 0 or less
+      setProducts(products.filter(p => p.productId !== productId));
+    } else {
+      // Update quantity
+      setProducts(products.map(p => 
+        p.productId === productId ? { ...p, quantity } : p
+      ));
+    }
+  };
+
+  const handleRemoveProduct = (productId: string) => {
+    setProducts(products.filter(p => p.productId !== productId));
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -238,6 +293,20 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       };
     }).filter(Boolean);
 
+    // Format products to match InvoiceProduct type
+    const formattedProducts = products.map(product => {
+      const selectedProduct = mockProducts.find(p => p.id === product.productId);
+      if (!selectedProduct) return null;
+      
+      return {
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        quantity: product.quantity,
+        price: selectedProduct.price,
+        total: selectedProduct.price * product.quantity
+      };
+    }).filter(Boolean);
+
     // Get staff name
     const selectedStaff = staffData.find(staff => staff.id === values.staffId);
     const staffName = selectedStaff ? selectedStaff.name : '';
@@ -270,7 +339,8 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
       status: 'paid' as const,
       date: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-      services: formattedServices
+      services: formattedServices,
+      products: formattedProducts
     };
 
     console.log('Submitting invoice:', invoiceData);
@@ -281,7 +351,8 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
     });
     onOpenChange(false);
     form.reset();
-    setServices([{ id: '1', serviceId: '' }]);
+    setServices([]);
+    setProducts([]);
     setSelectedCustomer(null);
     setIsNewCustomer(false);
     setActiveTab('search');
@@ -535,6 +606,94 @@ export const NewInvoiceDialog: React.FC<NewInvoiceDialogProps> = ({
                               variant="ghost"
                               size="icon"
                               onClick={() => handleServiceSelection(service.serviceId)}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Products Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <FormLabel>Products</FormLabel>
+                  {products.length > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      {products.length} product{products.length !== 1 ? 's' : ''} selected
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Select 
+                    value={selectedProductId} 
+                    onValueChange={(value) => {
+                      handleProductSelection(value);
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Add a product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {mockProducts
+                        .filter(product => !products.some(p => p.productId === product.id))
+                        .map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} - {formatCurrency(product.price)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {products.length > 0 && (
+                  <div className="space-y-2">
+                    {products.map((product) => {
+                      const selectedProduct = mockProducts.find(p => p.id === product.productId);
+                      if (!selectedProduct) return null;
+                      
+                      return (
+                        <div key={product.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span>{selectedProduct.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {selectedProduct.category}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleProductQuantityChange(product.productId, product.quantity - 1)}
+                              >
+                                -
+                              </Button>
+                              <span className="w-6 text-center">{product.quantity}</span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleProductQuantityChange(product.productId, product.quantity + 1)}
+                              >
+                                +
+                              </Button>
+                            </div>
+                            <span className="text-sm font-medium">
+                              {formatCurrency(selectedProduct.price * product.quantity)}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveProduct(product.productId)}
                             >
                               <Trash className="h-4 w-4" />
                             </Button>

@@ -13,6 +13,7 @@ import { Login } from './pages/Login';
 import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { ProductsPage } from '@/features/admin/products/ProductsPage';
 
 // Staff Routes
 import { StaffDashboard } from './pages/staff/Dashboard';
@@ -62,6 +63,7 @@ function App() {
           <Route path="appointments" element={<AdminAppointment />} />
           <Route path="customers" element={<Customers />} />
           <Route path="services" element={<Services />} />
+          <Route path="products" element={<ProductsPage />} />
           <Route path="pos" element={<POS />} />
           <Route path="slots" element={<Slots />} />
           <Route path="reports" element={<Reports />} />
