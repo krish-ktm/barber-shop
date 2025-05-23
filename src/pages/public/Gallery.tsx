@@ -98,7 +98,7 @@ export const Gallery: React.FC = () => {
   return (
     <div>
       {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
         {/* Background Image with Parallax Effect */}
         <motion.div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"

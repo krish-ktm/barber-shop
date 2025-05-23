@@ -78,7 +78,7 @@ export const Barbers: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative py-20 bg-primary text-primary-foreground overflow-hidden">
+      <section className="relative min-h-[60vh] flex items-center justify-center bg-primary text-primary-foreground overflow-hidden">
         <motion.div 
           className="absolute inset-0 bg-[url('https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg')] bg-cover bg-fixed bg-center"
           initial={{ scale: 1.1 }}
@@ -88,7 +88,7 @@ export const Barbers: React.FC = () => {
           <div className="absolute inset-0 bg-black/70" />
         </motion.div>
         
-        <div className="container mx-auto px-4 relative">
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div
             variants={staggerContainer}
             initial="initial"

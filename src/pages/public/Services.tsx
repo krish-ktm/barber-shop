@@ -92,7 +92,7 @@ export const Services: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-background/90">
       {/* Hero Section */}
-      <section className="relative h-[50vh] flex items-center justify-center overflow-hidden bg-primary">
+      <section className="relative h-[60vh] flex items-center justify-center overflow-hidden bg-primary">
         <motion.div 
           className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg')] bg-cover bg-center bg-no-repeat"
           initial={{ scale: 1.1 }}
