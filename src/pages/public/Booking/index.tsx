@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BookingProvider, useBooking } from './BookingContext';
+import { BookingTypeSelection } from './steps/BookingTypeSelection';
 import { ServiceSelection } from './steps/ServiceSelection';
 import { StaffSelection } from './steps/StaffSelection';
 import { DateTimeSelection } from './steps/DateTimeSelection';
@@ -10,24 +11,32 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar, CheckCircle2, Info, Scissors, User } from 'lucide-react';
 import { formatCurrency } from '@/utils';
 
-const steps = [
-  { id: 'service', title: 'Choose Services', icon: Scissors, component: ServiceSelection },
-  { id: 'staff', title: 'Select Staff', icon: User, component: StaffSelection },
-  { id: 'datetime', title: 'Pick Date & Time', icon: Calendar, component: DateTimeSelection },
-  { id: 'details', title: 'Your Details', icon: Info, component: CustomerDetails },
-  { id: 'confirm', title: 'Confirm', icon: CheckCircle2, component: BookingConfirmation },
-];
-
 const BookingContent: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const { selectedServices, totalPrice } = useBooking();
+  const { selectedServices, totalPrice, bookingType } = useBooking();
+
+  const steps = [
+    { id: 'type', title: 'Booking Type', icon: Scissors, component: BookingTypeSelection },
+    ...(bookingType === 'service' 
+      ? [
+          { id: 'service', title: 'Choose Services', icon: Scissors, component: ServiceSelection },
+          { id: 'staff', title: 'Select Staff', icon: User, component: StaffSelection },
+        ]
+      : [
+          { id: 'staff', title: 'Select Staff', icon: User, component: StaffSelection },
+          { id: 'service', title: 'Choose Services', icon: Scissors, component: ServiceSelection },
+        ]
+    ),
+    { id: 'datetime', title: 'Pick Date & Time', icon: Calendar, component: DateTimeSelection },
+    { id: 'details', title: 'Your Details', icon: Info, component: CustomerDetails },
+    { id: 'confirm', title: 'Confirm', icon: CheckCircle2, component: BookingConfirmation },
+  ];
 
   const CurrentStepComponent = steps[currentStep].component;
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
-      // Scroll to top on mobile when changing steps
       if (window.innerWidth < 768) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -37,7 +46,6 @@ const BookingContent: React.FC = () => {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
-      // Scroll to top on mobile when changing steps
       if (window.innerWidth < 768) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
