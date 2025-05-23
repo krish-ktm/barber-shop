@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BookingProvider, useBooking } from './BookingContext';
 import { ServiceSelection } from './steps/ServiceSelection';
@@ -9,20 +9,27 @@ import { BookingConfirmation } from './steps/BookingConfirmation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar, CheckCircle2, Info, Scissors, User } from 'lucide-react';
 import { formatCurrency } from '@/utils';
-
-const steps = [
-  { id: 'service', title: 'Choose Services', icon: Scissors, component: ServiceSelection },
-  { id: 'staff', title: 'Select Staff', icon: User, component: StaffSelection },
-  { id: 'datetime', title: 'Pick Date & Time', icon: Calendar, component: DateTimeSelection },
-  { id: 'details', title: 'Your Details', icon: Info, component: CustomerDetails },
-  { id: 'confirm', title: 'Confirm', icon: CheckCircle2, component: BookingConfirmation },
-];
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const BookingContent: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const { selectedServices, totalPrice } = useBooking();
+  const { 
+    selectedServices, 
+    selectedStaffId,
+    totalPrice, 
+    bookingFlow, 
+    setBookingFlow,
+    setSelectedServices,
+    setSelectedStaffId
+  } = useBooking();
 
-  const CurrentStepComponent = steps[currentStep].component;
+  // Reset function for changing flow
+  const resetSelection = () => {
+    setSelectedServices([]);
+    setSelectedStaffId(null);
+    setCurrentStep(0);
+  };
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -44,6 +51,24 @@ const BookingContent: React.FC = () => {
     }
   };
 
+  const steps = bookingFlow === 'service-first' 
+    ? [
+        { id: 'service', title: 'Choose Services', icon: Scissors, component: ServiceSelection },
+        { id: 'staff', title: 'Select Staff', icon: User, component: StaffSelection },
+        { id: 'datetime', title: 'Pick Date & Time', icon: Calendar, component: DateTimeSelection },
+        { id: 'details', title: 'Your Details', icon: Info, component: CustomerDetails },
+        { id: 'confirm', title: 'Confirm', icon: CheckCircle2, component: BookingConfirmation },
+      ]
+    : [
+        { id: 'staff', title: 'Select Staff', icon: User, component: StaffSelection },
+        { id: 'service', title: 'Choose Services', icon: Scissors, component: ServiceSelection },
+        { id: 'datetime', title: 'Pick Date & Time', icon: Calendar, component: DateTimeSelection },
+        { id: 'details', title: 'Your Details', icon: Info, component: CustomerDetails },
+        { id: 'confirm', title: 'Confirm', icon: CheckCircle2, component: BookingConfirmation },
+      ];
+
+  const CurrentStepComponent = steps[currentStep].component;
+
   return (
     <div>
       {/* Hero Section */}
@@ -64,7 +89,7 @@ const BookingContent: React.FC = () => {
         <div className="relative z-10 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Book Your Appointment</h1>
           <p className="text-lg md:text-xl text-gray-200">
-            Choose your services and preferred time slot
+            Choose your preferred booking method below
           </p>
         </div>
       </motion.section>
@@ -72,6 +97,70 @@ const BookingContent: React.FC = () => {
       <section className="py-8 md:py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
+            {/* Booking Flow Selection */}
+            {currentStep === 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8"
+              >
+                <Card>
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-semibold text-center mb-4">How would you like to book?</h2>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button
+                          variant={bookingFlow === 'service-first' ? 'default' : 'outline'}
+                          className="w-full h-auto p-6 flex flex-col items-center gap-4"
+                          onClick={() => {
+                            if (bookingFlow !== 'service-first') {
+                              setBookingFlow('service-first');
+                              resetSelection();
+                            }
+                          }}
+                        >
+                          <Scissors className="h-8 w-8" />
+                          <div className="space-y-2 text-center">
+                            <div className="font-semibold">Choose Service First</div>
+                            <p className="text-sm opacity-80">
+                              Browse our services and find the perfect staff member for your needs
+                            </p>
+                          </div>
+                        </Button>
+                      </motion.div>
+
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button
+                          variant={bookingFlow === 'staff-first' ? 'default' : 'outline'}
+                          className="w-full h-auto p-6 flex flex-col items-center gap-4"
+                          onClick={() => {
+                            if (bookingFlow !== 'staff-first') {
+                              setBookingFlow('staff-first');
+                              resetSelection();
+                            }
+                          }}
+                        >
+                          <User className="h-8 w-8" />
+                          <div className="space-y-2 text-center">
+                            <div className="font-semibold">Choose Staff First</div>
+                            <p className="text-sm opacity-80">
+                              Select your preferred staff member and see their available services
+                            </p>
+                          </div>
+                        </Button>
+                      </motion.div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
             {/* Progress Steps - Mobile */}
             <div className="md:hidden mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -202,13 +291,48 @@ const BookingContent: React.FC = () => {
                   </Button>
 
                   <div className="flex items-center gap-6 flex-1 justify-end">
-                    {currentStep === 0 && selectedServices.length > 0 && (
-                      <div className="text-right">
-                        <div className="font-medium">Selected Services ({selectedServices.length})</div>
-                        <div className="text-sm text-muted-foreground">
-                          Total: {formatCurrency(totalPrice)}
-                        </div>
-                      </div>
+                    {currentStep === 0 && (
+                      bookingFlow === 'service-first' ? (
+                        selectedServices.length > 0 && (
+                          <div className="text-right">
+                            <div className="font-medium">Selected Services ({selectedServices.length})</div>
+                            <div className="text-sm text-muted-foreground">
+                              Total: {formatCurrency(totalPrice)}
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        selectedStaffId && (
+                          <div className="text-right">
+                            <div className="font-medium">Staff Selected</div>
+                            <div className="text-sm text-muted-foreground">
+                              Ready to choose services
+                            </div>
+                          </div>
+                        )
+                      )
+                    )}
+
+                    {currentStep === 1 && (
+                      bookingFlow === 'service-first' ? (
+                        selectedStaffId && (
+                          <div className="text-right">
+                            <div className="font-medium">Staff Selected</div>
+                            <div className="text-sm text-muted-foreground">
+                              Ready for date & time
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        selectedServices.length > 0 && (
+                          <div className="text-right">
+                            <div className="font-medium">Selected Services ({selectedServices.length})</div>
+                            <div className="text-sm text-muted-foreground">
+                              Total: {formatCurrency(totalPrice)}
+                            </div>
+                          </div>
+                        )
+                      )
                     )}
 
                     {currentStep < steps.length - 1 && (
@@ -218,7 +342,12 @@ const BookingContent: React.FC = () => {
                       >
                         <Button 
                           onClick={handleNext}
-                          disabled={currentStep === 0 && selectedServices.length === 0}
+                          disabled={
+                            (currentStep === 0 && bookingFlow === 'service-first' && selectedServices.length === 0) ||
+                            (currentStep === 0 && bookingFlow === 'staff-first' && !selectedStaffId) ||
+                            (currentStep === 1 && bookingFlow === 'service-first' && !selectedStaffId) ||
+                            (currentStep === 1 && bookingFlow === 'staff-first' && selectedServices.length === 0)
+                          }
                         >
                           Next
                           <ArrowRight className="h-4 w-4 ml-2" />
