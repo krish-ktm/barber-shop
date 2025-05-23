@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { Service, Staff } from '@/types';
+import { Service } from '@/types';
 
 interface BookingContextType {
   selectedServices: Service[];
@@ -14,7 +14,6 @@ interface BookingContextType {
   };
   totalDuration: number;
   totalPrice: number;
-  bookingFlow: 'service-first' | 'staff-first';
   setSelectedServices: (services: Service[]) => void;
   setSelectedStaffId: (staffId: string | null) => void;
   setSelectedDate: (date: Date | undefined) => void;
@@ -25,7 +24,6 @@ interface BookingContextType {
     phone: string;
     notes: string;
   }) => void;
-  setBookingFlow: (flow: 'service-first' | 'staff-first') => void;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -35,7 +33,6 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [bookingFlow, setBookingFlow] = useState<'service-first' | 'staff-first'>('service-first');
   const [customerDetails, setCustomerDetails] = useState({
     name: '',
     email: '',
@@ -57,13 +54,11 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         customerDetails,
         totalDuration,
         totalPrice,
-        bookingFlow,
         setSelectedServices,
         setSelectedStaffId,
         setSelectedDate,
         setSelectedTime,
         setCustomerDetails,
-        setBookingFlow,
       }}
     >
       {children}

@@ -12,16 +12,14 @@ interface StaffSelectionProps {
 }
 
 export const StaffSelection: React.FC<StaffSelectionProps> = () => {
-  const { selectedStaffId, setSelectedStaffId, selectedServices, bookingFlow } = useBooking();
+  const { selectedStaffId, setSelectedStaffId, selectedServices } = useBooking();
 
-  // Filter staff based on selected services if in service-first flow
-  const availableStaff = bookingFlow === 'service-first'
-    ? staffData.filter(staff =>
-        selectedServices.every(service =>
-          staff.services.includes(service.id)
-        )
-      )
-    : staffData;
+  // Filter staff who can perform all selected services
+  const availableStaff = staffData.filter(staff =>
+    selectedServices.every(service =>
+      staff.services.includes(service.id)
+    )
+  );
 
   return (
     <motion.div
@@ -61,7 +59,6 @@ export const StaffSelection: React.FC<StaffSelectionProps> = () => {
               variant={selectedStaffId === staff.id ? "default" : "outline"}
               className="w-full h-auto p-4 justify-between group"
               onClick={() => setSelectedStaffId(staff.id)}
-              disabled={!staff.isAvailable}
             >
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
@@ -82,11 +79,6 @@ export const StaffSelection: React.FC<StaffSelectionProps> = () => {
                   }`}>
                     {staff.position}
                   </div>
-                  {bookingFlow === 'staff-first' && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {staff.services.length} services available
-                    </div>
-                  )}
                 </div>
               </div>
               <Badge 
@@ -104,7 +96,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = () => {
         ))}
       </motion.div>
 
-      {availableStaff.length === 0 && bookingFlow === 'service-first' && (
+      {availableStaff.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

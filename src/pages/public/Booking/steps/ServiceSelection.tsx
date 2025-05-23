@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { serviceData, staffData } from '@/mocks';
+import { serviceData } from '@/mocks';
 import { formatCurrency } from '@/utils';
 import { useBooking } from '../BookingContext';
 import {
@@ -18,18 +18,11 @@ interface ServiceSelectionProps {
 }
 
 export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
-  const { selectedServices, setSelectedServices, selectedStaffId, bookingFlow } = useBooking();
+  const { selectedServices, setSelectedServices } = useBooking();
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
-  // Get available services based on selected staff if in staff-first flow
-  const availableServices = bookingFlow === 'staff-first' && selectedStaffId
-    ? serviceData.filter(service => 
-        staffData.find(staff => staff.id === selectedStaffId)?.services.includes(service.id)
-      )
-    : serviceData;
-
   // Group services by category
-  const groupedServices = availableServices.reduce((acc, service) => {
+  const groupedServices = serviceData.reduce((acc, service) => {
     if (!acc[service.category]) {
       acc[service.category] = [];
     }
@@ -66,9 +59,7 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = () => {
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold">Choose Your Services</h2>
         <p className="text-muted-foreground">
-          {bookingFlow === 'staff-first' 
-            ? `Select from services offered by your chosen staff member`
-            : 'Select one or more services you\'d like to book'}
+          Select one or more services you'd like to book
         </p>
       </div>
 
