@@ -1,10 +1,9 @@
 import React from 'react';
-import { Calendar, DollarSign, Users, Scissors } from 'lucide-react';
+import { Calendar, DollarSign, Users } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { AppointmentList } from '@/components/dashboard/AppointmentList';
 import { PerformanceTable } from '@/components/dashboard/PerformanceTable';
-import { RecentActivityList } from '@/components/dashboard/RecentActivityList';
 import { PageHeader } from '@/components/layout';
 import { formatCurrency } from '@/utils';
 
@@ -13,23 +12,29 @@ import {
   dashboardStatsData, 
   revenueData, 
   servicePerformanceData, 
-  staffPerformanceData,
-  logsData
+  staffPerformanceData
 } from '@/mocks';
 
 export const Dashboard: React.FC = () => {
+  // Get today's date as string in format 'yyyy-MM-dd'
+  const todayDateString = new Date().toISOString().split('T')[0];
+  
   // Get today's appointments
   const todayAppointments = appointmentData.filter(
-    appointment => appointment.date === new Date().toISOString().split('T')[0]
+    appointment => appointment.date === todayDateString
   );
 
-  // Upcoming appointments: future appointments sorted by date and time
+  // Upcoming appointments: future appointments sorted by date and time (excluding today)
   const upcomingAppointments = appointmentData
     .filter(appointment => {
       const appointmentDate = new Date(appointment.date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      return appointmentDate >= today && appointment.status !== 'completed' && appointment.status !== 'cancelled';
+      
+      // Check that date is future (not today) and not completed/cancelled
+      return appointmentDate > today && 
+             appointment.status !== 'completed' && 
+             appointment.status !== 'cancelled';
     })
     .sort((a, b) => {
       // First sort by date
@@ -46,21 +51,17 @@ export const Dashboard: React.FC = () => {
       const timeB = hoursB * 60 + minutesB;
       return timeA - timeB;
     })
-    .slice(0, 5);
-
-  // Recent activity logs
-  const recentLogs = [...logsData]
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 5);
+    .slice(0, 5); // Reduced to show fewer appointments
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader 
         title="Dashboard" 
         description="Overview of your barber shop business"
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Stats Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Daily Revenue"
           value={formatCurrency(dashboardStatsData.dailyRevenue)}
@@ -91,43 +92,36 @@ export const Dashboard: React.FC = () => {
         />
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <RevenueChart 
-          title="Revenue (Last 14 Days)" 
-          data={revenueData} 
-          className="lg:col-span-2"
-        />
+      {/* Appointments Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AppointmentList 
           title="Today's Appointments" 
           appointments={todayAppointments}
         />
+        <AppointmentList
+          title="Upcoming Appointments"
+          appointments={upcomingAppointments}
+        />
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-1">
-          <AppointmentList
-            title="Upcoming Appointments"
-            appointments={upcomingAppointments}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <RecentActivityList
-            title="Recent Activity"
-            logs={recentLogs}
-          />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts and Performance Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <RevenueChart 
+          title="Revenue (Last 14 Days)" 
+          data={revenueData} 
+          className="lg:col-span-6"
+        />
         <PerformanceTable
           title="Top Services"
           data={servicePerformanceData.slice(0, 5)}
           type="service"
+          className="lg:col-span-3"
         />
         <PerformanceTable
           title="Staff Performance"
-          data={staffPerformanceData}
+          data={staffPerformanceData.slice(0, 3)}
           type="staff"
+          className="lg:col-span-3"
         />
       </div>
     </div>
