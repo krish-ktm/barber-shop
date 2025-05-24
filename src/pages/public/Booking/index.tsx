@@ -17,9 +17,10 @@ const BookingContent: React.FC = () => {
     totalPrice, 
     bookingFlow, 
     setBookingFlow,
-    setSelectedServices,
-    setSelectedStaffId,
-    setFirstSelection
+    selectedStaffId,
+    selectedDate,
+    selectedTime,
+    customerDetails
   } = useBooking();
 
   const steps = [
@@ -27,7 +28,7 @@ const BookingContent: React.FC = () => {
       id: 'selection', 
       title: 'Choose Booking Method', 
       icon: Scissors, 
-      component: ServiceStaffTabs 
+      component: ServiceStaffTabs
     },
     { 
       id: 'second-selection', 
@@ -72,8 +73,51 @@ const BookingContent: React.FC = () => {
     }
   };
 
+  // Determine if we can proceed to next step based on current step
+  const canProceed = () => {
+    switch(currentStep) {
+      case 0: // ServiceStaffTabs
+        return (bookingFlow === 'service-first' && selectedServices.length > 0) ||
+               (bookingFlow === 'staff-first' && selectedStaffId);
+      case 1: // SecondSelectionStep
+        return (bookingFlow === 'service-first' && selectedStaffId) ||
+               (bookingFlow === 'staff-first' && selectedServices.length > 0);
+      case 2: // DateTimeSelection
+        return selectedDate && selectedTime;
+      case 3: // CustomerDetails
+        return customerDetails.name.trim() !== '' && customerDetails.phone.trim() !== '';
+      case 4: // BookingConfirmation
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  // Get summary text for selected booking details
+  const getBookingSummary = () => {
+    const summary = [];
+    
+    if (selectedServices.length > 0) {
+      summary.push(`${selectedServices.length} service${selectedServices.length > 1 ? 's' : ''}`);
+    }
+    
+    if (selectedStaffId) {
+      summary.push('1 staff');
+    }
+    
+    if (selectedDate && selectedTime) {
+      summary.push('appointment time');
+    }
+    
+    if (summary.length === 0) {
+      return "No selections yet";
+    }
+    
+    return summary.join(', ') + (totalPrice > 0 ? ` · ${formatCurrency(totalPrice)}` : '');
+  };
+
   return (
-    <div className="container max-w-4xl mx-auto py-6 md:py-8 px-4 md:px-6">
+    <div className="container max-w-4xl mx-auto py-6 md:py-8 px-4 md:px-6 pb-24">
       <section className="space-y-6">
         <div className="space-y-2 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold">Book an Appointment</h1>
@@ -186,32 +230,51 @@ const BookingContent: React.FC = () => {
             className="bg-card border rounded-lg p-4 sm:p-5 md:p-6"
           >
             <div className="space-y-6">
-              <CurrentStepComponent onNext={handleNext} onBack={handleBack} />
-
-              {currentStep > 0 && currentStep !== 1 && (
-                <div className="flex items-center justify-between gap-4 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={handleBack}
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
-
-                  {currentStep === 1 && selectedServices.length > 0 && (
-                    <div className="text-right">
-                      <div className="font-medium">Selected Services ({selectedServices.length})</div>
-                      <div className="text-sm text-muted-foreground">
-                        Total: {formatCurrency(totalPrice)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              <CurrentStepComponent />
             </div>
           </motion.div>
         </div>
       </section>
+
+      {/* Sticky Navigation Footer */}
+      {currentStep < steps.length - 1 && (
+        <motion.div 
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg p-4 z-50"
+        >
+          <div className="container max-w-4xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-4">
+              <div className="w-full sm:flex-1">
+                <div className="text-sm font-medium">Booking Summary</div>
+                <p className="text-muted-foreground text-sm">{getBookingSummary()}</p>
+              </div>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {currentStep > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={handleBack}
+                    className="flex-1 sm:flex-initial"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                )}
+                
+                <Button 
+                  onClick={handleNext}
+                  disabled={!canProceed()}
+                  className="flex-1 sm:flex-initial"
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };

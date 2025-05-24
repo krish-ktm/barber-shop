@@ -2,20 +2,10 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useBooking } from '../BookingContext';
 
-interface CustomerDetailsProps {
-  onNext: () => void;
-  onBack: () => void;
-}
-
-export const CustomerDetails: React.FC<CustomerDetailsProps> = ({ onNext, onBack }) => {
+export const CustomerDetails: React.FC = () => {
   const { customerDetails, setCustomerDetails } = useBooking();
-
-  // Check if required fields are filled to enable next button
-  const canProceed = customerDetails.name.trim() !== '' && customerDetails.phone.trim() !== '';
 
   return (
     <motion.div
@@ -114,24 +104,6 @@ export const CustomerDetails: React.FC<CustomerDetailsProps> = ({ onNext, onBack
           />
         </motion.div>
       </motion.div>
-
-      {/* Navigation Buttons */}
-      <div className="flex justify-between items-center pt-6 mt-6 border-t">
-        <Button 
-          variant="outline" 
-          onClick={onBack}
-          className="px-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
-        </Button>
-        <Button 
-          onClick={onNext} 
-          disabled={!canProceed}
-          className="px-6"
-        >
-          Next <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
     </motion.div>
   );
 };

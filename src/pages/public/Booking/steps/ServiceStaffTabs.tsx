@@ -5,19 +5,13 @@ import { ServiceSelection } from './ServiceSelection';
 import { StaffSelection } from './StaffSelection';
 import { useBooking } from '../BookingContext';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface ServiceStaffTabsProps {
-  onNext: () => void;
-  onBack: () => void;
-}
-
-export const ServiceStaffTabs: React.FC<ServiceStaffTabsProps> = ({ onNext, onBack }) => {
+export const ServiceStaffTabs: React.FC = () => {
   const { 
     selectedServices, 
     selectedStaffId, 
-    firstSelection, 
     setFirstSelection,
     setBookingFlow,
     setSelectedServices,
@@ -56,22 +50,14 @@ export const ServiceStaffTabs: React.FC<ServiceStaffTabsProps> = ({ onNext, onBa
     setShowConfirmation(false);
   };
 
-  // Handle "Next" button click
-  const handleNext = () => {
-    // Set the booking flow based on current selection
+  // Set the booking flow when appropriate
+  useEffect(() => {
     if (activeTab === 'services' && selectedServices.length > 0) {
       setBookingFlow('service-first');
-      onNext(); // Proceed to next step
     } else if (activeTab === 'staff' && selectedStaffId) {
       setBookingFlow('staff-first');
-      onNext(); // Proceed to next step
     }
-  };
-
-  // Determine if we can proceed to next step
-  const canProceed = 
-    (activeTab === 'services' && selectedServices.length > 0) ||
-    (activeTab === 'staff' && selectedStaffId);
+  }, [activeTab, selectedServices, selectedStaffId, setBookingFlow]);
 
   return (
     <motion.div
@@ -128,16 +114,6 @@ export const ServiceStaffTabs: React.FC<ServiceStaffTabsProps> = ({ onNext, onBa
           <StaffSelection />
         </TabsContent>
       </Tabs>
-
-      <div className="flex justify-end mt-6">
-        <Button 
-          onClick={handleNext}
-          disabled={!canProceed}
-        >
-          Next Step
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
     </motion.div>
   );
 }; 

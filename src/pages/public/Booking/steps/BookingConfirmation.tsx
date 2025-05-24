@@ -3,21 +3,14 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Calendar, Clock, Scissors, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { staffData } from '@/mocks';
 import { formatCurrency } from '@/utils';
 import { useBooking } from '../BookingContext';
 import { useToast } from '@/hooks/use-toast';
 
-interface BookingConfirmationProps {
-  onNext: () => void;
-  onBack: () => void;
-}
-
-export const BookingConfirmation: React.FC<BookingConfirmationProps> = () => {
+export const BookingConfirmation: React.FC = () => {
   const { toast } = useToast();
   const {
     selectedServices,
