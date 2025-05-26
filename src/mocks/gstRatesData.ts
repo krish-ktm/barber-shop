@@ -22,32 +22,29 @@ export const gstRatesData: GSTRate[] = [
   },
   { 
     id: '3', 
-    name: 'India GST (18%)', 
+    name: 'Canada GST (5%)', 
     components: [
-      { id: 'comp-3', name: 'CGST', rate: 9 },
-      { id: 'comp-4', name: 'SGST', rate: 9 }
-    ],
-    isActive: false,
-    totalRate: 18
-  },
-  { 
-    id: '4', 
-    name: 'India GST (12%)', 
-    components: [
-      { id: 'comp-5', name: 'CGST', rate: 6 },
-      { id: 'comp-6', name: 'SGST', rate: 6 }
-    ],
-    isActive: false,
-    totalRate: 12
-  },
-  { 
-    id: '5', 
-    name: 'India GST (5%)', 
-    components: [
-      { id: 'comp-7', name: 'CGST', rate: 2.5 },
-      { id: 'comp-8', name: 'SGST', rate: 2.5 }
+      { id: 'comp-3', name: 'GST', rate: 5 }
     ],
     isActive: false,
     totalRate: 5
+  },
+  { 
+    id: '4', 
+    name: 'Canada HST - Ontario (13%)', 
+    components: [
+      { id: 'comp-5', name: 'HST', rate: 13 }
+    ],
+    isActive: false,
+    totalRate: 13
+  },
+  { 
+    id: '5', 
+    name: 'Canada HST - Nova Scotia (15%)', 
+    components: [
+      { id: 'comp-7', name: 'HST', rate: 15 }
+    ],
+    isActive: false,
+    totalRate: 15
   }
 ]; 

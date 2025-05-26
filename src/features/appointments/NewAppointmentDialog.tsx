@@ -36,7 +36,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { staffData, serviceData } from '@/mocks';
 import { createTimeSlots } from '@/utils/dates';
@@ -68,7 +67,6 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [selectedStaff, setSelectedStaff] = useState<string>('');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -126,7 +124,6 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
     onOpenChange(false);
     form.reset();
     setSelectedServices([]);
-    setSelectedStaff('');
   };
 
   return (
@@ -194,10 +191,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                     <FormItem>
                       <FormLabel>Staff Member</FormLabel>
                       <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedStaff(value);
-                        }}
+                        onValueChange={field.onChange}
                         value={field.value}
                       >
                         <FormControl>
@@ -224,30 +218,20 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Services</FormLabel>
-                      <div className="grid grid-cols-2 gap-2 border rounded-md p-4">
-                        {serviceData.map((service) => (
-                          <div key={service.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={service.id}
-                              checked={field.value.includes(service.id)}
-                              onCheckedChange={(checked) => {
-                                const value = service.id;
-                                const newServices = checked
-                                  ? [...field.value, value]
-                                  : field.value.filter((v) => v !== value);
-                                field.onChange(newServices);
-                                setSelectedServices(newServices);
-                              }}
-                            />
-                            <label
-                              htmlFor={service.id}
-                              className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {service.name} - ${service.price}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
+                      <ServicePicker
+                        selectedServices={field.value}
+                        onServiceSelect={(serviceId) => {
+                          const currentServices = field.value;
+                          const isSelected = currentServices.includes(serviceId);
+                          
+                          const newServices = isSelected 
+                            ? currentServices.filter(id => id !== serviceId)
+                            : [...currentServices, serviceId];
+                          
+                          field.onChange(newServices);
+                          setSelectedServices(newServices);
+                        }}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
