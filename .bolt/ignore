@@ -2,23 +2,27 @@ src/components/ui/*
 hooks/use-toast.ts
 
 # Admin related files
-src/pages/AdminAppointment.tsx
-src/pages/Customers.tsx
-src/pages/Dashboard.tsx
-src/pages/GSTSettings.tsx
-src/pages/Reports.tsx
-src/pages/Services.tsx
-src/pages/Settings.tsx
-src/pages/StaffManagement.tsx
-src/pages/staff/*
+# src/pages/AdminAppointment.tsx
+# src/pages/Customers.tsx
+# src/pages/Dashboard.tsx
+# src/pages/GSTSettings.tsx
+# src/pages/Reports.tsx
+# src/pages/Services.tsx
+# src/pages/Settings.tsx
+# src/pages/StaffManagement.tsx
+# src/pages/staff/*
 
 # Admin features
-src/features/customers/*
-src/features/appointments/*
-src/features/pos/*
-src/features/services/*
-src/features/staff/*
+# src/features/customers/*
+# src/features/appointments/*
+# src/features/pos/*
+# src/features/services/*
+# src/features/staff/*
 
 # Admin components
-src/components/dashboard/*
-src/components/ProtectedRoute.tsx
+# src/components/dashboard/*
+# src/components/ProtectedRoute.tsx
+
+# Public pages
+src/pages/public/*
+
