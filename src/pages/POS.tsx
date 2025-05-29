@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import {
-  Calendar as CalendarIcon,
   Download,
   Filter,
   Plus,
@@ -40,7 +39,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils';
 import { InvoiceDialog } from '@/features/pos/InvoiceDialog';
-import { NewInvoiceDialog } from '@/features/pos/NewInvoiceDialog';
+import { StepInvoiceDialog } from '@/features/pos/StepInvoiceDialog';
 
 export const POS: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -275,13 +274,15 @@ export const POS: React.FC = () => {
         </div>
       </div>
 
-      <InvoiceDialog
-        invoice={selectedInvoice}
-        open={showInvoiceDialog}
-        onOpenChange={setShowInvoiceDialog}
-      />
+      {showInvoiceDialog && selectedInvoice && (
+        <InvoiceDialog
+          invoice={selectedInvoice}
+          open={showInvoiceDialog}
+          onOpenChange={setShowInvoiceDialog}
+        />
+      )}
 
-      <NewInvoiceDialog
+      <StepInvoiceDialog
         open={showNewInvoiceDialog}
         onOpenChange={setShowNewInvoiceDialog}
       />
