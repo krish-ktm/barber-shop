@@ -2,6 +2,7 @@ import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { StaffManagement } from './pages/StaffManagement';
 import { AdminAppointment } from './pages/AdminAppointment';
+import { AdminCalendar } from './pages/AdminCalendar';
 import { Customers } from './pages/Customers';
 import { POS } from './pages/POS';
 import { Slots } from './pages/Slots';
@@ -67,6 +68,7 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="staff-management" element={<StaffManagement />} />
           <Route path="appointments" element={<AdminAppointment />} />
+          <Route path="calendar" element={<AdminCalendar />} />
           <Route path="customers" element={<Customers />} />
           <Route path="services" element={<Services />} />
           <Route path="products" element={<ProductsPage />} />

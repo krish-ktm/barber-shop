@@ -49,7 +49,7 @@ const createAppointment = (
 
 // Generate mock appointment data
 export const appointmentData: Appointment[] = [
-  // Today's appointments
+  // Today's appointments with overlaps
   createAppointment(
     'apt-1',
     'cust-1',
@@ -66,6 +66,36 @@ export const appointmentData: Appointment[] = [
     'confirmed',
     'Regular customer, prefers scissors over clippers'
   ),
+  // Same time as apt-1, different staff
+  createAppointment(
+    'apt-1a',
+    'cust-20',
+    'Alex Rodriguez',
+    '(555) 777-8888',
+    'staff-2',
+    'Miguel Rodriguez',
+    0,
+    '09:30',
+    [
+      { serviceId: 'service-3', serviceName: 'Hot Towel Shave', price: 35, duration: 45 }
+    ],
+    'scheduled'
+  ),
+  // Same time as apt-1, yet another staff
+  createAppointment(
+    'apt-1b',
+    'cust-21',
+    'Kevin Hart',
+    '(555) 888-9999',
+    'staff-3',
+    'Sarah Johnson',
+    0,
+    '09:30',
+    [
+      { serviceId: 'service-4', serviceName: 'Fade Haircut', price: 30, duration: 45 }
+    ],
+    'confirmed'
+  ),
   createAppointment(
     'apt-2',
     'cust-2',
@@ -79,6 +109,21 @@ export const appointmentData: Appointment[] = [
       { serviceId: 'service-4', serviceName: 'Fade Haircut', price: 30, duration: 45 }
     ],
     'confirmed'
+  ),
+  // Overlapping at 10:00 with apt-2
+  createAppointment(
+    'apt-2a',
+    'cust-22',
+    'Chris Evans',
+    '(555) 111-2222',
+    'staff-4',
+    'David Lee',
+    0,
+    '10:00',
+    [
+      { serviceId: 'service-1', serviceName: 'Classic Haircut', price: 25, duration: 30 }
+    ],
+    'scheduled'
   ),
   createAppointment(
     'apt-3',
@@ -94,6 +139,7 @@ export const appointmentData: Appointment[] = [
     ],
     'scheduled'
   ),
+  // Multiple appointments at 13:00
   createAppointment(
     'apt-4',
     'cust-4',
@@ -107,6 +153,48 @@ export const appointmentData: Appointment[] = [
       { serviceId: 'service-1', serviceName: 'Classic Haircut', price: 25, duration: 30 }
     ],
     'completed'
+  ),
+  createAppointment(
+    'apt-4a',
+    'cust-23',
+    'Tony Stark',
+    '(555) 333-4444',
+    'staff-2',
+    'Miguel Rodriguez',
+    0,
+    '13:00',
+    [
+      { serviceId: 'service-5', serviceName: 'Hair & Beard Combo', price: 40, duration: 60 }
+    ],
+    'confirmed'
+  ),
+  createAppointment(
+    'apt-4b',
+    'cust-24',
+    'Steve Rogers',
+    '(555) 444-5555',
+    'staff-3',
+    'Sarah Johnson',
+    0,
+    '13:00',
+    [
+      { serviceId: 'service-2', serviceName: 'Beard Trim', price: 15, duration: 15 }
+    ],
+    'scheduled'
+  ),
+  createAppointment(
+    'apt-4c',
+    'cust-25',
+    'Bruce Banner',
+    '(555) 555-6666',
+    'staff-4',
+    'David Lee',
+    0,
+    '13:00',
+    [
+      { serviceId: 'service-6', serviceName: 'Kids Haircut', price: 20, duration: 30 }
+    ],
+    'confirmed'
   ),
   createAppointment(
     'apt-5',
@@ -124,7 +212,7 @@ export const appointmentData: Appointment[] = [
     'First-time customer'
   ),
   
-  // Tomorrow's appointments
+  // Tomorrow's appointments with overlaps
   createAppointment(
     'apt-6',
     'cust-6',
@@ -140,6 +228,20 @@ export const appointmentData: Appointment[] = [
     'scheduled'
   ),
   createAppointment(
+    'apt-6a',
+    'cust-26',
+    'Thor Odinson',
+    '(555) 666-7777',
+    'staff-1',
+    'James Wilson',
+    1,
+    '09:00',
+    [
+      { serviceId: 'service-2', serviceName: 'Beard Trim', price: 15, duration: 15 }
+    ],
+    'confirmed'
+  ),
+  createAppointment(
     'apt-7',
     'cust-7',
     'Thomas Moore',
@@ -153,8 +255,23 @@ export const appointmentData: Appointment[] = [
     ],
     'scheduled'
   ),
+  // Same time slot with different staff
+  createAppointment(
+    'apt-7a',
+    'cust-27',
+    'Clint Barton',
+    '(555) 777-9999',
+    'staff-4',
+    'David Lee',
+    1,
+    '10:30',
+    [
+      { serviceId: 'service-1', serviceName: 'Classic Haircut', price: 25, duration: 30 }
+    ],
+    'confirmed'
+  ),
   
-  // Day after tomorrow
+  // Day after tomorrow - multiple staff with appointments at the same time
   createAppointment(
     'apt-8',
     'cust-8',
@@ -167,6 +284,48 @@ export const appointmentData: Appointment[] = [
     [
       { serviceId: 'service-1', serviceName: 'Classic Haircut', price: 25, duration: 30 },
       { serviceId: 'service-2', serviceName: 'Beard Trim', price: 15, duration: 15 }
+    ],
+    'scheduled'
+  ),
+  createAppointment(
+    'apt-8a',
+    'cust-28',
+    'Natasha Romanoff',
+    '(555) 888-0000',
+    'staff-1',
+    'James Wilson',
+    2,
+    '11:00',
+    [
+      { serviceId: 'service-4', serviceName: 'Fade Haircut', price: 30, duration: 45 }
+    ],
+    'confirmed'
+  ),
+  createAppointment(
+    'apt-8b',
+    'cust-29',
+    'Wanda Maximoff',
+    '(555) 999-1111',
+    'staff-2',
+    'Miguel Rodriguez',
+    2,
+    '11:00',
+    [
+      { serviceId: 'service-6', serviceName: 'Kids Haircut', price: 20, duration: 30 }
+    ],
+    'scheduled'
+  ),
+  createAppointment(
+    'apt-8c',
+    'cust-30',
+    'Scott Lang',
+    '(555) 000-2222',
+    'staff-3',
+    'Sarah Johnson',
+    2,
+    '11:00',
+    [
+      { serviceId: 'service-3', serviceName: 'Hot Towel Shave', price: 35, duration: 45 }
     ],
     'scheduled'
   ),
@@ -254,7 +413,91 @@ export const appointmentData: Appointment[] = [
     [
       { serviceId: 'service-5', serviceName: 'Hair & Beard Combo', price: 40, duration: 60 }
     ],
-    'cancelled',
-    'Customer had emergency'
+    'completed'
+  ),
+  createAppointment(
+    'apt-15',
+    'cust-14',
+    'David Evans',
+    '(555) 456-0123',
+    'staff-5',
+    'Olivia Brown',
+    -4,
+    '09:30',
+    [
+      { serviceId: 'service-4', serviceName: 'Fade Haircut', price: 30, duration: 45 }
+    ],
+    'completed'
+  ),
+  createAppointment(
+    'apt-16',
+    'cust-15',
+    'Edward King',
+    '(555) 567-1234',
+    'staff-3',
+    'Sarah Johnson',
+    -4,
+    '14:00',
+    [
+      { serviceId: 'service-1', serviceName: 'Classic Haircut', price: 25, duration: 30 },
+      { serviceId: 'service-2', serviceName: 'Beard Trim', price: 15, duration: 15 }
+    ],
+    'cancelled'
+  ),
+  createAppointment(
+    'apt-17',
+    'cust-16',
+    'George Wright',
+    '(555) 678-2345',
+    'staff-2',
+    'Miguel Rodriguez',
+    -5,
+    '11:30',
+    [
+      { serviceId: 'service-3', serviceName: 'Hot Towel Shave', price: 35, duration: 45 }
+    ],
+    'completed'
+  ),
+  createAppointment(
+    'apt-18',
+    'cust-17',
+    'Henry Lopez',
+    '(555) 789-3456',
+    'staff-4',
+    'David Lee',
+    -5,
+    '16:00',
+    [
+      { serviceId: 'service-7', serviceName: 'Hair Coloring', price: 60, duration: 90 }
+    ],
+    'completed'
+  ),
+  createAppointment(
+    'apt-19',
+    'cust-18',
+    'Isaac Allen',
+    '(555) 890-4567',
+    'staff-1',
+    'James Wilson',
+    -6,
+    '10:30',
+    [
+      { serviceId: 'service-1', serviceName: 'Classic Haircut', price: 25, duration: 30 }
+    ],
+    'completed'
+  ),
+  createAppointment(
+    'apt-20',
+    'cust-19',
+    'Jack Young',
+    '(555) 901-5678',
+    'staff-5',
+    'Olivia Brown',
+    -6,
+    '13:00',
+    [
+      { serviceId: 'service-9', serviceName: 'Hair Treatment', price: 45, duration: 60 }
+    ],
+    'completed'
   ),
 ];

@@ -8,8 +8,6 @@ import {
   Plus,
   Search,
   X,
-  CalendarRange,
-  Sliders
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
@@ -41,7 +39,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { DateRange } from 'react-day-picker';
 import {
   Tabs,
@@ -58,6 +55,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Sliders } from 'lucide-react';
 
 export const AdminAppointment: React.FC = () => {
   // Basic filters
@@ -276,7 +275,7 @@ export const AdminAppointment: React.FC = () => {
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-
+                
                 <Button
                   variant="ghost"
                   onClick={goToToday}
@@ -295,7 +294,7 @@ export const AdminAppointment: React.FC = () => {
                       variant="outline"
                       className="justify-start text-left font-normal min-w-[220px]"
                     >
-                      <CalendarRange className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-2 h-4 w-4" />
                       {dateRange?.from ? (
                         dateRange.to ? (
                           <>
@@ -346,7 +345,7 @@ export const AdminAppointment: React.FC = () => {
             </div>
           </div>
         </div>
-
+        
         <div className="p-4 flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -526,258 +525,258 @@ export const AdminAppointment: React.FC = () => {
               </>
             )}
           </div>
-
-          <Sheet open={showFilters} onOpenChange={setShowFilters}>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                className="sm:hidden"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-                {getActiveFiltersCount() > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {getActiveFiltersCount()}
-                  </Badge>
-                )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[90vh]">
-              <SheetHeader className="mb-6">
-                <SheetTitle>Filters</SheetTitle>
-              </SheetHeader>
-              
-              <Tabs defaultValue={useAdvancedFilters ? "advanced" : "basic"}>
-                <TabsList className="grid grid-cols-2 mb-4">
-                  <TabsTrigger 
-                    value="basic" 
-                    onClick={() => setUseAdvancedFilters(false)}
-                  >
-                    Basic
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="advanced" 
-                    onClick={() => setUseAdvancedFilters(true)}
-                  >
-                    Advanced
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="basic" className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Date</label>
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => {
-                        if (date) {
-                          setSelectedDate(date);
-                        }
-                      }}
-                      className="rounded-md border"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Status</label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="no-show">No Show</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Staff Member</label>
-                    <Select value={staffFilter} onValueChange={(value) => {
-                      setStaffFilter(value);
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by staff" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Staff</SelectItem>
-                        {staffData.map((staff) => (
-                          <SelectItem key={staff.id} value={staff.id}>
-                            {staff.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Service</label>
-                    <Select value={serviceFilter} onValueChange={(value) => {
-                      setServiceFilter(value);
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Services</SelectItem>
-                        {serviceData.map((service) => (
-                          <SelectItem key={service.id} value={service.id}>
-                            {service.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="advanced" className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Date Range</label>
-                    <Calendar
-                      mode="range"
-                      selected={dateRange}
-                      onSelect={setDateRange}
-                      className="rounded-md border"
-                    />
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Time Range</label>
-                    <div className="flex gap-2 items-center">
-                      <Select
-                        value={timeRange?.[0] || '09:00'}
-                        onValueChange={(value) => setTimeRange([value, timeRange?.[1] || '18:00'])}
-                      >
-                        <SelectTrigger className="w-[100px]">
-                          <SelectValue placeholder="Start" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
-                            <SelectItem key={`start-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
-                              {`${hour.toString().padStart(2, '0')}:00`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span>to</span>
-                      <Select
-                        value={timeRange?.[1] || '18:00'}
-                        onValueChange={(value) => setTimeRange([timeRange?.[0] || '09:00', value])}
-                      >
-                        <SelectTrigger className="w-[100px]">
-                          <SelectValue placeholder="End" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
-                            <SelectItem key={`end-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
-                              {`${hour.toString().padStart(2, '0')}:00`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Price Range (${priceRange?.[0]} - ${priceRange?.[1]})</label>
-                    <Slider
-                      value={priceRange || [0, 100]}
-                      min={0}
-                      max={100}
-                      step={5}
-                      onValueChange={(value) => setPriceRange(value as [number, number])}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Duration Range ({durationRange?.[0]} - {durationRange?.[1]} mins)</label>
-                    <Slider
-                      value={durationRange || [15, 120]}
-                      min={15}
-                      max={120}
-                      step={15}
-                      onValueChange={(value) => setDurationRange(value as [number, number])}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Status</label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="no-show">No Show</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Staff Member</label>
-                    <Select value={staffFilter} onValueChange={setStaffFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by staff" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Staff</SelectItem>
-                        {staffData.map((staff) => (
-                          <SelectItem key={staff.id} value={staff.id}>
-                            {staff.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Service</label>
-                    <Select value={serviceFilter} onValueChange={setServiceFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Services</SelectItem>
-                        {serviceData.map((service) => (
-                          <SelectItem key={service.id} value={service.id}>
-                            {service.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TabsContent>
-              </Tabs>
-              
-              <div className="flex items-center justify-between pt-6 border-t mt-6">
-                <Button variant="outline" onClick={() => {
-                  clearFilters();
-                  setShowFilters(false);
-                }}>
-                  Reset filters
-                </Button>
-                <SheetClose asChild>
-                  <Button>Apply filters</Button>
-                </SheetClose>
-              </div>
-            </SheetContent>
-          </Sheet>
         </div>
+        
+        <AppointmentList
+          appointments={filteredAppointments}
+          showActions
+        />
       </div>
 
-      <AppointmentList
-        appointments={filteredAppointments}
-        showActions
-      />
+      <Sheet open={showFilters} onOpenChange={setShowFilters}>
+        <SheetTrigger asChild>
+          <Button
+            variant="outline"
+            className="sm:hidden"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {getActiveFiltersCount() > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {getActiveFiltersCount()}
+              </Badge>
+            )}
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="h-[90vh]">
+          <SheetHeader className="mb-6">
+            <SheetTitle>Filters</SheetTitle>
+          </SheetHeader>
+          
+          <Tabs defaultValue={useAdvancedFilters ? "advanced" : "basic"}>
+            <TabsList className="grid grid-cols-2 mb-4">
+              <TabsTrigger 
+                value="basic" 
+                onClick={() => setUseAdvancedFilters(false)}
+              >
+                Basic
+              </TabsTrigger>
+              <TabsTrigger 
+                value="advanced" 
+                onClick={() => setUseAdvancedFilters(true)}
+              >
+                Advanced
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="basic" className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date</label>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                    }
+                  }}
+                  className="rounded-md border"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="no-show">No Show</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Staff Member</label>
+                <Select value={staffFilter} onValueChange={(value) => {
+                  setStaffFilter(value);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Staff</SelectItem>
+                    {staffData.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>
+                        {staff.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Service</label>
+                <Select value={serviceFilter} onValueChange={(value) => {
+                  setServiceFilter(value);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Services</SelectItem>
+                    {serviceData.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="advanced" className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date Range</label>
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  className="rounded-md border"
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Time Range</label>
+                <div className="flex gap-2 items-center">
+                  <Select
+                    value={timeRange?.[0] || '09:00'}
+                    onValueChange={(value) => setTimeRange([value, timeRange?.[1] || '18:00'])}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="Start" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
+                        <SelectItem key={`start-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
+                          {`${hour.toString().padStart(2, '0')}:00`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span>to</span>
+                  <Select
+                    value={timeRange?.[1] || '18:00'}
+                    onValueChange={(value) => setTimeRange([timeRange?.[0] || '09:00', value])}
+                  >
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="End" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
+                        <SelectItem key={`end-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
+                          {`${hour.toString().padStart(2, '0')}:00`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Price Range (${priceRange?.[0]} - ${priceRange?.[1]})</label>
+                <Slider
+                  value={priceRange || [0, 100]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  onValueChange={(value) => setPriceRange(value as [number, number])}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Duration Range ({durationRange?.[0]} - {durationRange?.[1]} mins)</label>
+                <Slider
+                  value={durationRange || [15, 120]}
+                  min={15}
+                  max={120}
+                  step={15}
+                  onValueChange={(value) => setDurationRange(value as [number, number])}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="no-show">No Show</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Staff Member</label>
+                <Select value={staffFilter} onValueChange={setStaffFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Staff</SelectItem>
+                    {staffData.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>
+                        {staff.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Service</label>
+                <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Services</SelectItem>
+                    {serviceData.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+          </Tabs>
+          
+          <div className="flex items-center justify-between pt-6 border-t mt-6">
+            <Button variant="outline" onClick={() => {
+              clearFilters();
+              setShowFilters(false);
+            }}>
+              Reset filters
+            </Button>
+            <SheetClose asChild>
+              <Button>Apply filters</Button>
+            </SheetClose>
+          </div>
+        </SheetContent>
+      </Sheet>
+      
       <NewAppointmentDialog
         open={showNewAppointment}
         onOpenChange={setShowNewAppointment}

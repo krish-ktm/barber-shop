@@ -45,6 +45,11 @@ export const Sidebar: React.FC = () => {
       href: '/admin/appointments',
     },
     {
+      icon: <Calendar size={18} />,
+      label: 'Calendar',
+      href: '/admin/calendar',
+    },
+    {
       icon: <Users size={18} />,
       label: 'Customers',
       href: '/admin/customers',
