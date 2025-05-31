@@ -7,6 +7,12 @@ import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { staffData } from '@/mocks';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface CalendarViewProps {
   appointments: Appointment[];
@@ -23,7 +29,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onViewAppointment,
   onAddAppointment,
 }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [view, setView] = useState<ViewType>('week');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -76,29 +82,69 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       );
     }
 
+    // Sort appointments by staff seniority/position
+    const sortedAppointments = [...slotAppointments].sort((a, b) => {
+      const staffA = staffData.find(s => s.id === a.staffId);
+      const staffB = staffData.find(s => s.id === b.staffId);
+      return (staffB?.commissionPercentage || 0) - (staffA?.commissionPercentage || 0);
+    });
+
     return (
       <div className="h-24 border-b border-r p-1 relative">
         <div className="space-y-1">
-          {slotAppointments.map(appointment => (
-            <button
-              key={appointment.id}
-              onClick={() => onViewAppointment(appointment.id)}
-              className={cn(
-                "w-full text-left px-2 py-1 rounded text-xs",
-                "hover:bg-accent/10 transition-colors",
-                "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
-              )}
-              style={{
-                backgroundColor: staffData.find(s => s.id === appointment.staffId)?.color || '#000000',
-                color: '#ffffff'
-              }}
-            >
-              <div className="font-medium truncate">{appointment.customerName}</div>
-              <div className="text-[10px] opacity-90 truncate">
-                {appointment.time} • {appointment.staffName}
-              </div>
-            </button>
-          ))}
+          {sortedAppointments.map((appointment, index) => {
+            const staff = staffData.find(s => s.id === appointment.staffId);
+            const totalDuration = appointment.services.reduce((sum, service) => sum + service.duration, 0);
+            const width = `${100 / slotAppointments.length}%`;
+            const left = `${(index * 100) / slotAppointments.length}%`;
+            
+            return (
+              <TooltipProvider key={appointment.id}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onViewAppointment(appointment.id)}
+                      className={cn(
+                        "absolute text-left px-2 py-1 rounded text-xs",
+                        "hover:opacity-90 transition-opacity",
+                        "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+                        "border border-border"
+                      )}
+                      style={{
+                        backgroundColor: staff?.color || '#000000',
+                        color: '#ffffff',
+                        width,
+                        left,
+                        top: '4px',
+                        height: 'calc(100% - 8px)',
+                      }}
+                    >
+                      <div className="font-medium truncate flex items-center justify-between">
+                        <span>{appointment.customerName}</span>
+                        <span className="text-[10px] opacity-90">
+                          {totalDuration}min
+                        </span>
+                      </div>
+                      <div className="text-[10px] opacity-90 truncate flex items-center justify-between">
+                        <span>{appointment.time}</span>
+                        <span>{staff?.name}</span>
+                      </div>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-medium">{appointment.customerName}</p>
+                      <p className="text-xs">{appointment.time} - {appointment.endTime}</p>
+                      <p className="text-xs">With: {appointment.staffName}</p>
+                      <div className="text-xs mt-1 pt-1 border-t">
+                        {appointment.services.map(service => service.serviceName).join(', ')}
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
         </div>
       </div>
     );
@@ -187,6 +233,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   {renderTimeSlot(day, hour)}
                 </React.Fragment>
               ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Staff legend */}
+        <div className="flex flex-wrap gap-2 mt-4 px-4 pb-4">
+          {staffData.map(staff => (
+            <div 
+              key={staff.id}
+              className="flex items-center gap-2 text-xs"
+            >
+              <div 
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: staff.color }}
+              />
+              <span>{staff.name}</span>
             </div>
           ))}
         </div>
