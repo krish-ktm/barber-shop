@@ -224,7 +224,7 @@ export const FullCalendarView = ({
           <div
             key={i}
             className={cn(
-              'border h-16 xs:h-20 sm:h-28 p-1 rounded-md transition-colors cursor-pointer hover:bg-background-alt',
+              'border h-16 xs:h-20 sm:h-28 p-1 rounded-md transition-colors cursor-pointer hover:bg-background-alt relative',
               isToday && 'border-primary',
               isSelected && 'bg-background-alt border-primary-light',
             )}
@@ -247,16 +247,16 @@ export const FullCalendarView = ({
             </div>
             
             <ScrollArea className="h-10 xs:h-14 sm:h-20 pr-1">
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {dateAppointments.slice(0, 3).map((appointment) => (
-                  <AppointmentCard
+                  <MonthCellAppointment
                     key={appointment.id}
                     appointment={appointment}
                     onClick={() => onViewAppointment(appointment.id)}
                   />
                 ))}
                 {dateAppointments.length > 3 && (
-                  <div className="text-[10px] text-muted-foreground text-center mt-1">
+                  <div className="text-[9px] text-muted-foreground text-center pr-1 font-medium">
                     +{dateAppointments.length - 3} more
                   </div>
                 )}
@@ -309,6 +309,75 @@ export const FullCalendarView = ({
 
   // Week View
   const renderWeekView = () => {
+    // WeekViewAppointment component for better weekly calendar display
+    const WeekViewAppointment: React.FC<{
+      appointment: Appointment;
+      onClick: () => void;
+      isCompact?: boolean;
+    }> = ({ appointment, onClick, isCompact = false }) => {
+      const statusColors = {
+        scheduled: theme.colors.primary,
+        confirmed: theme.colors.success,
+        completed: theme.colors.accent,
+        cancelled: theme.colors.error,
+        'no-show': theme.colors.warning,
+      };
+
+      const statusColor = statusColors[appointment.status] || theme.colors.primary;
+      
+      // Get first letter of the staff's first name for the avatar
+      const staffInitial = appointment.staffName.charAt(0);
+      
+      return (
+        <div
+          onClick={onClick}
+          className={cn(
+            "rounded-sm border-l-2 flex flex-col cursor-pointer relative overflow-hidden w-full h-full",
+            isCompact ? "min-h-[20px] px-1 py-0.5" : "min-h-[40px] p-1",
+            "bg-background hover:bg-background/80 transition-colors"
+          )}
+          style={{ 
+            borderLeftColor: statusColor,
+            backgroundColor: `${statusColor}05` // 5% opacity of status color for subtle background
+          }}
+        >
+          {/* Time and staff initial */}
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-1">
+              <Clock className={cn("text-muted-foreground", isCompact ? "h-2 w-2" : "h-3 w-3")} />
+              <span className={cn("font-medium text-muted-foreground", isCompact ? "text-[8px]" : "text-[10px]")}>
+                {appointment.time}
+              </span>
+            </div>
+            
+            {/* Staff avatar */}
+            <div 
+              className={cn(
+                "rounded-full flex items-center justify-center text-white",
+                isCompact ? "w-3 h-3 text-[6px]" : "w-4 h-4 text-[8px]"
+              )}
+              style={{ backgroundColor: statusColor }}
+              title={appointment.staffName}
+            >
+              {staffInitial}
+            </div>
+          </div>
+          
+          {/* Customer name */}
+          <div className={cn("font-medium truncate", isCompact ? "text-[8px]" : "text-[10px]")}>
+            {appointment.customerName.split(' ')[0]}
+          </div>
+          
+          {/* Service (only if not compact) */}
+          {!isCompact && appointment.services.length > 0 && (
+            <div className="text-[8px] text-muted-foreground truncate mt-0.5">
+              {appointment.services[0].serviceName}
+            </div>
+          )}
+        </div>
+      );
+    };
+
     const weekStart = startOfWeek(currentDate);
     const weekDays = eachDayOfInterval({
       start: weekStart,
@@ -387,21 +456,18 @@ export const FullCalendarView = ({
                               "grid-cols-4"
                             )}>
                               {appts.map(appointment => (
-                                <AppointmentCard
+                                <WeekViewAppointment
                                   key={appointment.id}
                                   appointment={appointment}
                                   onClick={() => onViewAppointment(appointment.id)}
-                                  isLarge={false}
-                                  isWeekView={true}
                                 />
                               ))}
                             </div>
                           ) : (
-                            <AppointmentCard
+                            <WeekViewAppointment
                               key={appts[0].id}
                               appointment={appts[0]}
                               onClick={() => onViewAppointment(appts[0].id)}
-                              isWeekView={true}
                             />
                           )}
                         </div>
@@ -422,6 +488,7 @@ export const FullCalendarView = ({
     const timeSlots = Array.from({ length: 13 }, (_, i) => i + 8); // 8am to 8pm
     const dayAppointments = getAppointmentsForDate(currentDate);
     const isToday = isSameDay(currentDate, new Date());
+    const currentHour = new Date().getHours();
 
     // Sort appointments by time
     dayAppointments.sort((a, b) => {
@@ -434,25 +501,32 @@ export const FullCalendarView = ({
       <div className="overflow-auto">
         <div className="mb-4">
           <h3 className={cn(
-            "text-base sm:text-xl font-semibold mb-2 sm:mb-4 py-1 sm:py-2 px-2 sm:px-4 rounded-md",
-            isToday && "border-l-4 border-primary pl-3 sm:pl-4"
+            "text-base sm:text-xl font-semibold mb-2 sm:mb-4 py-2 sm:py-3 px-3 sm:px-5 rounded-md",
+            isToday ? "bg-primary/5 border-l-4 border-primary pl-4 sm:pl-6" : "bg-card"
           )}>
-            {format(currentDate, 'EEEE')}
+            {format(currentDate, 'EEEE, MMMM d')}
+            {isToday && <span className="ml-2 text-sm text-primary">(Today)</span>}
           </h3>
         </div>
-        <div className="min-w-[320px] grid grid-cols-1 md:grid-cols-[80px_1fr] gap-2">
-          {/* Time slots */}
-          <div className="hidden md:flex flex-col border-r">
+        <div className="min-w-[320px] grid grid-cols-1 md:grid-cols-[80px_1fr] gap-3 rounded-md overflow-hidden border shadow-sm bg-card">
+          {/* Time slots column */}
+          <div className="hidden md:flex flex-col border-r bg-background/50">
             {timeSlots.map(hour => (
-              <div key={`time-${hour}`} className="h-16 sm:h-20 md:h-24 flex items-start justify-end pr-2 pt-1">
+              <div 
+                key={`time-${hour}`} 
+                className={cn(
+                  "h-16 sm:h-20 md:h-24 flex items-start justify-end pr-2 pt-1 border-b",
+                  hour % 2 === 0 ? "bg-background/30" : "bg-transparent"
+                )}
+              >
                 <span className="text-xs text-muted-foreground font-medium">
-                  {hour}:00
+                  {format(new Date(2022, 0, 1, hour), 'h:00 a')}
                 </span>
               </div>
             ))}
           </div>
 
-          {/* Appointment slots */}
+          {/* Appointment slots column */}
           <div className="flex flex-col">
             {timeSlots.map(hour => {
               // Get appointments that fall within this hour
@@ -470,13 +544,30 @@ export const FullCalendarView = ({
                 appointmentsByTime[appointment.time].push(appointment);
               });
 
+              // Determine if this is the current hour
+              const isCurrentHour = isToday && currentHour === hour;
+
               return (
-                <div key={`day-slot-${hour}`} className="h-16 sm:h-20 md:h-24 border-b p-2 relative">
+                <div 
+                  key={`day-slot-${hour}`} 
+                  className={cn(
+                    "h-16 sm:h-20 md:h-24 border-b px-2 py-1 relative overflow-hidden",
+                    hour % 2 === 0 ? "bg-background/30" : "bg-transparent",
+                    isCurrentHour ? "bg-primary/5" : ""
+                  )}
+                >
+                  {/* Mobile time indicator */}
                   <div className="md:hidden text-xs text-muted-foreground font-medium mb-1">
-                    {hour}:00
+                    {format(new Date(2022, 0, 1, hour), 'h:00 a')}
                   </div>
+                  
+                  {/* Current time indicator */}
+                  {isCurrentHour && (
+                    <div className="absolute left-0 w-1 h-full bg-primary" />
+                  )}
+                  
                   {slotAppointments.length > 0 ? (
-                    <div className="space-y-1">
+                    <div className="space-y-1 h-full">
                       {/* Render appointments grouped by start time */}
                       {Object.entries(appointmentsByTime).map(([time, appts]) => (
                         <div key={time} className="grid grid-cols-1 gap-1">
@@ -486,7 +577,7 @@ export const FullCalendarView = ({
                               "grid gap-1",
                               appts.length === 2 ? "grid-cols-2" : 
                               appts.length === 3 ? "grid-cols-3" : 
-                              "grid-cols-4"
+                              "grid-cols-2"
                             )}>
                               {appts.map(appointment => (
                                 <AppointmentCard
@@ -494,6 +585,7 @@ export const FullCalendarView = ({
                                   appointment={appointment}
                                   onClick={() => onViewAppointment(appointment.id)}
                                   isLarge={false}
+                                  isSimplified={true}
                                 />
                               ))}
                             </div>
@@ -503,15 +595,22 @@ export const FullCalendarView = ({
                               key={appts[0].id}
                               appointment={appts[0]}
                               onClick={() => onViewAppointment(appts[0].id)}
-                              isLarge
+                              isLarge={true}
+                              isSimplified={false}
                             />
                           )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="h-full border border-dashed rounded-md flex items-center justify-center text-xs text-muted-foreground">
-                      No appointments
+                    <div className="h-full border border-dashed rounded-md flex flex-col items-center justify-center hover:bg-background/50 transition-colors">
+                      <div className="text-xs text-muted-foreground text-center">
+                        <span className="hidden sm:inline">No appointments</span>
+                        <span className="sm:hidden">Empty</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
+                        {format(new Date(2022, 0, 1, hour), 'h:00 a')}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -663,7 +762,8 @@ const AppointmentCard: React.FC<{
   onClick: () => void;
   isLarge?: boolean;
   isWeekView?: boolean;
-}> = ({ appointment, onClick, isLarge = false, isWeekView = false }) => {
+  isSimplified?: boolean;
+}> = ({ appointment, onClick, isLarge = false, isWeekView = false, isSimplified = false }) => {
   const statusColors = {
     scheduled: theme.colors.primary,
     confirmed: theme.colors.success,
@@ -673,7 +773,10 @@ const AppointmentCard: React.FC<{
   };
 
   const statusColor = statusColors[appointment.status] || theme.colors.primary;
-
+  
+  // Get first letter of the staff's first name for the avatar
+  const staffInitial = appointment.staffName.charAt(0);
+  
   return (
     <TooltipProvider>
       <Tooltip>
@@ -681,22 +784,106 @@ const AppointmentCard: React.FC<{
           <div
             onClick={onClick}
             className={cn(
-              "px-1 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] xs:text-xs truncate cursor-pointer hover:bg-card",
-              isLarge ? "sm:text-sm py-0.5 sm:py-2" : "text-[10px] xs:text-xs py-0.5 sm:py-1 border-l",
-              isWeekView && "min-h-[20px] sm:min-h-[24px]"
+              "rounded-md border transition-all hover:shadow-sm cursor-pointer relative overflow-hidden",
+              (isLarge && !isSimplified) ? "p-2" : "p-1",
+              isWeekView && "min-h-[20px] sm:min-h-[24px]",
+              isSimplified && "flex items-center gap-1"
             )}
-            style={{ borderLeftColor: statusColor, borderLeftWidth: isLarge ? '3px' : '2px' }}
+            style={{ 
+              borderLeftColor: statusColor, 
+              borderLeftWidth: '4px',
+              backgroundColor: `${statusColor}10` // 10% opacity of status color for subtle background
+            }}
           >
-            <div className="flex items-center gap-1">
-              <Clock className="h-2 w-2 sm:h-3 sm:w-3" />
-              <span>{appointment.time}</span>
-              <span className="hidden sm:inline">({appointment.staffName.split(' ')[0]})</span>
-            </div>
-            <div className="truncate font-medium">{appointment.customerName}</div>
-            {isLarge && (
-              <div className="text-[9px] xs:text-xs text-muted-foreground truncate mt-0.5 sm:mt-1">
-                {appointment.services.map(s => s.serviceName).join(', ')}
-              </div>
+            {/* For non-simplified view, show normal card layout */}
+            {!isSimplified && (
+              <>
+                {/* Time indicator at the top */}
+                <div className="flex justify-between items-center mb-1 text-[10px] text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-2.5 w-2.5" />
+                    <span className="font-medium">{appointment.time}</span>
+                  </div>
+                  
+                  {/* Staff initial in a small avatar-like circle */}
+                  <div className="flex items-center">
+                    <div 
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                      style={{ backgroundColor: statusColor }}
+                    >
+                      {staffInitial}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Customer name */}
+                <div className="font-medium text-xs truncate">
+                  {appointment.customerName}
+                </div>
+                
+                {/* Services - only show on large cards with limited height */}
+                {isLarge && (
+                  <div className="flex flex-wrap gap-1 mt-1 overflow-hidden max-h-[16px]">
+                    {appointment.services.slice(0, 1).map((service, index) => (
+                      <div 
+                        key={index} 
+                        className="text-[8px] px-1.5 py-0 rounded-full bg-background/80 truncate max-w-full"
+                      >
+                        {service.serviceName}
+                      </div>
+                    ))}
+                    {appointment.services.length > 1 && (
+                      <div className="text-[8px] text-muted-foreground">
+                        +{appointment.services.length - 1}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Status indicator at the bottom - compact version */}
+                {isLarge && (
+                  <div className="mt-1 flex items-center">
+                    <div className="text-[8px] px-1 py-0 rounded-sm bg-muted capitalize">
+                      {appointment.status}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            
+            {/* For simplified view, show compact layout */}
+            {isSimplified && (
+              <>
+                {/* Staff initial */}
+                <div 
+                  className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[8px] font-bold text-white"
+                  style={{ backgroundColor: statusColor }}
+                >
+                  {staffInitial}
+                </div>
+                
+                {/* Time, name and service */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-medium">{appointment.time}</span>
+                    <span className="text-[10px] font-medium truncate">
+                      {appointment.customerName.split(' ')[0]}
+                    </span>
+                  </div>
+                  
+                  {/* Mini service tag */}
+                  {appointment.services.length > 0 && (
+                    <div className="flex items-center gap-0.5">
+                      <div className="text-[8px] truncate text-muted-foreground max-w-[50px]">
+                        {appointment.services[0].serviceName}
+                      </div>
+                      {appointment.services.length > 1 && (
+                        <div className="text-[8px] text-muted-foreground">+{appointment.services.length - 1}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </TooltipTrigger>
@@ -711,6 +898,9 @@ const AppointmentCard: React.FC<{
               Services: {appointment.services.map(s => s.serviceName).join(', ')}
             </div>
             <div className="text-xs capitalize">Status: {appointment.status}</div>
+            {appointment.customerPhone && (
+              <div className="text-xs">Phone: {appointment.customerPhone}</div>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>
@@ -743,5 +933,48 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     <Badge variant={variant as 'default' | 'secondary' | 'destructive' | 'outline'} className="capitalize">
       {label}
     </Badge>
+  );
+};
+
+// MonthCellAppointment component for compact display in month view
+const MonthCellAppointment: React.FC<{
+  appointment: Appointment;
+  onClick: () => void;
+}> = ({ appointment, onClick }) => {
+  const statusColors = {
+    scheduled: theme.colors.primary,
+    confirmed: theme.colors.success,
+    completed: theme.colors.accent,
+    cancelled: theme.colors.error,
+    'no-show': theme.colors.warning,
+  };
+
+  const statusColor = statusColors[appointment.status] || theme.colors.primary;
+  
+  // Generate a stable color for the staff based on their ID
+  const staffColor = 
+    appointment.staffId.charCodeAt(0) % 3 === 0 ? theme.colors.primary : 
+    appointment.staffId.charCodeAt(0) % 3 === 1 ? theme.colors.success : 
+    theme.colors.accent;
+
+  return (
+    <div 
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="px-1 py-0.5 rounded-sm flex items-center gap-1 cursor-pointer text-[9px] xs:text-[10px] hover:bg-accent/5 transition-colors group border-l-2"
+      style={{ borderLeftColor: statusColor }}
+    >
+      <span className="font-medium text-muted-foreground shrink-0">{appointment.time}</span>
+      <span className="font-medium truncate flex-1 group-hover:text-primary">
+        {appointment.customerName.split(' ')[0]}
+      </span>
+      <span 
+        className="w-2.5 h-2.5 rounded-full flex-shrink-0 hidden xs:block" 
+        style={{ backgroundColor: staffColor }}
+        title={appointment.staffName}
+      />
+    </div>
   );
 }; 
