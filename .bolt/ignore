@@ -25,7 +25,7 @@ src/features/staff/*
 
 # Keep calendar-related files
 # src/pages/AdminCalendar.tsx
-# src/features/appointments/FullCalendarView.tsx
+src/features/appointments/FullCalendarView.tsx
 # src/features/appointments/AppointmentDetailsDialog.tsx
 
 # Keep only appointment features needed for calendar
