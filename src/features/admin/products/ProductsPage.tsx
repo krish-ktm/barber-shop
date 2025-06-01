@@ -28,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Product {
   id: string;
@@ -36,6 +37,8 @@ interface Product {
   price: number;
   stock: number;
   status: 'active' | 'inactive';
+  commission: number;
+  imageUrl?: string;
 }
 
 // Mock data - replace with actual data fetching
@@ -47,6 +50,8 @@ const mockProducts: Product[] = [
     price: 24.99,
     stock: 50,
     status: 'active',
+    commission: 10,
+    imageUrl: 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg',
   },
   {
     id: '2',
@@ -55,6 +60,8 @@ const mockProducts: Product[] = [
     price: 19.99,
     stock: 30,
     status: 'active',
+    commission: 15,
+    imageUrl: 'https://images.pexels.com/photos/1813272/pexels-photo-1813272.jpeg',
   },
   // Add more mock products as needed
 ];
@@ -139,9 +146,10 @@ export function ProductsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Commission</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -150,9 +158,23 @@ export function ProductsPage() {
             <TableBody>
               {filteredProducts.map((product) => (
                 <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 rounded-md">
+                        {product.imageUrl ? (
+                          <AvatarImage src={product.imageUrl} alt={product.name} />
+                        ) : (
+                          <AvatarFallback className="rounded-md bg-muted">
+                            {product.name.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <span className="font-medium">{product.name}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>{product.category}</TableCell>
                   <TableCell>${product.price.toFixed(2)}</TableCell>
+                  <TableCell>{product.commission}%</TableCell>
                   <TableCell>{product.stock}</TableCell>
                   <TableCell>
                     <span

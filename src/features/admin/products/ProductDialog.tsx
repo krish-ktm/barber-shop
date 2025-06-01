@@ -7,11 +7,22 @@ import {
 } from '@/components/ui/dialog';
 import { ProductForm } from './ProductForm';
 
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  status: 'active' | 'inactive';
+  commission: number;
+  imageUrl?: string;
+}
+
 interface ProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData?: any;
-  onSubmit: (data: any) => void;
+  initialData?: Product;
+  onSubmit: (data: Omit<Product, 'id'>) => void;
 }
 
 export function ProductDialog({
@@ -20,9 +31,13 @@ export function ProductDialog({
   initialData,
   onSubmit,
 }: ProductDialogProps) {
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
             {initialData ? 'Edit Product' : 'Add New Product'}
@@ -33,10 +48,11 @@ export function ProductDialog({
               : 'Fill in the details to add a new product.'}
           </DialogDescription>
         </DialogHeader>
-        <ProductForm
+        
+        <ProductForm 
           initialData={initialData}
           onSubmit={onSubmit}
-          onCancel={() => onOpenChange(false)}
+          onCancel={handleCancel}
         />
       </DialogContent>
     </Dialog>
