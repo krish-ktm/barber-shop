@@ -4,7 +4,8 @@ import {
   Calendar, 
   Home,
   User,
-  Clock
+  Clock,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,11 @@ export const StaffSidebar: React.FC = () => {
       icon: <Calendar size={18} />,
       label: 'Appointments',
       href: '/staff/appointments',
+    },
+    {
+      icon: <BarChart3 size={18} />,
+      label: 'Reports',
+      href: '/staff/reports',
     },
     {
       icon: <Clock size={18} />,
