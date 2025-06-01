@@ -7,7 +7,7 @@ hooks/use-toast.ts
 src/pages/Customers.tsx
 src/pages/Dashboard.tsx
 src/pages/GSTSettings.tsx
-src/pages/Reports.tsx
+# src/pages/Reports.tsx
 src/pages/Services.tsx
 src/pages/Settings.tsx
 src/pages/StaffManagement.tsx
@@ -24,14 +24,14 @@ src/features/services/*
 src/features/staff/*
 
 # Keep calendar-related files
-# src/pages/AdminCalendar.tsx
-# src/features/appointments/FullCalendarView.tsx
-# src/features/appointments/AppointmentDetailsDialog.tsx
+src/pages/AdminCalendar.tsx
+src/features/appointments/FullCalendarView.tsx
+src/features/appointments/AppointmentDetailsDialog.tsx
 
 # Keep only appointment features needed for calendar
-# src/features/appointments/NewAppointmentDialog.tsx
-# src/features/appointments/ServicePicker.tsx
-# src/features/appointments/AppointmentList.tsx
+src/features/appointments/NewAppointmentDialog.tsx
+src/features/appointments/ServicePicker.tsx
+src/features/appointments/AppointmentList.tsx
 
 # Admin components
 # src/components/dashboard/*
