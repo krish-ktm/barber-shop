@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Copy, Download, Mail, Printer } from 'lucide-react';
+import { Copy, Download } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -84,32 +84,10 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
     });
   };
 
-  const handlePrint = () => {
-    toast({
-      title: 'Print requested',
-      description: 'Printing functionality will be implemented.',
-    });
-  };
-
   const handleDownload = () => {
     toast({
       title: 'Download started',
       description: 'Customer details PDF will be downloaded shortly.',
-    });
-  };
-
-  const handleSendEmail = () => {
-    if (!customer.email) {
-      toast({
-        title: 'No email address',
-        description: 'This customer does not have an email address.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    toast({
-      title: 'Email sent',
-      description: 'Customer details have been sent to their email.',
     });
   };
 
@@ -235,20 +213,10 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t">
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
           <Button variant="outline" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
-          {customer.email && (
-            <Button variant="outline" onClick={handleSendEmail}>
-              <Mail className="h-4 w-4 mr-2" />
-              Send Email
-            </Button>
-          )}
         </div>
       </DialogContent>
     </Dialog>
