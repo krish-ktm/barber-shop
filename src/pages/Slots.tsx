@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
 import { Clock, Plus, Save } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { businessHoursData } from '@/mocks';
@@ -44,6 +43,8 @@ export const Slots: React.FC = () => {
   const [daysOff, setDaysOff] = useState<string[]>(
     businessHoursData.daysOff.map(day => day.toString())
   );
+  // State to control the visibility of the breaks section
+  const [showBreaksSection] = useState(false);
 
   const handleSave = () => {
     toast({
@@ -164,77 +165,80 @@ export const Slots: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Breaks</CardTitle>
-            <Button variant="outline" size="sm" onClick={handleAddBreak}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Break
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {breaks.map((breakItem, index) => (
-                <div key={index}>
-                  {index > 0 && <Separator className="my-4" />}
-                  <div className="grid gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <Label className="mb-2">Break Name</Label>
-                        <Input
-                          value={breakItem.name}
-                          onChange={(e) =>
-                            handleBreakChange(index, 'name', e.target.value)
-                          }
-                          placeholder="Enter break name"
-                        />
+        {/* Breaks section - hidden with display logic but not removed */}
+        {showBreaksSection && (
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Breaks</CardTitle>
+              <Button variant="outline" size="sm" onClick={handleAddBreak}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Break
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {breaks.map((breakItem, index) => (
+                  <div key={index}>
+                    {index > 0 && <Separator className="my-4" />}
+                    <div className="grid gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <Label className="mb-2">Break Name</Label>
+                          <Input
+                            value={breakItem.name}
+                            onChange={(e) =>
+                              handleBreakChange(index, 'name', e.target.value)
+                            }
+                            placeholder="Enter break name"
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="self-end"
+                          onClick={() => handleRemoveBreak(index)}
+                        >
+                          Remove
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="self-end"
-                        onClick={() => handleRemoveBreak(index)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="mb-2">Start Time</Label>
-                        <Input
-                          type="time"
-                          value={breakItem.start}
-                          onChange={(e) =>
-                            handleBreakChange(index, 'start', e.target.value)
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label className="mb-2">End Time</Label>
-                        <Input
-                          type="time"
-                          value={breakItem.end}
-                          onChange={(e) =>
-                            handleBreakChange(index, 'end', e.target.value)
-                          }
-                        />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="mb-2">Start Time</Label>
+                          <Input
+                            type="time"
+                            value={breakItem.start}
+                            onChange={(e) =>
+                              handleBreakChange(index, 'start', e.target.value)
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label className="mb-2">End Time</Label>
+                          <Input
+                            type="time"
+                            value={breakItem.end}
+                            onChange={(e) =>
+                              handleBreakChange(index, 'end', e.target.value)
+                            }
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
 
-              {breaks.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No breaks configured</p>
-                  <p className="text-sm">Add breaks like lunch time or cleaning periods</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                {breaks.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No breaks configured</p>
+                    <p className="text-sm">Add breaks like lunch time or cleaning periods</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
