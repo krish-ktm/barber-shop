@@ -15,6 +15,20 @@ import { Customer, Invoice } from '@/types';
 import { formatCurrency, formatPhoneNumber } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import { invoiceData } from '@/mocks';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CustomerDetailsDialogProps {
   customer: Customer | null;
@@ -150,52 +164,70 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
             {/* Invoice History */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Invoice History</h4>
-              <div className="space-y-4">
-                {customerInvoices.map((invoice) => (
-                  <div key={invoice.id} className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{invoice.id}</span>
-                          {getStatusBadge(invoice.status)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {format(new Date(invoice.date), 'MMMM d, yyyy')}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">{formatCurrency(invoice.total)}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {getPaymentMethodBadge(invoice.paymentMethod)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      {invoice.services.map((service, index) => (
-                        <div
-                          key={`${service.serviceId}-${index}`}
-                          className="flex justify-between text-sm"
-                        >
-                          <div>
-                            <span>{service.serviceName}</span>
-                            {service.quantity > 1 && (
-                              <span className="text-muted-foreground"> × {service.quantity}</span>
-                            )}
-                          </div>
-                          <span>{formatCurrency(service.total)}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {invoice.notes && (
-                      <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">Notes: </span>
-                        {invoice.notes}
-                      </div>
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Services</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customerInvoices.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                          No invoices found for this customer
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      customerInvoices.map((invoice) => (
+                        <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50">
+                          <TableCell className="font-medium">{invoice.id}</TableCell>
+                          <TableCell>{format(new Date(invoice.date), 'MMM d, yyyy')}</TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="max-w-[200px] truncate cursor-help">
+                                    {invoice.services.map(s => s.serviceName).join(', ')}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" align="start" className="max-w-[300px]">
+                                  <div className="space-y-1 text-sm">
+                                    {invoice.services.map((service, idx) => (
+                                      <div key={idx} className="flex justify-between gap-4">
+                                        <span>
+                                          {service.serviceName}
+                                          {service.quantity > 1 && <span className="text-muted-foreground"> × {service.quantity}</span>}
+                                        </span>
+                                        <span className="font-medium">{formatCurrency(service.total)}</span>
+                                      </div>
+                                    ))}
+                                    {invoice.notes && (
+                                      <div className="pt-1 mt-1 border-t text-muted-foreground">
+                                        <span className="font-medium">Notes: </span>
+                                        {invoice.notes}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                          <TableCell>{getPaymentMethodBadge(invoice.paymentMethod)}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(invoice.total)}
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
-                  </div>
-                ))}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </div>
