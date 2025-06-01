@@ -13,6 +13,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+  SheetFooter,
+} from '@/components/ui/sheet';
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,6 +32,10 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils';
 import { EditServiceDialog } from '@/features/services/EditServiceDialog';
 import { AddServiceDialog } from '@/features/services/AddServiceDialog';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 export const Services: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,16 +44,58 @@ export const Services: React.FC = () => {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  
+  // Advanced filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 200]);
+  const [durationRange, setDurationRange] = useState<[number, number]>([0, 120]);
+
+  // Get all unique categories
+  const categories = Array.from(new Set(serviceData.map(service => service.category)));
+  
+  // Computed values
+  const maxPrice = Math.max(...serviceData.map(s => s.price), 200);
+  const maxDuration = Math.max(...serviceData.map(s => s.duration), 120);
+
+  // Get active filter count
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (searchQuery) count++;
+    if (sortBy !== 'name') count++;
+    if (categoryFilter !== 'all') count++;
+    if (selectedCategories.length > 0) count++;
+    if (priceRange[0] > 0 || priceRange[1] < maxPrice) count++;
+    if (durationRange[0] > 0 || durationRange[1] < maxDuration) count++;
+    return count;
+  };
 
   // Filter and sort services
   const filteredServices = serviceData
     .filter(service => {
+      // Text search
       const searchLower = searchQuery.toLowerCase();
-      const categoryMatch = categoryFilter === 'all' || service.category === categoryFilter;
-      
-      return (searchQuery === '' || 
+      const searchMatch = searchQuery === '' || 
         service.name.toLowerCase().includes(searchLower) ||
-        service.description.toLowerCase().includes(searchLower)) && categoryMatch;
+        service.description.toLowerCase().includes(searchLower);
+      if (!searchMatch) return false;
+      
+      // Category filter (dropdown)
+      const categoryMatch = categoryFilter === 'all' || service.category === categoryFilter;
+      if (!categoryMatch) return false;
+      
+      // Selected categories (checkboxes)
+      if (selectedCategories.length > 0 && !selectedCategories.includes(service.category)) {
+        return false;
+      }
+      
+      // Price range
+      if (service.price < priceRange[0] || service.price > priceRange[1]) return false;
+      
+      // Duration range
+      if (service.duration < durationRange[0] || service.duration > durationRange[1]) return false;
+      
+      return true;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -62,6 +116,9 @@ export const Services: React.FC = () => {
     setSearchQuery('');
     setSortBy('name');
     setCategoryFilter('all');
+    setSelectedCategories([]);
+    setPriceRange([0, maxPrice]);
+    setDurationRange([0, maxDuration]);
   };
 
   const handleEditService = (service: Service) => {
@@ -72,6 +129,16 @@ export const Services: React.FC = () => {
   const handleSaveService = (updatedService: Partial<Service>) => {
     console.log('Saving service:', updatedService);
     // In a real app, this would update the backend
+  };
+  
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(value)) {
+        return prev.filter(c => c !== value);
+      } else {
+        return [...prev, value];
+      }
+    });
   };
 
   const getCategoryBadge = (category: string) => {
@@ -122,7 +189,7 @@ export const Services: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-3">
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[180px]">
                   <SortAsc className="h-4 w-4 mr-2" />
@@ -151,8 +218,18 @@ export const Services: React.FC = () => {
                   <SelectItem value="combo">Combo</SelectItem>
                 </SelectContent>
               </Select>
+              
+              <Button variant="outline" onClick={() => setShowFilters(true)}>
+                <Filter className="h-4 w-4 mr-2" />
+                Advanced Filters
+                {getActiveFilterCount() > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {getActiveFilterCount()}
+                  </Badge>
+                )}
+              </Button>
 
-              {(searchQuery || sortBy !== 'name' || categoryFilter !== 'all') && (
+              {getActiveFilterCount() > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -160,7 +237,7 @@ export const Services: React.FC = () => {
                   className="h-9"
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Clear
+                  Clear All
                 </Button>
               )}
             </div>
@@ -185,41 +262,166 @@ export const Services: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredServices.map((service) => (
-                  <TableRow
-                    key={service.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleEditService(service)}
-                  >
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{service.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {service.description}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getCategoryBadge(service.category)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{service.duration} min</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(service.price)}
+                {filteredServices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No services found matching the current filters
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredServices.map((service) => (
+                    <TableRow
+                      key={service.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleEditService(service)}
+                    >
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{service.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {service.description}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getCategoryBadge(service.category)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>{service.duration} min</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(service.price)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
         </div>
       </div>
+      
+      <Sheet open={showFilters} onOpenChange={setShowFilters}>
+        <SheetContent side="right" className="w-full max-w-md">
+          <SheetHeader className="mb-6">
+            <SheetTitle>Advanced Filters</SheetTitle>
+          </SheetHeader>
+          
+          <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] p-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sort By</label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="price">Price (High to Low)</SelectItem>
+                  <SelectItem value="duration">Duration (Long to Short)</SelectItem>
+                  <SelectItem value="category">Category</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-      <EditServiceDialog
+            <div className="space-y-4">
+              <label className="text-sm font-medium">Categories</label>
+              <div className="grid grid-cols-2 gap-2">
+                {categories.map(category => (
+                  <div key={category} className="flex items-center gap-2">
+                    <Checkbox 
+                      id={`category-${category}`} 
+                      checked={selectedCategories.includes(category)}
+                      onCheckedChange={() => handleCategoryChange(category)}
+                    />
+                    <Label htmlFor={`category-${category}`} className="cursor-pointer">
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-sm font-medium">Price Range</label>
+              <div className="px-1">
+                <Slider
+                  defaultValue={[0, maxPrice]}
+                  min={0}
+                  max={maxPrice}
+                  step={5}
+                  value={priceRange}
+                  onValueChange={(value) => setPriceRange(value as [number, number])}
+                />
+              </div>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <div>{formatCurrency(priceRange[0])}</div>
+                <div>{formatCurrency(priceRange[1])}</div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-sm font-medium">Duration Range</label>
+              <div className="px-1">
+                <Slider
+                  defaultValue={[0, maxDuration]}
+                  min={0}
+                  max={maxDuration}
+                  step={5}
+                  value={durationRange}
+                  onValueChange={(value) => setDurationRange(value as [number, number])}
+                />
+              </div>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <div>{durationRange[0]} min</div>
+                <div>{durationRange[1]} min</div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" onClick={() => {
+                  // Set short services filter
+                  setDurationRange([0, 30]);
+                }}>
+                  Short Services
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  // Set premium services filter
+                  setPriceRange([50, maxPrice]);
+                }}>
+                  Premium
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  // Set haircut filter
+                  setSelectedCategories(['haircut']);
+                }}>
+                  Haircuts Only
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  // Set combo services filter
+                  setSelectedCategories(['combo']);
+                }}>
+                  Combo Services
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <SheetFooter className="flex justify-between pt-4 mt-4 border-t">
+            <Button variant="outline" onClick={clearFilters}>
+              Reset filters
+            </Button>
+            <SheetClose asChild>
+              <Button>Apply filters</Button>
+            </SheetClose>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <EditServiceDialog 
         service={selectedService}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
