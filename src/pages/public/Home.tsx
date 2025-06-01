@@ -24,6 +24,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { staffData, serviceData } from '@/mocks';
 import { formatCurrency } from '@/utils';
+import { ReviewsSection } from '@/features/public/ReviewsSection';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -778,6 +779,9 @@ export const Home: React.FC = () => {
           </motion.div>
         </div>
       </motion.section>
+
+      {/* Reviews Section */}
+      <ReviewsSection />
     </div>
   );
 };

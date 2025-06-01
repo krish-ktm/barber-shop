@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart3, Calendar, CreditCard, Home, Scissors, Settings, Users, Clock, ListCheck as ListChecklist, Percent, Package } from 'lucide-react';
+import { BarChart3, Calendar, CreditCard, Home, Scissors, Settings, Users, Clock, ListCheck as ListChecklist, Percent, Package, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -93,6 +93,11 @@ export const Sidebar: React.FC = () => {
       icon: <Percent size={18} />,
       label: 'GST Settings',
       href: '/admin/gst-settings',
+    },
+    {
+      icon: <Star size={18} />,
+      label: 'Reviews',
+      href: '/admin/reviews',
     },
   ];
 

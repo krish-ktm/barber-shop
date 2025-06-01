@@ -7,3 +7,4 @@ export * from './customerData';
 export * from './businessData';
 export * from './gstRatesData';
 export * from './reportData';
+export * from './reviewsData';
