@@ -93,14 +93,16 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
 
   return (
     <Card className={className}>
-      <CardHeader>
-        <CardTitle className="text-base font-medium">{title}</CardTitle>
-        {description && (
-          <CardDescription>{description}</CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="flex justify-center">
-        <div className="w-full h-[300px]">
+      {title && (
+        <CardHeader>
+          <CardTitle className="text-base font-medium">{title}</CardTitle>
+          {description && (
+            <CardDescription>{description}</CardDescription>
+          )}
+        </CardHeader>
+      )}
+      <CardContent className="p-0">
+        <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

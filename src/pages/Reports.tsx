@@ -755,18 +755,16 @@ export const Reports: React.FC = () => {
                         Distribution of payment methods
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="pb-6">
-                      <div className="w-full h-[350px]">
-                        <PieChartCard
-                          data={paymentMethodData}
-                          title=""
-                          showLegend
-                          showLabels={false}
-                          innerRadius={60}
-                          outerRadius={80}
-                          className="border-none shadow-none"
-                        />
-                      </div>
+                    <CardContent className="px-0 pb-0">
+                      <PieChartCard
+                        data={paymentMethodData}
+                        title=""
+                        showLegend
+                        showLabels={false}
+                        innerRadius={60}
+                        outerRadius={80}
+                        className="border-none shadow-none"
+                      />
                     </CardContent>
                   </Card>
                   
@@ -820,18 +818,16 @@ export const Reports: React.FC = () => {
                         Revenue by category
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="pb-6">
-                      <div className="w-full h-[350px]">
-                        <PieChartCard
-                          data={serviceCategoryData}
-                          title=""
-                          showLegend
-                          showLabels={false}
-                          innerRadius={60}
-                          outerRadius={80}
-                          className="border-none shadow-none"
-                        />
-                      </div>
+                    <CardContent className="px-0 pb-0">
+                      <PieChartCard
+                        data={serviceCategoryData}
+                        title=""
+                        showLegend
+                        showLabels={false}
+                        innerRadius={60}
+                        outerRadius={80}
+                        className="border-none shadow-none"
+                      />
                     </CardContent>
                   </Card>
                   
