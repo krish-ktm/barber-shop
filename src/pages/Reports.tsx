@@ -665,7 +665,7 @@ export const Reports: React.FC = () => {
               </TabsList>
               
               <TabsContent value="trends" className="space-y-4 pt-4">
-                <Card>
+                <Card className="overflow-visible">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
@@ -691,8 +691,8 @@ export const Reports: React.FC = () => {
                       </Select>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
+                  <CardContent className="pb-6 mb-6">
+                    <div className="w-full h-[350px]">
                       <ComparisonChart
                         data={revenueComparisonData}
                         title=""
@@ -748,15 +748,15 @@ export const Reports: React.FC = () => {
               
               <TabsContent value="payment" className="space-y-4 pt-4">
                 <div className="grid gap-6 md:grid-cols-3">
-                  <Card className="md:col-span-1">
+                  <Card className="md:col-span-1 overflow-visible">
                     <CardHeader>
                       <CardTitle>Payment Methods</CardTitle>
                       <CardDescription>
                         Distribution of payment methods
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="h-[250px]">
+                    <CardContent className="pb-6">
+                      <div className="w-full h-[350px]">
                         <PieChartCard
                           data={paymentMethodData}
                           title=""
@@ -810,18 +810,18 @@ export const Reports: React.FC = () => {
                   </Card>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="services" className="space-y-4 pt-4">
                 <div className="grid gap-6 md:grid-cols-3">
-                  <Card className="md:col-span-1">
+                  <Card className="md:col-span-1 overflow-visible">
                     <CardHeader>
                       <CardTitle>Service Categories</CardTitle>
                       <CardDescription>
                         Revenue by category
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="h-[250px]">
+                    <CardContent className="pb-6">
+                      <div className="w-full h-[350px]">
                         <PieChartCard
                           data={serviceCategoryData}
                           title=""
@@ -958,10 +958,10 @@ export const Reports: React.FC = () => {
             {/* Staff Performance Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Staff Performance</CardTitle>
-                <CardDescription>
+                    <CardTitle>Staff Performance</CardTitle>
+                    <CardDescription>
                   Click on a row to view detailed performance metrics
-                </CardDescription>
+                    </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -980,7 +980,7 @@ export const Reports: React.FC = () => {
                       const staffInfo = staffData.find(s => s.name === staff.name);
                       return (
                         <TableRow 
-                          key={index}
+                      key={index}
                           className="cursor-pointer hover:bg-muted/50"
                           onClick={() => handleStaffRowClick(staffInfo?.id || `staff-${index}`)}
                         >
@@ -1029,7 +1029,7 @@ export const Reports: React.FC = () => {
                                 ) : (
                                   <span className="text-xl font-semibold">{staff.name.charAt(0)}</span>
                                 )}
-                              </div>
+                </div>
                               <div>
                                 <h2 className="text-xl font-bold">{staff.name}</h2>
                                 <p className="text-muted-foreground">{staffInfo?.position || 'Staff Member'}</p>
@@ -1043,8 +1043,8 @@ export const Reports: React.FC = () => {
                                 </CardHeader>
                                 <CardContent className="p-3 pt-0">
                                   <p className="text-2xl font-bold">{staff.appointments}</p>
-                                </CardContent>
-                              </Card>
+              </CardContent>
+            </Card>
                               
                               <Card className="overflow-hidden">
                                 <CardHeader className="p-3">
@@ -1301,18 +1301,18 @@ export const Reports: React.FC = () => {
                         const serviceInfo = serviceData.find(s => s.name === service.name);
                         return (
                           <div key={index} className="space-y-6">
-                            <div className="flex items-center justify-between">
-                              <div>
+                      <div className="flex items-center justify-between">
+                        <div>
                                 <h2 className="text-xl font-bold">{service.name}</h2>
                                 <p className="text-muted-foreground">
                                   {serviceInfo?.category || 'General'} • {service.avgDuration} minutes
-                                </p>
-                              </div>
+                          </p>
+                        </div>
                               <Badge variant={parseInt(service.growthRate) > 0 ? "default" : "secondary"}>
                                 {parseInt(service.growthRate) > 0 ? '+' : ''}{service.growthRate}% growth
-                              </Badge>
-                            </div>
-                            
+                        </Badge>
+                      </div>
+
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                               <Card className="overflow-hidden">
                                 <CardHeader className="p-3">
@@ -1349,8 +1349,8 @@ export const Reports: React.FC = () => {
                                   <p className="text-2xl font-bold">{service.customerSatisfaction}/5.0</p>
                                 </CardContent>
                               </Card>
-                            </div>
-                            
+                      </div>
+
                             <Tabs defaultValue="metrics" className="w-full">
                               <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="metrics">Performance</TabsTrigger>
@@ -1432,7 +1432,7 @@ export const Reports: React.FC = () => {
                                 </Table>
                               </TabsContent>
                             </Tabs>
-                          </div>
+                </div>
                         );
                       })}
                   </div>
@@ -1515,15 +1515,15 @@ export const Reports: React.FC = () => {
             </div>
 
             {/* Appointment Weekly Analysis */}
-            <Card>
+            <Card className="overflow-visible">
               <CardHeader>
                 <CardTitle>Weekly Appointment Analysis</CardTitle>
                 <CardDescription>
                   Appointment trends and distribution by day of week
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
+              <CardContent className="pb-6">
+                <div className="w-full h-[350px] mb-6">
                   <ComparisonChart
                     data={appointmentMetrics.distributionByDay.map(day => ({
                       date: day.day,
@@ -1538,7 +1538,7 @@ export const Reports: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Appointment Distribution Cards */}
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
@@ -1610,8 +1610,8 @@ export const Reports: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
+              </CardContent>
+            </Card>
             </div>
           </TabsContent>
         </Tabs>
