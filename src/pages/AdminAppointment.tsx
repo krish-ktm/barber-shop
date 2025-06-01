@@ -530,6 +530,7 @@ export const AdminAppointment: React.FC = () => {
         <AppointmentList
           appointments={filteredAppointments}
           showActions
+          staffView={false}
         />
       </div>
 

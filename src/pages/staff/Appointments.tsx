@@ -267,10 +267,13 @@ export const StaffAppointments: React.FC = () => {
         </div>
       </div>
 
-      <AppointmentList
-        appointments={filteredAppointments}
-        showActions
+      <AppointmentList 
+        appointments={filteredAppointments} 
+        showActions={true}
+        staffView={true}
       />
     </div>
   );
 };
+
+export default StaffAppointments;

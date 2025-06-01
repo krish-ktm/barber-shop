@@ -1,5 +1,4 @@
 import React from 'react';
-import { format } from 'date-fns';
 import { 
   Calendar,
   Clock,
@@ -8,7 +7,6 @@ import {
   Mail,
   CheckCircle,
   XCircle,
-  User,
   Scissors
 } from 'lucide-react';
 import { Appointment } from '@/types';
@@ -30,11 +28,13 @@ import { formatTime, formatCurrency } from '@/utils';
 interface AppointmentListProps {
   appointments: Appointment[];
   showActions?: boolean;
+  staffView?: boolean;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
   appointments,
   showActions = false,
+  staffView = false,
 }) => {
   const getStaffImage = (staffId: string) => {
     const staff = staffData.find(s => s.id === staffId);
@@ -56,6 +56,17 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const maskPhoneNumber = (phone: string) => {
+    return `XXX-XXX-${phone.slice(-4)}`;
+  };
+
+  const maskEmail = (email: string = '') => {
+    if (!email) return '';
+    const [username, domain] = email.split('@');
+    if (!username || !domain) return 'xxxx@xxxx.xxx';
+    return `${username.charAt(0)}***@${domain}`;
   };
 
   if (appointments.length === 0) {
@@ -106,12 +117,16 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                     </div>
                     <div className="flex items-center">
                       <Phone className="mr-2 h-4 w-4 shrink-0" />
-                      <span className="truncate">{appointment.customerPhone}</span>
+                      <span className="truncate">
+                        {staffView ? maskPhoneNumber(appointment.customerPhone) : appointment.customerPhone}
+                      </span>
                     </div>
                     {appointment.customerEmail && (
                       <div className="flex items-center">
                         <Mail className="mr-2 h-4 w-4 shrink-0" />
-                        <span className="truncate">{appointment.customerEmail}</span>
+                        <span className="truncate">
+                          {staffView ? maskEmail(appointment.customerEmail) : appointment.customerEmail}
+                        </span>
                       </div>
                     )}
                   </div>
