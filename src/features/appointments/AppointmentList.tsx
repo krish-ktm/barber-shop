@@ -28,13 +28,15 @@ import { formatTime, formatCurrency } from '@/utils';
 interface AppointmentListProps {
   appointments: Appointment[];
   showActions?: boolean;
-  staffView?: boolean;
+  isStaffView?: boolean;
+  onViewAppointment?: (appointmentId: string) => void;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
   appointments,
   showActions = false,
-  staffView = false,
+  isStaffView = false,
+  onViewAppointment,
 }) => {
   const getStaffImage = (staffId: string) => {
     const staff = staffData.find(s => s.id === staffId);
@@ -84,7 +86,11 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   return (
     <div className="space-y-4">
       {appointments.map((appointment) => (
-        <Card key={appointment.id} className="overflow-hidden">
+        <Card 
+          key={appointment.id} 
+          className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => onViewAppointment && onViewAppointment(appointment.id)}
+        >
           <div className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="flex items-start space-x-4">
@@ -111,21 +117,23 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                       <Clock className="mr-2 h-4 w-4 shrink-0" />
                       <span>{formatTime(appointment.time)} - {formatTime(appointment.endTime)}</span>
                     </div>
-                    <div className="flex items-center">
-                      <Scissors className="mr-2 h-4 w-4 shrink-0" />
-                      <span>{appointment.staffName}</span>
-                    </div>
+                    {!isStaffView && (
+                      <div className="flex items-center">
+                        <Scissors className="mr-2 h-4 w-4 shrink-0" />
+                        <span>{appointment.staffName}</span>
+                      </div>
+                    )}
                     <div className="flex items-center">
                       <Phone className="mr-2 h-4 w-4 shrink-0" />
                       <span className="truncate">
-                        {staffView ? maskPhoneNumber(appointment.customerPhone) : appointment.customerPhone}
+                        {!isStaffView ? appointment.customerPhone : maskPhoneNumber(appointment.customerPhone)}
                       </span>
                     </div>
                     {appointment.customerEmail && (
                       <div className="flex items-center">
                         <Mail className="mr-2 h-4 w-4 shrink-0" />
                         <span className="truncate">
-                          {staffView ? maskEmail(appointment.customerEmail) : appointment.customerEmail}
+                          {!isStaffView ? appointment.customerEmail : maskEmail(appointment.customerEmail)}
                         </span>
                       </div>
                     )}
@@ -137,7 +145,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                 <div className="flex items-center sm:self-start">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>

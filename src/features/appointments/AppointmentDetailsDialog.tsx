@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, User, Scissors, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, User, Scissors, MessageSquare, Phone } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,28 +9,23 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { appointmentData } from '@/mocks';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Appointment } from '@/types';
 
 interface AppointmentDetailsDialogProps {
-  appointmentId: string;
+  appointment: Appointment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isStaffView?: boolean;
 }
 
 export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> = ({
-  appointmentId,
+  appointment,
   open,
   onOpenChange,
+  isStaffView = false,
 }) => {
-  // Find the appointment
-  const appointment = appointmentData.find(a => a.id === appointmentId);
-
-  if (!appointment) {
-    return null;
-  }
-
   // Status badge colors
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -49,6 +44,12 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
     }
   };
 
+  const handleUpdateStatus = (newStatus: string) => {
+    // In a real app, this would update the appointment status
+    console.log(`Update appointment ${appointment.id} status to: ${newStatus}`);
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -65,6 +66,17 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
           </div>
 
           <div className="space-y-3">
+            {isStaffView && (
+              <div className="flex items-start gap-3">
+                <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Contact</p>
+                  <p className="text-sm text-muted-foreground">{appointment.customerPhone}</p>
+                  <p className="text-sm text-muted-foreground">{appointment.customerEmail}</p>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-start gap-3">
               <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
               <div>
@@ -85,13 +97,15 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <User className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium">Staff</p>
-                <p className="text-sm text-muted-foreground">{appointment.staffName}</p>
+            {!isStaffView && (
+              <div className="flex items-start gap-3">
+                <User className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Staff</p>
+                  <p className="text-sm text-muted-foreground">{appointment.staffName}</p>
+                </div>
               </div>
-            </div>
+            )}
 
             <Separator />
 
@@ -128,11 +142,39 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
           </div>
         </div>
 
-        <DialogFooter className="flex space-x-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-          <Button>Edit Appointment</Button>
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0">
+          {isStaffView ? (
+            <>
+              <div className="flex gap-2">
+                {appointment.status !== 'completed' && (
+                  <Button 
+                    variant="default" 
+                    onClick={() => handleUpdateStatus('completed')}
+                  >
+                    Mark Completed
+                  </Button>
+                )}
+                {appointment.status !== 'no-show' && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleUpdateStatus('no-show')}
+                  >
+                    No Show
+                  </Button>
+                )}
+              </div>
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+              <Button>Edit Appointment</Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

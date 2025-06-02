@@ -36,12 +36,15 @@ import {
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
 
 export const StaffAppointments: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // Mock staff ID - in real app would come from auth context
   const staffId = 'staff-1';
@@ -83,6 +86,15 @@ export const StaffAppointments: React.FC = () => {
     setSearchQuery('');
     setStatusFilter('all');
   };
+
+  const handleViewAppointment = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setIsDetailsOpen(true);
+  };
+
+  const selectedAppointment = selectedAppointmentId 
+    ? appointmentData.find(app => app.id === selectedAppointmentId) 
+    : null;
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -249,29 +261,33 @@ export const StaffAppointments: React.FC = () => {
                         setShowFilters(false);
                       }
                     }}
-                    className="rounded-md border"
+                    className="border rounded-md p-3"
                   />
                 </div>
-
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <Button variant="outline" onClick={clearFilters}>
-                    Reset filters
-                  </Button>
-                  <SheetClose asChild>
-                    <Button>Apply filters</Button>
-                  </SheetClose>
-                </div>
+                
+                <SheetClose asChild>
+                  <Button className="w-full">Apply Filters</Button>
+                </SheetClose>
               </div>
             </SheetContent>
           </Sheet>
         </div>
+
+        <AppointmentList 
+          appointments={filteredAppointments}
+          isStaffView={true}
+          onViewAppointment={handleViewAppointment}
+        />
       </div>
 
-      <AppointmentList 
-        appointments={filteredAppointments} 
-        showActions={true}
-        staffView={true}
-      />
+      {selectedAppointment && (
+        <AppointmentDetailsDialog 
+          appointment={selectedAppointment}
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+          isStaffView={true}
+        />
+      )}
     </div>
   );
 };

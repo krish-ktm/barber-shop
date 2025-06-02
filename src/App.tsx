@@ -20,6 +20,7 @@ import { Reviews } from './pages/Reviews';
 // Staff Routes
 import { StaffDashboard } from './pages/staff/Dashboard';
 import { StaffAppointments } from './pages/staff/Appointments';
+import { StaffCalendar } from './pages/staff/StaffCalendar';
 import { StaffProfile } from './pages/staff/Profile';
 import { StaffWorkingHours } from './pages/staff/WorkingHours';
 import { StaffReports } from './pages/staff/Reports';
@@ -95,6 +96,7 @@ function App() {
           <Route index element={<Navigate to="/staff/dashboard" replace />} />
           <Route path="dashboard" element={<StaffDashboard />} />
           <Route path="appointments" element={<StaffAppointments />} />
+          <Route path="calendar" element={<StaffCalendar />} />
           <Route path="reports" element={<StaffReports />} />
           <Route path="profile" element={<StaffProfile />} />
           <Route path="working-hours" element={<StaffWorkingHours />} />
