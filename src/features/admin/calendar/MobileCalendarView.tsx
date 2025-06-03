@@ -30,6 +30,13 @@ import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 import { theme } from '@/theme/theme';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type CalendarView = 'month' | 'week' | 'day' | 'list';
 
@@ -47,6 +54,7 @@ export const MobileCalendarView = ({
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('month');
+  const [showAppointmentsModal, setShowAppointmentsModal] = useState<boolean>(false);
 
   // Navigation functions
   const goToPrevious = () => {
@@ -91,6 +99,7 @@ export const MobileCalendarView = ({
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     onSelectDate(date);
+    setShowAppointmentsModal(true);
   };
 
   // Get title based on current view
@@ -195,6 +204,7 @@ export const MobileCalendarView = ({
     const monthStart = startOfMonth(currentDate);
     const startDate = getDay(monthStart);
     const daysInMonth = getDaysInMonth(currentDate);
+    const selectedDateAppointments = getAppointmentsForDate(selectedDate);
 
     const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     
@@ -243,7 +253,7 @@ export const MobileCalendarView = ({
             onClick={() => handleDateClick(date)}
           >
             <div className="flex flex-col h-full">
-              <div className="flex justify-between items-center">
+              <div className="flex items-start justify-between">
                 <span
                   className={cn(
                     'text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center',
@@ -253,7 +263,7 @@ export const MobileCalendarView = ({
                   {i}
                 </span>
                 {dateAppointments.length > 0 && (
-                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">
+                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 min-w-[1rem] flex items-center justify-center">
                     {dateAppointments.length}
                   </Badge>
                 )}
@@ -315,10 +325,84 @@ export const MobileCalendarView = ({
       return rows;
     };
 
+    // Appointments Modal
+    const AppointmentsModal = () => {
+      return (
+        <Dialog open={showAppointmentsModal} onOpenChange={setShowAppointmentsModal}>
+          <DialogContent className="max-w-md p-0 h-[80vh] flex flex-col rounded-lg">
+            <DialogHeader className="px-4 py-3 border-b sticky top-0 z-10">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-base font-medium">
+                  {format(selectedDate, 'EEEE, MMMM d')}
+                </DialogTitle>
+                <div className="absolute right-10 top-3">
+                  <Badge variant="outline">
+                    {selectedDateAppointments.length} appt{selectedDateAppointments.length !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
+              </div>
+            </DialogHeader>
+            
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              {selectedDateAppointments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-center">
+                  <p className="text-muted-foreground">No appointments scheduled for this day</p>
+                </div>
+              ) : (
+                <div className="space-y-0.5 py-2">
+                  {selectedDateAppointments.map((appointment) => (
+                    <div
+                      key={appointment.id}
+                      className="p-3 rounded-md hover:bg-accent/40 cursor-pointer"
+                      onClick={() => {
+                        onViewAppointment(appointment.id);
+                        setShowAppointmentsModal(false);
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: getStatusColor(appointment.status) }}
+                          />
+                          <span className="font-medium">{appointment.time}</span>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs px-2 py-0",
+                            appointment.status === 'confirmed' && "bg-success/10 text-success border-success/30",
+                            appointment.status === 'cancelled' && "bg-error/10 text-error border-error/30",
+                            appointment.status === 'scheduled' && "bg-warning/10 text-warning border-warning/30"
+                          )}
+                        >
+                          {appointment.status}
+                        </Badge>
+                      </div>
+                      <div className="mt-1.5 font-medium">{appointment.customerName}</div>
+                      <div className="flex justify-between items-center mt-1">
+                        <div className="text-xs text-muted-foreground truncate max-w-[70%]">
+                          {getServiceNames(appointment)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {getTotalServiceDuration(appointment)} min
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      );
+    };
+
     return (
       <div>
         {renderDays()}
         {renderCells()}
+        <AppointmentsModal />
       </div>
     );
   };
