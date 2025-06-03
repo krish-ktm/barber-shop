@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { PageHeader } from '@/components/layout';
-import { FullCalendarView } from '@/features/appointments/FullCalendarView';
 import { appointmentData } from '@/mocks';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
+import { CalendarLayout } from '@/features/admin/calendar/CalendarLayout';
 
 export const AdminCalendar: React.FC = () => {
   // State for appointment details dialog
@@ -32,7 +32,7 @@ export const AdminCalendar: React.FC = () => {
       />
       
       <div className="bg-card border rounded-lg">
-        <FullCalendarView 
+        <CalendarLayout 
           appointments={appointmentData}
           onSelectDate={handleSelectDate}
           onViewAppointment={handleViewAppointment}
