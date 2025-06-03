@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 import { theme } from '@/theme/theme';
@@ -233,13 +232,13 @@ export const TabletCalendarView = ({
           <div
             key={i}
             className={cn(
-              'border h-24 p-1.5 rounded-md transition-colors cursor-pointer hover:bg-background-alt relative',
+              'border h-24 p-1.5 rounded-md transition-colors cursor-pointer hover:bg-background-alt relative overflow-hidden',
               isToday && 'border-primary',
               isSelected && 'bg-background-alt border-primary-light',
             )}
             onClick={() => handleDateClick(date)}
           >
-            <div className="flex justify-between items-center mb-1.5">
+            <div className="flex justify-between items-center mb-1">
               <span
                 className={cn(
                   'text-xs font-semibold rounded-full w-6 h-6 flex items-center justify-center',
@@ -255,9 +254,9 @@ export const TabletCalendarView = ({
               )}
             </div>
             
-            <ScrollArea className="h-16 pr-1">
+            <div className="h-[calc(100%-24px)] overflow-hidden">
               <div className="space-y-0.5">
-                {dateAppointments.slice(0, 3).map((appointment) => (
+                {dateAppointments.slice(0, 2).map((appointment) => (
                   <div
                     key={appointment.id}
                     onClick={(e) => {
@@ -266,17 +265,17 @@ export const TabletCalendarView = ({
                     }}
                     className="text-[10px] p-0.5 rounded bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors truncate flex items-center gap-1"
                   >
-                    <div className="w-1 h-1 rounded-full" style={{ backgroundColor: getStatusColor(appointment.status) }} />
+                    <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
                     <span className="truncate">{appointment.time} - {appointment.customerName}</span>
                   </div>
                 ))}
-                {dateAppointments.length > 3 && (
+                {dateAppointments.length > 2 && (
                   <div className="text-[10px] text-center text-muted-foreground">
-                    +{dateAppointments.length - 3} more
+                    +{dateAppointments.length - 2} more
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         );
 
@@ -356,7 +355,7 @@ export const TabletCalendarView = ({
           {hours.map((hour) => (
             <React.Fragment key={hour}>
               {/* Hour column */}
-              <div className="p-1 border-r text-[10px] text-muted-foreground h-16 flex items-start justify-end">
+              <div className="p-1 border-r text-[10px] text-muted-foreground h-20 flex items-start justify-end">
                 {hour}:00
               </div>
               
@@ -366,22 +365,33 @@ export const TabletCalendarView = ({
                 return (
                   <div 
                     key={`${format(day, 'yyyy-MM-dd')}-${hour}`}
-                    className="border-t border-l p-0.5 h-16 relative"
+                    className="border-t border-l p-0.5 h-20 relative"
                   >
-                    {dayAppointments.map((appointment) => (
-                      <div
-                        key={appointment.id}
-                        className="absolute inset-0 m-0.5 p-0.5 rounded bg-primary/10 border border-primary/20 
-                                  text-[9px] cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden"
-                        onClick={() => onViewAppointment(appointment.id)}
-                      >
-                        <div className="flex items-center">
-                          <div className="w-1.5 h-1.5 rounded-full mr-0.5" style={{ backgroundColor: getStatusColor(appointment.status) }} />
-                          <span className="font-medium">{appointment.time}</span>
+                    <div className="flex flex-col gap-0.5 h-full overflow-hidden">
+                      {dayAppointments.length === 0 ? (
+                        <div className="h-full w-full"></div>
+                      ) : (
+                        dayAppointments.slice(0, 2).map((appointment) => (
+                          <div
+                            key={appointment.id}
+                            className="p-0.5 rounded bg-primary/10 border border-primary/20 
+                                      text-[9px] cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden"
+                            onClick={() => onViewAppointment(appointment.id)}
+                          >
+                            <div className="flex items-center">
+                              <div className="w-1.5 h-1.5 rounded-full mr-0.5 flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
+                              <span className="font-medium truncate">{appointment.time}</span>
+                            </div>
+                            <div className="truncate">{appointment.customerName}</div>
+                          </div>
+                        ))
+                      )}
+                      {dayAppointments.length > 2 && (
+                        <div className="text-[8px] text-center text-muted-foreground">
+                          +{dayAppointments.length - 2} more
                         </div>
-                        <div className="truncate">{appointment.customerName}</div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
                 );
               })}

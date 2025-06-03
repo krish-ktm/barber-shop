@@ -356,7 +356,7 @@ export const DesktopCalendarView = ({
           {hours.map((hour) => (
             <React.Fragment key={hour}>
               {/* Hour column */}
-              <div className="p-2 border-r text-xs text-muted-foreground h-20 flex items-start justify-end">
+              <div className="p-2 border-r text-xs text-muted-foreground h-28 flex items-start justify-end">
                 {hour}:00
               </div>
               
@@ -366,25 +366,37 @@ export const DesktopCalendarView = ({
                 return (
                   <div 
                     key={`${format(day, 'yyyy-MM-dd')}-${hour}`}
-                    className="border-t border-l p-1 h-20 relative"
+                    className="border-t border-l p-1 h-28 relative"
                   >
-                    {dayAppointments.map((appointment) => (
-                      <div
-                        key={appointment.id}
-                        className="absolute inset-0 m-1 p-1 rounded bg-primary/10 border border-primary/20 
-                                  text-xs cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden"
-                        onClick={() => onViewAppointment(appointment.id)}
-                      >
-                        <div className="flex items-center mb-1">
-                          <div className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: getStatusColor(appointment.status) }} />
-                          <span className="font-medium">{appointment.time}</span>
-                        </div>
-                        <div className="truncate">{appointment.customerName}</div>
-                        <div className="truncate text-[10px] text-muted-foreground">
-                          {appointment.services.map(s => s.serviceName).join(', ')}
-                        </div>
-                      </div>
-                    ))}
+                    <div className="flex flex-col gap-1 h-full">
+                      {dayAppointments.length === 0 ? (
+                        <div className="h-full w-full"></div>
+                      ) : (
+                        dayAppointments.map((appointment, index) => (
+                          <div
+                            key={appointment.id}
+                            className={`p-1 rounded bg-primary/10 border border-primary/20 
+                                     text-xs cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden
+                                     ${index > 1 ? 'hidden md:block' : ''}`}
+                            style={{
+                              maxHeight: `${Math.floor(100 / Math.min(dayAppointments.length, 3))}%`
+                            }}
+                            onClick={() => onViewAppointment(appointment.id)}
+                          >
+                            <div className="flex items-center mb-0.5">
+                              <div className="w-2 h-2 rounded-full mr-1 flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
+                              <span className="font-medium truncate">{appointment.time}</span>
+                            </div>
+                            <div className="truncate">{appointment.customerName}</div>
+                            {index === 0 && dayAppointments.length > 3 && (
+                              <div className="text-[10px] text-center text-muted-foreground mt-0.5">
+                                +{dayAppointments.length - 2} more
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -442,14 +454,16 @@ export const DesktopCalendarView = ({
                       }}
                       onClick={() => onViewAppointment(appointment.id)}
                     >
-                      <div className="flex items-center gap-1 mb-1">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getStatusColor(appointment.status) }} />
-                        <span className="font-medium">{appointment.time}</span>
-                      </div>
-                      <div className="font-medium truncate">{appointment.customerName}</div>
-                      <div className="text-xs truncate text-muted-foreground">{appointment.services.map(s => s.serviceName).join(', ')}</div>
-                      <div className="text-xs mt-1">
-                        Duration: {appointment.services.reduce((total, svc) => total + svc.duration, 0)} min
+                      <div className="flex flex-col h-full overflow-hidden">
+                        <div className="flex items-center gap-1 mb-1">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
+                          <span className="font-medium truncate">{appointment.time}</span>
+                        </div>
+                        <div className="font-medium truncate">{appointment.customerName}</div>
+                        <div className="text-xs truncate text-muted-foreground">{appointment.services.map(s => s.serviceName).join(', ')}</div>
+                        <div className="text-xs mt-auto pt-1 truncate">
+                          Duration: {appointment.services.reduce((total, svc) => total + svc.duration, 0)} min
+                        </div>
                       </div>
                     </div>
                   ))}
