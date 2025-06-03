@@ -6,6 +6,7 @@ import {
   addWeeks,
   subWeeks,
   addDays,
+  subDays,
   getDay, 
   getDaysInMonth, 
   isSameDay, 
@@ -18,6 +19,7 @@ import {
 import { 
   ChevronLeft, 
   ChevronRight, 
+  Clock, 
   CalendarDays, 
   LayoutGrid, 
   LayoutList
@@ -29,7 +31,7 @@ import { Appointment } from '@/types';
 import { theme } from '@/theme/theme';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type CalendarView = 'month' | 'week' | 'list';
+type CalendarView = 'month' | 'week' | 'day' | 'list';
 
 interface MobileCalendarViewProps {
   appointments: Appointment[];
@@ -55,6 +57,9 @@ export const MobileCalendarView = ({
       case 'week':
         setCurrentDate(subWeeks(currentDate, 1));
         break;
+      case 'day':
+        setCurrentDate(subDays(currentDate, 1));
+        break;
       case 'list':
         setCurrentDate(subWeeks(currentDate, 2));
         break;
@@ -68,6 +73,9 @@ export const MobileCalendarView = ({
         break;
       case 'week':
         setCurrentDate(addWeeks(currentDate, 1));
+        break;
+      case 'day':
+        setCurrentDate(addDays(currentDate, 1));
         break;
       case 'list':
         setCurrentDate(addWeeks(currentDate, 2));
@@ -95,13 +103,16 @@ export const MobileCalendarView = ({
       case 'week': {
         const weekStart = startOfWeek(currentDate);
         const weekEnd = endOfWeek(currentDate);
-        title = `${format(weekStart, 'M/d')} - ${format(weekEnd, 'M/d')}`;
+        title = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`;
         break;
       }
+      case 'day':
+        title = format(currentDate, 'MMM d, yyyy');
+        break;
       case 'list': {
         const listStart = startOfDay(currentDate);
         const listEnd = endOfDay(addDays(currentDate, 14));
-        title = `${format(listStart, 'M/d')} - ${format(listEnd, 'M/d')}`;
+        title = `${format(listStart, 'MMM d')} - ${format(listEnd, 'MMM d')}`;
         break;
       }
     }
@@ -150,19 +161,27 @@ export const MobileCalendarView = ({
         </div>
         
         <div className="flex justify-center">
-          <Tabs defaultValue={view} onValueChange={(value) => setView(value as CalendarView)} className="w-auto">
-            <TabsList className="grid grid-cols-3 w-full max-w-xs">
-              <TabsTrigger value="month" className="text-xs">
-                <CalendarDays className="h-3 w-3 mr-1" />
-                Month
+          <Tabs 
+            value={view} 
+            onValueChange={(value) => setView(value as CalendarView)} 
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="month" className="text-xs px-0">
+                <CalendarDays className="h-3 w-3 sm:mr-1" />
+                <span className="hidden xs:inline">Month</span>
               </TabsTrigger>
-              <TabsTrigger value="week" className="text-xs">
-                <LayoutGrid className="h-3 w-3 mr-1" />
-                Week
+              <TabsTrigger value="week" className="text-xs px-0">
+                <LayoutGrid className="h-3 w-3 sm:mr-1" />
+                <span className="hidden xs:inline">Week</span>
               </TabsTrigger>
-              <TabsTrigger value="list" className="text-xs">
-                <LayoutList className="h-3 w-3 mr-1" />
-                List
+              <TabsTrigger value="day" className="text-xs px-0">
+                <Clock className="h-3 w-3 sm:mr-1" />
+                <span className="hidden xs:inline">Day</span>
+              </TabsTrigger>
+              <TabsTrigger value="list" className="text-xs px-0">
+                <LayoutList className="h-3 w-3 sm:mr-1" />
+                <span className="hidden xs:inline">List</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -314,22 +333,28 @@ export const MobileCalendarView = ({
       <div className="flex flex-col">
         {/* Day headers */}
         <div className="grid grid-cols-8 mb-1 border-b">
-          <div className="h-12 flex items-end justify-center p-1 font-medium text-muted-foreground">
+          <div className="h-10 flex items-end justify-center p-1 font-medium text-muted-foreground">
             <span className="text-[8px]">Hr</span>
           </div>
           {weekDays.map((day) => {
             const isToday = isSameDay(day, new Date());
+            const dayNum = format(day, 'd');
+            const dayOfWeek = format(day, 'E')[0]; // First letter of day
+            
             return (
               <div 
                 key={format(day, 'yyyy-MM-dd')} 
                 className={cn(
-                  "h-12 flex flex-col items-center justify-center border-l p-1 cursor-pointer hover:bg-background-alt",
+                  "h-10 flex flex-col items-center justify-center border-l p-0.5 cursor-pointer hover:bg-background-alt",
                   isToday && "bg-primary/5 border-primary"
                 )}
-                onClick={() => handleDateClick(day)}
+                onClick={() => {
+                  handleDateClick(day);
+                  setView('day');
+                }}
               >
-                <span className="text-[9px] font-medium">{format(day, 'EE')}</span>
-                <span className={cn("text-xs font-semibold", isToday && "text-primary")}>{format(day, 'd')}</span>
+                <span className={cn("text-[9px] font-medium", isToday && "text-primary")}>{dayOfWeek}</span>
+                <span className={cn("text-xs font-semibold", isToday && "text-primary")}>{dayNum}</span>
               </div>
             );
           })}
@@ -340,36 +365,41 @@ export const MobileCalendarView = ({
           {hours.map((hour) => (
             <React.Fragment key={hour}>
               {/* Hour column */}
-              <div className="p-1 border-r text-[8px] text-muted-foreground h-10 flex items-start justify-end">
+              <div className="py-0.5 px-1 border-r text-[8px] text-muted-foreground h-8 flex items-start justify-end">
                 {hour}
               </div>
               
               {/* Day columns */}
               {weekDays.map((day) => {
                 const dayAppointments = getAppointmentsForTimeSlot(day, hour);
+                const hasAppointments = dayAppointments.length > 0;
+                
                 return (
                   <div 
                     key={`${format(day, 'yyyy-MM-dd')}-${hour}`}
-                    className="border-t border-l p-0.5 h-10 relative"
+                    className={cn(
+                      "border-t border-l h-8 relative",
+                      hasAppointments && "bg-primary/5"
+                    )}
+                    onClick={() => {
+                      if (hasAppointments) {
+                        setCurrentDate(day);
+                        setSelectedDate(day);
+                        setView('day');
+                      }
+                    }}
                   >
-                    {dayAppointments.length > 0 && (
-                      <div
-                        className="absolute inset-0 flex items-center justify-center"
-                        onClick={() => {
-                          // When tapped, show the appointments for this day in list view
-                          setSelectedDate(day);
-                          setView('list');
-                        }}
-                      >
-                        <Badge 
-                          variant="outline" 
-                          className={cn(
-                            "h-5 text-[8px] px-1.5",
-                            dayAppointments.length > 0 && "bg-primary/10 border-primary/20"
-                          )}
-                        >
-                          {dayAppointments.length}
-                        </Badge>
+                    {hasAppointments && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: getStatusColor(dayAppointments[0].status) }}
+                        />
+                        {dayAppointments.length > 1 && (
+                          <span className="absolute text-[7px] font-bold -mt-3 ml-2">
+                            {dayAppointments.length}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -378,6 +408,53 @@ export const MobileCalendarView = ({
             </React.Fragment>
           ))}
         </div>
+      </div>
+    );
+  };
+
+  // Day View - Mobile optimized
+  const renderDayView = () => {
+    const dayAppointments = getAppointmentsForDate(currentDate);
+
+    return (
+      <div className="flex flex-col">
+        <div className="text-center mb-3">
+          <div className="text-sm font-medium">{format(currentDate, 'EEEE')}</div>
+          <div className="text-base font-bold">{format(currentDate, 'MMMM d, yyyy')}</div>
+        </div>
+        
+        {dayAppointments.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No appointments scheduled for this day
+          </div>
+        ) : (
+          <div className="border rounded-md overflow-hidden">
+            <div className="divide-y">
+              {dayAppointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className="p-2 hover:bg-muted/10 cursor-pointer"
+                  onClick={() => onViewAppointment(appointment.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <div 
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: getStatusColor(appointment.status) }}
+                      />
+                      <span className="font-medium text-xs">{appointment.time}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {getTotalServiceDuration(appointment)} min
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs">{appointment.customerName}</div>
+                  <div className="mt-0.5 text-[10px] text-muted-foreground">{getServiceNames(appointment)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -484,6 +561,7 @@ export const MobileCalendarView = ({
       <div className="mt-2">
         {view === 'month' && renderMonthView()}
         {view === 'week' && renderWeekView()}
+        {view === 'day' && renderDayView()}
         {view === 'list' && renderListView()}
       </div>
     </div>

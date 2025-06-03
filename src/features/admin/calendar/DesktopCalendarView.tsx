@@ -425,7 +425,7 @@ export const DesktopCalendarView = ({
             {hours.map((hour) => (
               <div 
                 key={hour} 
-                className="h-24 flex items-start justify-end pr-2 text-sm text-muted-foreground"
+                className="h-28 flex items-start justify-end pr-2 text-sm text-muted-foreground"
               >
                 {hour}:00
               </div>
@@ -441,32 +441,55 @@ export const DesktopCalendarView = ({
               });
               
               return (
-                <div key={hour} className="h-24 border-t relative">
-                  {hourAppointments.map((appointment, idx) => (
-                    <div
-                      key={appointment.id}
-                      className="absolute inset-y-0 p-2 m-1 rounded bg-primary/10 border border-primary/20 
-                               cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden"
-                      style={{
-                        left: `${idx * 25}%`,
-                        width: 'calc(25% - 8px)',
-                        maxWidth: '300px'
-                      }}
-                      onClick={() => onViewAppointment(appointment.id)}
-                    >
-                      <div className="flex flex-col h-full overflow-hidden">
-                        <div className="flex items-center gap-1 mb-1">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
-                          <span className="font-medium truncate">{appointment.time}</span>
+                <div key={hour} className="h-28 border-t relative">
+                  {hourAppointments.map((appointment, idx) => {
+                    // Calculate width based on number of appointments in this hour
+                    const width = Math.min(100 / Math.max(hourAppointments.length, 2), 50);
+                    
+                    return (
+                      <div
+                        key={appointment.id}
+                        className="absolute inset-y-0 py-2 px-3 m-1 rounded bg-primary/10 border border-primary/20 
+                                 cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden flex flex-col"
+                        style={{
+                          left: `${idx * width}%`,
+                          width: `calc(${width}% - 8px)`,
+                          maxWidth: '350px'
+                        }}
+                        onClick={() => onViewAppointment(appointment.id)}
+                      >
+                        {/* Header */}
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
+                          <span className="font-semibold text-sm">{appointment.time}</span>
+                          <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-5 whitespace-nowrap">
+                            {appointment.status}
+                          </Badge>
                         </div>
-                        <div className="font-medium truncate">{appointment.customerName}</div>
-                        <div className="text-xs truncate text-muted-foreground">{appointment.services.map(s => s.serviceName).join(', ')}</div>
-                        <div className="text-xs mt-auto pt-1 truncate">
-                          Duration: {appointment.services.reduce((total, svc) => total + svc.duration, 0)} min
+                        
+                        {/* Content */}
+                        <div className="overflow-hidden flex-1 min-h-0">
+                          <div className="font-medium text-sm mb-1 truncate">{appointment.customerName}</div>
+                          <div className="text-xs text-muted-foreground line-clamp-2">
+                            {appointment.services.map(s => s.serviceName).join(', ')}
+                          </div>
+                        </div>
+                        
+                        {/* Footer */}
+                        <div className="mt-1 pt-1 border-t border-primary/10 flex justify-between items-center flex-shrink-0">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {appointment.services.reduce((total, svc) => total + svc.duration, 0)} min
+                          </span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1.5 -my-1" onClick={(e) => {
+                            e.stopPropagation();
+                            onViewAppointment(appointment.id);
+                          }}>
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
