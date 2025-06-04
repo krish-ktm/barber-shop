@@ -11,7 +11,10 @@ import {
   Percent,
   ChevronDown,
   ChevronRight,
-  UserCircle2
+  UserCircle2,
+  Info,
+  Edit,
+  Plus
 } from 'lucide-react';
 import {
   Form,
@@ -44,6 +47,15 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 // Guest user constants - will be replaced with actual values during backend integration
 const GUEST_USER: Customer = {
@@ -114,9 +126,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [showGstOptions, setShowGstOptions] = useState(false);
+  const [customGstRate, setCustomGstRate] = useState<string>('');
+  const [customGstValue, setCustomGstValue] = useState<number>(0);
 
   // Get default active GST rate
-  const defaultGstRate = gstRatesData.find(rate => rate.isActive)?.id || '';
+  const defaultGstRate = gstRatesData.find(rate => rate.isActive);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -127,10 +142,18 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       discountValue: 0,
       tipAmount: 0,
       paymentMethod: 'cash',
-      gstRates: [defaultGstRate],
+      gstRates: [defaultGstRate?.id || ''],
       notes: '',
     },
   });
+
+  // Set default GST rate automatically when form loads
+  React.useEffect(() => {
+    // Find the active/default GST rate
+    if (defaultGstRate) {
+      form.setValue('gstRates', [defaultGstRate.id]);
+    }
+  }, []);
 
   const newCustomerForm = useForm<z.infer<typeof newCustomerSchema>>({
     resolver: zodResolver(newCustomerSchema),
@@ -220,7 +243,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             return;
           }
           setIsGuestUser(false);
-          setCurrentStep('services');
+        setCurrentStep('services');
         } else {
           // Existing customer selected
           setIsGuestUser(false);
@@ -298,18 +321,18 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       });
     } else {
       // Use regular customer details
-      onSubmit({
-        ...values,
-        services,
-        customerName: selectedCustomer?.name || newCustomerForm.getValues().name,
-        isNewCustomer,
+    onSubmit({
+      ...values,
+      services,
+      customerName: selectedCustomer?.name || newCustomerForm.getValues().name,
+      isNewCustomer,
         isGuestUser: false,
-        customerDetails: isNewCustomer ? {
-          name: newCustomerForm.getValues().name,
-          email: newCustomerForm.getValues().email,
-          phone: values.customerPhone,
-        } : undefined,
-      });
+      customerDetails: isNewCustomer ? {
+        name: newCustomerForm.getValues().name,
+        email: newCustomerForm.getValues().email,
+        phone: values.customerPhone,
+      } : undefined,
+    });
     }
   };
 
@@ -363,83 +386,83 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 
   // Render the customer step
   const renderCustomerStep = () => {
-    return (
-      <Card className="p-4">
-        <h3 className="text-lg font-medium mb-4">Customer Information</h3>
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="search">Search Customer</TabsTrigger>
-            <TabsTrigger value="new">New Customer</TabsTrigger>
-          </TabsList>
+  return (
+              <Card className="p-4">
+                <h3 className="text-lg font-medium mb-4">Customer Information</h3>
+                <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="search">Search Customer</TabsTrigger>
+                    <TabsTrigger value="new">New Customer</TabsTrigger>
+                  </TabsList>
 
-          <TabsContent value="search" className="space-y-4">
-            <FormField
-              control={form.control}
-              name="customerPhone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <div className="flex gap-2">
-                    <FormControl>
-                      <Input
-                        placeholder="Enter phone number"
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setSelectedCustomer(null);
-                          setIsNewCustomer(false);
+                  <TabsContent value="search" className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="customerPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input
+                                placeholder="Enter phone number"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  setSelectedCustomer(null);
+                                  setIsNewCustomer(false);
                           setIsGuestUser(false);
-                        }}
-                      />
-                    </FormControl>
-                    <Button
-                      type="button"
-                      onClick={() => handleSearchCustomer(field.value)}
-                      disabled={isSearching || !field.value}
-                    >
-                      {isSearching ? (
-                        "Searching..."
-                      ) : (
-                        <>
-                          <Search className="h-4 w-4 mr-2" />
-                          Search
-                        </>
+                                }}
+                              />
+                            </FormControl>
+                            <Button
+                              type="button"
+                              onClick={() => handleSearchCustomer(field.value)}
+                              disabled={isSearching || !field.value}
+                            >
+                              {isSearching ? (
+                                "Searching..."
+                              ) : (
+                                <>
+                                  <Search className="h-4 w-4 mr-2" />
+                                  Search
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                    </Button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    />
 
-            {selectedCustomer && (
-              <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium">Customer Details</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedCustomer(null);
-                      setIsNewCustomer(false);
+                    {selectedCustomer && (
+                      <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium">Customer Details</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedCustomer(null);
+                              setIsNewCustomer(false);
                       setIsGuestUser(false);
-                      form.setValue('customerPhone', '');
-                    }}
-                  >
-                    Clear
-                  </Button>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <p><span className="font-medium">Name:</span> {selectedCustomer.name}</p>
-                  <p><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedCustomer.phone)}</p>
-                  {selectedCustomer.email && (
-                    <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
-                  )}
-                  <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
-                  <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
-                </div>
-              </div>
-            )}
+                              form.setValue('customerPhone', '');
+                            }}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <p><span className="font-medium">Name:</span> {selectedCustomer.name}</p>
+                          <p><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedCustomer.phone)}</p>
+                          {selectedCustomer.email && (
+                            <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
+                          )}
+                          <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
+                          <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
+                        </div>
+                      </div>
+                    )}
 
             {isGuestUser && (
               <div className="rounded-lg border border-primary/30 p-4 bg-primary/5">
@@ -453,77 +476,159 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               </div>
             )}
 
-            <div className="text-center mt-6">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mx-auto flex items-center gap-2"
-                onClick={() => {
-                  setIsGuestUser(true);
-                  setSelectedCustomer(null);
-                  setIsNewCustomer(false);
-                  form.setValue('customerPhone', '');
-                }}
-              >
-                <UserCircle2 className="h-4 w-4" />
-                Proceed as Guest
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
-                No customer details will be saved
-              </p>
-            </div>
-          </TabsContent>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Press "Continue" without searching to proceed as guest
+            </p>
+                  </TabsContent>
 
-          <TabsContent value="new">
-            <div className="space-y-4">
-              <FormField
-                control={newCustomerForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter customer name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <TabsContent value="new">
+                    <div className="space-y-4">
+                      <FormField
+                        control={newCustomerForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter customer name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enter phone number" 
+                            value={form.watch('customerPhone')} 
+                            onChange={(e) => form.setValue('customerPhone', e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
+                      </FormItem>
+
+                      <FormField
+                        control={newCustomerForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email (Optional)</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Enter email address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </Card>
+    );
+  };
+
+  // Render the staff step
+  const renderStaffStep = () => {
+    return (
+      <div className="space-y-6">
+        <h3 className="text-lg font-medium">Select Staff Member</h3>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {staffData.map((staff) => (
+            <div 
+              key={staff.id}
+              className={`
+                border rounded-lg p-4 cursor-pointer transition-all
+                ${form.watch('staffId') === staff.id ? 
+                  'border-primary bg-primary/5 shadow-sm' : 
+                  'border-border hover:border-primary/50 hover:bg-muted/30'
+                }
+              `}
+              onClick={() => form.setValue('staffId', staff.id)}
+            >
+              <div className="flex flex-col items-center text-center">
+                <Avatar className="h-16 w-16 mb-2">
+                  <AvatarImage src={staff.image} alt={staff.name} />
+                  <AvatarFallback>
+                    {staff.name
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <h4 className="text-base font-medium">{staff.name}</h4>
+                <p className="text-sm text-muted-foreground mb-1">{staff.position}</p>
+                {form.watch('staffId') === staff.id && (
+                  <Badge className="mt-2">
+                    <Check className="h-3 w-3 mr-1" />
+                    Selected
+                  </Badge>
                 )}
-              />
-
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Enter phone number" 
-                    value={form.watch('customerPhone')} 
-                    onChange={(e) => form.setValue('customerPhone', e.target.value)}
-                  />
-                </FormControl>
-                <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
-              </FormItem>
-
-              <FormField
-                control={newCustomerForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email (Optional)</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="Enter email address" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              </div>
             </div>
-          </TabsContent>
-        </Tabs>
-      </Card>
+          ))}
+        </div>
+        
+        {form.formState.errors.staffId && (
+          <p className="text-destructive text-sm">{form.formState.errors.staffId.message}</p>
+        )}
+
+        {/* Display selected services for reference */}
+        {services.length > 0 && (
+          <div className="mt-6 space-y-2">
+            <h4 className="text-sm font-medium">Selected Services</h4>
+            <div className="rounded-lg border p-4 space-y-2 bg-muted/30">
+              {services.map((service) => {
+                const selectedService = serviceData.find(s => s.id === service.serviceId);
+                if (!selectedService) return null;
+                
+                return (
+                  <div key={service.id} className="flex justify-between">
+                    <span>{selectedService.name}</span>
+                    <span className="font-medium">{formatCurrency(selectedService.price)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
 
   // Render the summary step
   const renderSummaryStep = () => {
+    const selectedGstRateId = form.getValues().gstRates[0];
+    const selectedGstRate = gstRatesData.find(rate => rate.id === selectedGstRateId);
+    
+    // Calculate subtotal
+    const subtotal = services.reduce((sum, service) => {
+      const selectedService = serviceData.find(s => s.id === service.serviceId);
+      return sum + (selectedService?.price || 0);
+    }, 0);
+    
+    // Calculate discount
+    let discountAmount = 0;
+    const discountType = form.getValues().discountType;
+    const discountValue = form.getValues().discountValue;
+    
+    if (discountType === 'percentage') {
+      discountAmount = (subtotal * discountValue) / 100;
+    } else if (discountType === 'fixed') {
+      discountAmount = discountValue;
+    }
+    
+    // Calculate tax
+    const taxRate = selectedGstRate?.totalRate || 0;
+    const taxableAmount = subtotal - discountAmount;
+    const taxAmount = (taxableAmount * taxRate) / 100;
+    
+    // Calculate total
+    const tipAmount = form.getValues().tipAmount;
+    const total = taxableAmount + taxAmount + tipAmount;
+    
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Review Invoice</h3>
@@ -562,6 +667,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 </div>
               );
             })}
+            
+            <div className="flex justify-between font-medium pt-2">
+              <span>Subtotal</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
           </div>
           
           <Separator />
@@ -581,13 +691,34 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 <span>Discount</span>
                 <span>
                   {form.getValues().discountType === 'percentage' 
-                    ? `${form.getValues().discountValue}%` 
+                    ? `${form.getValues().discountValue}% (${formatCurrency(discountAmount)})` 
                     : formatCurrency(form.getValues().discountValue)}
                 </span>
               </div>
             )}
+            
+            {/* GST Details */}
+            {selectedGstRate && (
+              <div className="pt-2">
+                <div className="flex justify-between">
+                  <span>Tax Rate</span>
+                  <span>{selectedGstRate.name}</span>
+                </div>
+                {selectedGstRate.components.map(comp => (
+                  <div key={comp.id} className="flex justify-between text-sm text-muted-foreground">
+                    <span>{comp.name} ({comp.rate}%)</span>
+                    <span>{formatCurrency((taxableAmount * comp.rate) / 100)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-medium">
+                  <span>Total Tax</span>
+                  <span>{formatCurrency(taxAmount)}</span>
+                </div>
+              </div>
+            )}
+            
             {form.getValues().tipAmount > 0 && (
-              <div className="flex justify-between">
+              <div className="flex justify-between pt-2">
                 <span>Tip</span>
                 <span>{formatCurrency(form.getValues().tipAmount)}</span>
               </div>
@@ -596,17 +727,179 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
           
           <Separator />
           
-          <div className="flex justify-between font-medium">
+          <div className="flex justify-between font-medium text-lg">
             <span>Total</span>
-            <span>{formatCurrency(
-              services.reduce((sum, service) => {
-                const selectedService = serviceData.find(s => s.id === service.serviceId);
-                return sum + (selectedService?.price || 0);
-              }, 0)
-            )}</span>
+            <span>{formatCurrency(total)}</span>
           </div>
         </div>
       </div>
+    );
+  };
+
+  // Add GST Rate selection to payment step with compact design
+  const renderGSTRateSelection = () => {
+    const selectedGstRateId = form.watch('gstRates')[0];
+    const selectedGstRate = gstRatesData.find(rate => rate.id === selectedGstRateId) || defaultGstRate;
+    
+    const handleCustomGstAdd = () => {
+      if (!customGstRate || customGstValue <= 0) {
+        toast({
+          title: 'Invalid custom GST',
+          description: 'Please provide a name and a positive rate value',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      // Create a temporary custom GST rate
+      const customRate = {
+        id: `custom-${Date.now()}`,
+        name: customGstRate,
+        components: [{ id: `comp-custom-${Date.now()}`, name: 'Custom', rate: customGstValue }],
+        isActive: false,
+        totalRate: customGstValue
+      };
+      
+      // Update the form with the custom rate
+      form.setValue('gstRates', [customRate.id]);
+      
+      // Add to the local gstRatesData (would be server-side in real implementation)
+      gstRatesData.push(customRate);
+      
+      // Reset custom inputs and close the panel
+      setCustomGstRate('');
+      setCustomGstValue(0);
+      setShowGstOptions(false);
+      
+      toast({
+        title: 'Custom GST added',
+        description: `Using custom rate: ${customRate.name} (${customRate.totalRate}%)`
+      });
+    };
+
+    return (
+      <FormField
+        control={form.control}
+        name="gstRates"
+        render={({ field }) => (
+          <FormItem className="space-y-2">
+            <FormLabel className="flex items-center gap-2">
+              GST Rate
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Choose the applicable GST rate for this invoice</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </FormLabel>
+            
+            <div className="border rounded-lg p-3">
+              {/* Current selected GST display */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium flex items-center">
+                    {selectedGstRate?.name} 
+                    {selectedGstRate?.isActive && 
+                      <Badge variant="outline" className="ml-2 text-xs">Default</Badge>
+                    }
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Rate: {selectedGstRate?.totalRate}%
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  type="button"
+                  onClick={() => setShowGstOptions(!showGstOptions)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Change
+                </Button>
+              </div>
+              
+              {/* Collapsible GST selection panel */}
+              <Collapsible open={showGstOptions} onOpenChange={setShowGstOptions}>
+                <CollapsibleContent className="mt-3 pt-3 border-t">
+                  <RadioGroup
+                    value={field.value[0]}
+                    onValueChange={(value) => field.onChange([value])}
+                    className="space-y-2 mb-3"
+                  >
+                    {gstRatesData.map((rate) => (
+                      <div 
+                        key={rate.id} 
+                        className={`
+                          flex items-center space-x-2 border rounded-lg p-2 cursor-pointer
+                          ${field.value.includes(rate.id) ? 
+                            'border-primary bg-primary/5' : 
+                            'border-border hover:border-primary/50 hover:bg-muted/30'
+                          }
+                        `}
+                        onClick={() => field.onChange([rate.id])}
+                      >
+                        <RadioGroupItem value={rate.id} id={`gst-${rate.id}`} className="ml-2" />
+                        <div className="flex-1 overflow-hidden pl-1">
+                          <div className="flex items-center">
+                            <label 
+                              htmlFor={`gst-${rate.id}`} 
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer truncate"
+                            >
+                              {rate.name}
+                            </label>
+                            {rate.isActive && <Badge variant="outline" className="text-xs ml-2">Default</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Total Rate: {rate.totalRate}%
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                  
+                  <div className="border-t pt-3 mt-3">
+                    <h4 className="text-sm font-medium mb-2 flex items-center">
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Add Custom GST Rate
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <Input 
+                        placeholder="Rate Name" 
+                        value={customGstRate}
+                        onChange={(e) => setCustomGstRate(e.target.value)}
+                        className="text-sm"
+                      />
+                      <div className="relative">
+                        <Input 
+                          type="number" 
+                          placeholder="Rate %" 
+                          value={customGstValue || ''}
+                          onChange={(e) => setCustomGstValue(parseFloat(e.target.value) || 0)}
+                          className="text-sm pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={handleCustomGstAdd}
+                    >
+                      Add Custom Rate
+                    </Button>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     );
   };
 
@@ -620,7 +913,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             {/* Step 1: Customer Information */}
             {currentStep === 'customer' && renderCustomerStep()}
 
-            {/* Step 2: Services Selection - restore collapsible UI */}
+            {/* Step 2: Services Selection */}
             {currentStep === 'services' && (
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Select Services</h3>
@@ -716,55 +1009,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             )}
 
             {/* Step 3: Staff Selection */}
-            {currentStep === 'staff' && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Select Staff Member</h3>
-                <FormField
-                  control={form.control}
-                  name="staffId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Staff Member</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select staff member" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {staffData.map((staff) => (
-                            <SelectItem key={staff.id} value={staff.id}>
-                              {staff.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Display selected services for reference */}
-                {services.length > 0 && (
-                  <div className="mt-6 space-y-2">
-                    <h4 className="text-sm font-medium">Selected Services</h4>
-                    <div className="rounded-lg border p-4 space-y-2 bg-muted/30">
-                      {services.map((service) => {
-                        const selectedService = serviceData.find(s => s.id === service.serviceId);
-                        if (!selectedService) return null;
-                        
-                        return (
-                          <div key={service.id} className="flex justify-between">
-                            <span>{selectedService.name}</span>
-                            <span className="font-medium">{formatCurrency(selectedService.price)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {currentStep === 'staff' && renderStaffStep()}
 
             {/* Step 4: Payment Information */}
             {currentStep === 'payment' && (
@@ -793,6 +1038,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                     </FormItem>
                   )}
                 />
+                
+                {/* GST Rate Selection */}
+                {renderGSTRateSelection()}
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
