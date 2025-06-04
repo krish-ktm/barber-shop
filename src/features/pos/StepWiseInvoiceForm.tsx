@@ -152,6 +152,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Find the active/default GST rate
     if (defaultGstRate) {
       form.setValue('gstRates', [defaultGstRate.id]);
+      setCustomGstRate(`${defaultGstRate.name} - Custom`);
     }
   }, []);
 
@@ -741,6 +742,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     const selectedGstRateId = form.watch('gstRates')[0];
     const selectedGstRate = gstRatesData.find(rate => rate.id === selectedGstRateId) || defaultGstRate;
     
+    // Pre-populate with default GST name if custom name is empty
     const handleCustomGstAdd = () => {
       if (!customGstRate || customGstValue <= 0) {
         toast({
@@ -775,6 +777,15 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         title: 'Custom GST added',
         description: `Using custom rate: ${customRate.name} (${customRate.totalRate}%)`
       });
+    };
+    
+    // Reset the form when opening the panel
+    const handleOpenGstOptions = () => {
+      // Pre-populate with default GST name and a blank value
+      if (defaultGstRate && !customGstRate) {
+        setCustomGstRate(`${defaultGstRate.name} - Custom`);
+      }
+      setShowGstOptions(!showGstOptions);
     };
 
     return (
@@ -815,7 +826,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   variant="ghost" 
                   size="sm" 
                   type="button"
-                  onClick={() => setShowGstOptions(!showGstOptions)}
+                  onClick={handleOpenGstOptions}
                 >
                   <Edit className="h-4 w-4 mr-1" />
                   Change
@@ -868,7 +879,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                     </h4>
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <Input 
-                        placeholder="Rate Name" 
+                        placeholder={defaultGstRate ? `${defaultGstRate.name} - Custom` : "Rate Name"} 
                         value={customGstRate}
                         onChange={(e) => setCustomGstRate(e.target.value)}
                         className="text-sm"
@@ -1016,127 +1027,118 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               <div className="space-y-6">
                 <h3 className="text-lg font-medium">Payment Details</h3>
                 
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Method</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment method" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="card">Card</SelectItem>
-                          <SelectItem value="mobile">Mobile Payment</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* GST Rate Selection */}
-                {renderGSTRateSelection()}
+                {/* Group payment method, discount and tip together in a card */}
+                <Card className="p-4">
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="paymentMethod"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Method</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select payment method" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="card">Card</SelectItem>
+                              <SelectItem value="mobile">Mobile Payment</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="discountType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Discount</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            if (value === 'none') {
-                              form.setValue('discountValue', 0);
-                            }
-                          }}
-                        >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="discountType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Discount Type</FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                if (value === 'none') {
+                                  form.setValue('discountValue', 0);
+                                }
+                              }}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Discount Type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">No Discount</SelectItem>
+                                <SelectItem value="percentage">Percentage (%)</SelectItem>
+                                <SelectItem value="fixed">Fixed Amount</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="discountValue"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Discount Value</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step={form.watch('discountType') === 'percentage' ? '1' : '0.01'}
+                                  disabled={form.watch('discountType') === 'none'}
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                  className={form.watch('discountType') === 'percentage' ? 'pr-8' : ''}
+                                />
+                                {form.watch('discountType') === 'percentage' && (
+                                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                                    <Percent className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="tipAmount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tip Amount</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Discount Type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">No Discount</SelectItem>
-                            <SelectItem value="percentage">Percentage (%)</SelectItem>
-                            <SelectItem value="fixed">Fixed Amount</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="discountValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Discount Value</FormLabel>
-                        <FormControl>
-                          <div className="relative">
                             <Input
                               type="number"
                               min="0"
-                              step={form.watch('discountType') === 'percentage' ? '1' : '0.01'}
-                              disabled={form.watch('discountType') === 'none'}
+                              step="0.01"
                               {...field}
                               onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              className={form.watch('discountType') === 'percentage' ? 'pr-8' : ''}
                             />
-                            {form.watch('discountType') === 'percentage' && (
-                              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                                <Percent className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="tipAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tip Amount</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Add any notes about the invoice" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </Card>
+                
+                {/* GST Rate Selection */}
+                {renderGSTRateSelection()}
               </div>
             )}
 
