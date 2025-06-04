@@ -10,7 +10,8 @@ import {
   Trash,
   Percent,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  UserCircle2
 } from 'lucide-react';
 import {
   Form,
@@ -42,6 +43,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { format } from 'date-fns';
+
+// Guest user constants - will be replaced with actual values during backend integration
+const GUEST_USER: Customer = {
+  id: 'guest-user',
+  name: 'Guest',
+  phone: '',
+  visitCount: 0,
+  totalSpent: 0,
+  createdAt: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss")
+};
 
 // Define steps for the invoice creation process
 type Step = 'customer' | 'services' | 'staff' | 'payment' | 'summary';
@@ -76,6 +88,7 @@ export interface InvoiceFormData {
   services: Array<{ id: string; serviceId: string }>;
   customerName: string;
   isNewCustomer: boolean;
+  isGuestUser: boolean;
   customerDetails?: {
     name: string;
     email?: string;
@@ -99,6 +112,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'new'>('search');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [isGuestUser, setIsGuestUser] = useState(false);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   // Get default active GST rate
@@ -189,17 +203,13 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const nextStep = () => {
     switch (currentStep) {
       case 'customer':
-        // Validate customer info before proceeding
+        // Check if there's any customer info provided
         if (!selectedCustomer && !isNewCustomer) {
-          toast({
-            title: 'Customer required',
-            description: 'Please search for a customer or create a new one.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        
-        if (isNewCustomer) {
+          // No customer selected - use guest user
+          setIsGuestUser(true);
+          setCurrentStep('services');
+        } else if (isNewCustomer) {
+          // Validate new customer data
           const newCustomerData = newCustomerForm.getValues();
           if (!newCustomerData.name) {
             toast({
@@ -209,9 +219,13 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             });
             return;
           }
+          setIsGuestUser(false);
+          setCurrentStep('services');
+        } else {
+          // Existing customer selected
+          setIsGuestUser(false);
+          setCurrentStep('services');
         }
-        
-        setCurrentStep('services');
         break;
       case 'services':
         // Validate services selection before proceeding
@@ -268,17 +282,35 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 
   const handleSubmit = () => {
     const values = form.getValues();
-    onSubmit({
-      ...values,
-      services,
-      customerName: selectedCustomer?.name || newCustomerForm.getValues().name,
-      isNewCustomer,
-      customerDetails: isNewCustomer ? {
-        name: newCustomerForm.getValues().name,
-        email: newCustomerForm.getValues().email,
-        phone: values.customerPhone,
-      } : undefined,
-    });
+    
+    if (isGuestUser) {
+      // Use guest user details
+      onSubmit({
+        ...values,
+        services,
+        customerName: GUEST_USER.name,
+        isNewCustomer: false,
+        isGuestUser: true,
+        customerDetails: {
+          name: GUEST_USER.name,
+          phone: values.customerPhone || '',
+        }
+      });
+    } else {
+      // Use regular customer details
+      onSubmit({
+        ...values,
+        services,
+        customerName: selectedCustomer?.name || newCustomerForm.getValues().name,
+        isNewCustomer,
+        isGuestUser: false,
+        customerDetails: isNewCustomer ? {
+          name: newCustomerForm.getValues().name,
+          email: newCustomerForm.getValues().email,
+          phone: values.customerPhone,
+        } : undefined,
+      });
+    }
   };
 
   // Render step indicator
@@ -329,6 +361,255 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     );
   };
 
+  // Render the customer step
+  const renderCustomerStep = () => {
+    return (
+      <Card className="p-4">
+        <h3 className="text-lg font-medium mb-4">Customer Information</h3>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="search">Search Customer</TabsTrigger>
+            <TabsTrigger value="new">New Customer</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="search" className="space-y-4">
+            <FormField
+              control={form.control}
+              name="customerPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input
+                        placeholder="Enter phone number"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setSelectedCustomer(null);
+                          setIsNewCustomer(false);
+                          setIsGuestUser(false);
+                        }}
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      onClick={() => handleSearchCustomer(field.value)}
+                      disabled={isSearching || !field.value}
+                    >
+                      {isSearching ? (
+                        "Searching..."
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4 mr-2" />
+                          Search
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {selectedCustomer && (
+              <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">Customer Details</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCustomer(null);
+                      setIsNewCustomer(false);
+                      setIsGuestUser(false);
+                      form.setValue('customerPhone', '');
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <p><span className="font-medium">Name:</span> {selectedCustomer.name}</p>
+                  <p><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedCustomer.phone)}</p>
+                  {selectedCustomer.email && (
+                    <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
+                  )}
+                  <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
+                  <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
+                </div>
+              </div>
+            )}
+
+            {isGuestUser && (
+              <div className="rounded-lg border border-primary/30 p-4 bg-primary/5">
+                <div className="flex items-center gap-2">
+                  <UserCircle2 className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Guest User Selected</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  You are proceeding with a guest user. No customer information will be saved.
+                </p>
+              </div>
+            )}
+
+            <div className="text-center mt-6">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mx-auto flex items-center gap-2"
+                onClick={() => {
+                  setIsGuestUser(true);
+                  setSelectedCustomer(null);
+                  setIsNewCustomer(false);
+                  form.setValue('customerPhone', '');
+                }}
+              >
+                <UserCircle2 className="h-4 w-4" />
+                Proceed as Guest
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                No customer details will be saved
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="new">
+            <div className="space-y-4">
+              <FormField
+                control={newCustomerForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter customer name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Enter phone number" 
+                    value={form.watch('customerPhone')} 
+                    onChange={(e) => form.setValue('customerPhone', e.target.value)}
+                  />
+                </FormControl>
+                <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
+              </FormItem>
+
+              <FormField
+                control={newCustomerForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Enter email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </Card>
+    );
+  };
+
+  // Render the summary step
+  const renderSummaryStep = () => {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Review Invoice</h3>
+        
+        <div className="rounded-lg border p-4 space-y-4">
+          <div className="space-y-2">
+            <h4 className="font-medium">Customer</h4>
+            {isGuestUser ? (
+              <div className="flex items-center gap-2">
+                <UserCircle2 className="h-4 w-4 text-muted-foreground" />
+                <p>Guest User</p>
+              </div>
+            ) : (
+              <>
+                <p>{selectedCustomer?.name || newCustomerForm.getValues().name}</p>
+                <p>{formatPhoneNumber(form.getValues().customerPhone)}</p>
+                {(selectedCustomer?.email || newCustomerForm.getValues().email) && (
+                  <p>{selectedCustomer?.email || newCustomerForm.getValues().email}</p>
+                )}
+              </>
+            )}
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-2">
+            <h4 className="font-medium">Services</h4>
+            {services.map((service) => {
+              const selectedService = serviceData.find(s => s.id === service.serviceId);
+              if (!selectedService) return null;
+              
+              return (
+                <div key={service.id} className="flex justify-between">
+                  <span>{selectedService.name}</span>
+                  <span>{formatCurrency(selectedService.price)}</span>
+                </div>
+              );
+            })}
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-2">
+            <h4 className="font-medium">Payment</h4>
+            <div className="flex justify-between">
+              <span>Staff</span>
+              <span>{staffData.find(s => s.id === form.getValues().staffId)?.name || 'Not selected'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Payment Method</span>
+              <span>{form.getValues().paymentMethod.charAt(0).toUpperCase() + form.getValues().paymentMethod.slice(1)}</span>
+            </div>
+            {form.getValues().discountType !== 'none' && (
+              <div className="flex justify-between">
+                <span>Discount</span>
+                <span>
+                  {form.getValues().discountType === 'percentage' 
+                    ? `${form.getValues().discountValue}%` 
+                    : formatCurrency(form.getValues().discountValue)}
+                </span>
+              </div>
+            )}
+            {form.getValues().tipAmount > 0 && (
+              <div className="flex justify-between">
+                <span>Tip</span>
+                <span>{formatCurrency(form.getValues().tipAmount)}</span>
+              </div>
+            )}
+          </div>
+          
+          <Separator />
+          
+          <div className="flex justify-between font-medium">
+            <span>Total</span>
+            <span>{formatCurrency(
+              services.reduce((sum, service) => {
+                const selectedService = serviceData.find(s => s.id === service.serviceId);
+                return sum + (selectedService?.price || 0);
+              }, 0)
+            )}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full">
       {renderStepIndicator()}
@@ -337,129 +618,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         <Form {...form}>
           <form className="space-y-6 py-6 px-4">
             {/* Step 1: Customer Information */}
-            {currentStep === 'customer' && (
-              <Card className="p-4">
-                <h3 className="text-lg font-medium mb-4">Customer Information</h3>
-                <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="search">Search Customer</TabsTrigger>
-                    <TabsTrigger value="new">New Customer</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="search" className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="customerPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
-                          <div className="flex gap-2">
-                            <FormControl>
-                              <Input
-                                placeholder="Enter phone number"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e);
-                                  setSelectedCustomer(null);
-                                  setIsNewCustomer(false);
-                                }}
-                              />
-                            </FormControl>
-                            <Button
-                              type="button"
-                              onClick={() => handleSearchCustomer(field.value)}
-                              disabled={isSearching || !field.value}
-                            >
-                              {isSearching ? (
-                                "Searching..."
-                              ) : (
-                                <>
-                                  <Search className="h-4 w-4 mr-2" />
-                                  Search
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {selectedCustomer && (
-                      <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">Customer Details</h4>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedCustomer(null);
-                              setIsNewCustomer(false);
-                              form.setValue('customerPhone', '');
-                            }}
-                          >
-                            Clear
-                          </Button>
-                        </div>
-                        <div className="space-y-1 text-sm">
-                          <p><span className="font-medium">Name:</span> {selectedCustomer.name}</p>
-                          <p><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedCustomer.phone)}</p>
-                          {selectedCustomer.email && (
-                            <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
-                          )}
-                          <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
-                          <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="new">
-                    <div className="space-y-4">
-                      <FormField
-                        control={newCustomerForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter customer name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter phone number" 
-                            value={form.watch('customerPhone')} 
-                            onChange={(e) => form.setValue('customerPhone', e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
-                      </FormItem>
-
-                      <FormField
-                        control={newCustomerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email (Optional)</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="Enter email address" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </Card>
-            )}
+            {currentStep === 'customer' && renderCustomerStep()}
 
             {/* Step 2: Services Selection - restore collapsible UI */}
             {currentStep === 'services' && (
@@ -734,81 +893,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             )}
 
             {/* Step 5: Review & Summary */}
-            {currentStep === 'summary' && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Review Invoice</h3>
-                
-                <div className="rounded-lg border p-4 space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Customer</h4>
-                    <p>{selectedCustomer?.name || newCustomerForm.getValues().name}</p>
-                    <p>{formatPhoneNumber(form.getValues().customerPhone)}</p>
-                    {(selectedCustomer?.email || newCustomerForm.getValues().email) && (
-                      <p>{selectedCustomer?.email || newCustomerForm.getValues().email}</p>
-                    )}
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Services</h4>
-                    {services.map((service) => {
-                      const selectedService = serviceData.find(s => s.id === service.serviceId);
-                      if (!selectedService) return null;
-                      
-                      return (
-                        <div key={service.id} className="flex justify-between">
-                          <span>{selectedService.name}</span>
-                          <span>{formatCurrency(selectedService.price)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Payment</h4>
-                    <div className="flex justify-between">
-                      <span>Staff</span>
-                      <span>{staffData.find(s => s.id === form.getValues().staffId)?.name || 'Not selected'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Payment Method</span>
-                      <span>{form.getValues().paymentMethod.charAt(0).toUpperCase() + form.getValues().paymentMethod.slice(1)}</span>
-                    </div>
-                    {form.getValues().discountType !== 'none' && (
-                      <div className="flex justify-between">
-                        <span>Discount</span>
-                        <span>
-                          {form.getValues().discountType === 'percentage' 
-                            ? `${form.getValues().discountValue}%` 
-                            : formatCurrency(form.getValues().discountValue)}
-                        </span>
-                      </div>
-                    )}
-                    {form.getValues().tipAmount > 0 && (
-                      <div className="flex justify-between">
-                        <span>Tip</span>
-                        <span>{formatCurrency(form.getValues().tipAmount)}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="flex justify-between font-medium">
-                    <span>Total</span>
-                    <span>{formatCurrency(
-                      services.reduce((sum, service) => {
-                        const selectedService = serviceData.find(s => s.id === service.serviceId);
-                        return sum + (selectedService?.price || 0);
-                      }, 0)
-                    )}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            {currentStep === 'summary' && renderSummaryStep()}
           </form>
         </Form>
       </ScrollArea>
