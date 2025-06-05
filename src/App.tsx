@@ -30,6 +30,7 @@ import { StaffLayout } from './components/layout/StaffLayout';
 import { BillingLayout } from './components/layout/BillingLayout';
 import { BillingDashboard } from './pages/billing/Dashboard';
 import { BillingPOS } from './pages/billing/POS';
+import { BillingCalendar } from './pages/billing/BillingCalendar';
 
 // Public Routes
 import { PublicLayout } from './components/layout/PublicLayout';
@@ -114,6 +115,7 @@ function App() {
         >
           <Route index element={<Navigate to="/billing/dashboard" replace />} />
           <Route path="dashboard" element={<BillingDashboard />} />
+          <Route path="calendar" element={<BillingCalendar />} />
           <Route path="pos" element={<BillingPOS />} />
           <Route path="*" element={<Navigate to="/billing/pos" replace />} />
         </Route>
