@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { Service } from '@/api/services/serviceService';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -41,13 +41,14 @@ const formSchema = z.object({
 interface AddServiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSave: (service: Partial<Service>) => void;
 }
 
 export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
   open,
   onOpenChange,
+  onSave,
 }) => {
-  const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -60,11 +61,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
-    toast({
-      title: 'Service added',
-      description: 'New service has been added successfully.',
-    });
+    onSave(values);
     onOpenChange(false);
     form.reset();
   };

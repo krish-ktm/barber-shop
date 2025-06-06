@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,6 +33,7 @@ export const Login: React.FC = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { login, isAuthenticated, userRole } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,32 +56,51 @@ export const Login: React.FC = () => {
     }
   }, [isAuthenticated, userRole, navigate, location]);
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (values.email === 'admin@barbershop.com' && values.password === 'admin123') {
-      login('admin');
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      setIsLoading(true);
+      await login(values.email, values.password);
+      
       toast({
         title: 'Success',
-        description: 'Welcome back, Admin!',
+        description: 'Welcome back!',
       });
-    } else if (values.email === 'staff@barbershop.com' && values.password === 'staff123') {
-      login('staff');
-      toast({
-        title: 'Success',
-        description: 'Welcome back, Staff Member!',
-      });
-    } else if (values.email === 'billing@barbershop.com' && values.password === 'billing123') {
-      login('billing');
-      toast({
-        title: 'Success',
-        description: 'Welcome back, Billing User!',
-      });
-    } else {
+    } catch (error) {
+      let errorMessage = 'Invalid email or password';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error',
-        description: 'Invalid email or password',
+        description: errorMessage,
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // For demo purposes, we'll keep the mock users option
+  const loginWithMockUser = (role: 'admin' | 'staff' | 'billing') => {
+    let email = '';
+    let password = '';
+    
+    if (role === 'admin') {
+      email = 'admin@barbershop.com';
+      password = 'admin123';
+    } else if (role === 'staff') {
+      email = 'staff@barbershop.com';
+      password = 'staff123';
+    } else if (role === 'billing') {
+      email = 'billing@barbershop.com';
+      password = 'billing123';
+    }
+    
+    form.setValue('email', email);
+    form.setValue('password', password);
+    form.handleSubmit(onSubmit)();
   };
 
   return (
@@ -108,6 +128,7 @@ export const Login: React.FC = () => {
                         type="email"
                         placeholder="Enter your email"
                         {...field}
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormMessage />
@@ -125,14 +146,15 @@ export const Login: React.FC = () => {
                         type="password"
                         placeholder="Enter your password"
                         {...field}
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
           </Form>
@@ -140,20 +162,31 @@ export const Login: React.FC = () => {
         <CardFooter className="flex flex-col gap-4 text-sm text-muted-foreground">
           <div className="text-center w-full">
             Demo credentials:
-            <div className="pt-2">
-              <strong>Admin Access</strong>
-              <div>Email: admin@barbershop.com</div>
-              <div>Password: admin123</div>
-            </div>
-            <div className="pt-2">
-              <strong>Staff Access</strong>
-              <div>Email: staff@barbershop.com</div>
-              <div>Password: staff123</div>
-            </div>
-            <div className="pt-2">
-              <strong>Billing Access</strong>
-              <div>Email: billing@barbershop.com</div>
-              <div>Password: billing123</div>
+            <div className="pt-2 flex flex-col gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => loginWithMockUser('admin')}
+                disabled={isLoading}
+              >
+                Login as Admin
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => loginWithMockUser('staff')}
+                disabled={isLoading}
+              >
+                Login as Staff
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => loginWithMockUser('billing')}
+                disabled={isLoading}
+              >
+                Login as Billing
+              </Button>
             </div>
           </div>
         </CardFooter>

@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import { Clock, Filter, Plus, Search, SortAsc, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, Filter, Plus, Search, SortAsc, X, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
-import { serviceData } from '@/mocks';
-import { Service } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -35,15 +33,25 @@ import { AddServiceDialog } from '@/features/services/AddServiceDialog';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
+import { useApi } from '@/hooks/useApi';
+import { 
+  getAllServices, 
+  createService, 
+  updateService, 
+  Service
+} from '@/api/services/serviceService';
+import { useToast } from '@/hooks/use-toast';
 
 export const Services: React.FC = () => {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [page] = useState(1);
+  const [limit] = useState(100); // Get more services to allow client-side filtering
   
   // Advanced filters
   const [showFilters, setShowFilters] = useState(false);
@@ -51,12 +59,66 @@ export const Services: React.FC = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 200]);
   const [durationRange, setDurationRange] = useState<[number, number]>([0, 120]);
 
-  // Get all unique categories
-  const categories = Array.from(new Set(serviceData.map(service => service.category)));
+  // API Hooks
+  const {
+    data: servicesData,
+    loading: isLoading,
+    error: servicesError,
+    execute: fetchServices
+  } = useApi(getAllServices);
   
-  // Computed values
-  const maxPrice = Math.max(...serviceData.map(s => s.price), 200);
-  const maxDuration = Math.max(...serviceData.map(s => s.duration), 120);
+  const {
+    execute: saveService
+  } = useApi(createService);
+  
+  const {
+    execute: executeUpdateService
+  } = useApi(updateService);
+  
+  useEffect(() => {
+    // Convert sort state to API parameter format
+    let sortParam = '';
+    switch (sortBy) {
+      case 'name':
+        sortParam = 'name_asc';
+        break;
+      case 'price':
+        sortParam = 'price_desc';
+        break;
+      case 'duration':
+        sortParam = 'duration_desc';
+        break;
+      case 'category':
+        sortParam = 'category_asc';
+        break;
+      default:
+        sortParam = 'name_asc';
+    }
+    
+    // Only send category filter if it's not "all"
+    const category = categoryFilter !== 'all' ? categoryFilter : undefined;
+    
+    fetchServices(page, limit, sortParam, category);
+  }, [fetchServices, page, limit, sortBy, categoryFilter]);
+
+  // Set maxPrice and maxDuration based on API data
+  const services = servicesData?.services || [];
+  const maxPrice = Math.max(...services.map(s => s.price), 200);
+  const maxDuration = Math.max(...services.map(s => s.duration), 120);
+
+  // Get all unique categories from API data
+  const categories = Array.from(new Set(services.map(service => service.category)));
+
+  // Error handling
+  useEffect(() => {
+    if (servicesError) {
+      toast({
+        title: "Error loading services",
+        description: servicesError.message,
+        variant: "destructive"
+      });
+    }
+  }, [servicesError, toast]);
 
   // Get active filter count
   const getActiveFilterCount = () => {
@@ -70,19 +132,15 @@ export const Services: React.FC = () => {
     return count;
   };
 
-  // Filter and sort services
-  const filteredServices = serviceData
+  // Filter services
+  const filteredServices = services
     .filter(service => {
       // Text search
       const searchLower = searchQuery.toLowerCase();
       const searchMatch = searchQuery === '' || 
         service.name.toLowerCase().includes(searchLower) ||
-        service.description.toLowerCase().includes(searchLower);
+        (service.description?.toLowerCase().includes(searchLower) || false);
       if (!searchMatch) return false;
-      
-      // Category filter (dropdown)
-      const categoryMatch = categoryFilter === 'all' || service.category === categoryFilter;
-      if (!categoryMatch) return false;
       
       // Selected categories (checkboxes)
       if (selectedCategories.length > 0 && !selectedCategories.includes(service.category)) {
@@ -96,20 +154,6 @@ export const Services: React.FC = () => {
       if (service.duration < durationRange[0] || service.duration > durationRange[1]) return false;
       
       return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'price':
-          return b.price - a.price;
-        case 'duration':
-          return b.duration - a.duration;
-        case 'category':
-          return a.category.localeCompare(b.category);
-        default:
-          return 0;
-      }
     });
 
   const clearFilters = () => {
@@ -126,10 +170,35 @@ export const Services: React.FC = () => {
     setShowEditDialog(true);
   };
 
-  const handleSaveService = (updatedService: Partial<Service>) => {
-    console.log('Saving service:', updatedService);
-    // In a real app, this would update the backend
+  const handleSaveService = async (serviceData: Partial<Service>) => {
+    try {
+      await saveService(serviceData);
+      toast({
+        title: "Success",
+        description: "Service created successfully",
+      });
+      fetchServices(page, limit);
+    } catch (error) {
+      console.error("Error saving service:", error);
+    }
   };
+  
+  const handleUpdateService = async (serviceData: Partial<Service>) => {
+    if (!selectedService) return;
+    
+    try {
+      await executeUpdateService(selectedService.id, serviceData);
+      toast({
+        title: "Success",
+        description: "Service updated successfully",
+      });
+      fetchServices(page, limit);
+    } catch (error) {
+      console.error("Error updating service:", error);
+    }
+  };
+  
+
   
   const handleCategoryChange = (value: string) => {
     setSelectedCategories(prev => {
@@ -210,12 +279,11 @@ export const Services: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="haircut">Haircut</SelectItem>
-                  <SelectItem value="beard">Beard</SelectItem>
-                  <SelectItem value="shave">Shave</SelectItem>
-                  <SelectItem value="color">Color</SelectItem>
-                  <SelectItem value="treatment">Treatment</SelectItem>
-                  <SelectItem value="combo">Combo</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               
@@ -262,7 +330,16 @@ export const Services: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredServices.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8">
+                      <div className="flex justify-center items-center">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        <span>Loading services...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredServices.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                       No services found matching the current filters
@@ -425,12 +502,13 @@ export const Services: React.FC = () => {
         service={selectedService}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
-        onSave={handleSaveService}
+        onSave={handleUpdateService}
       />
 
       <AddServiceDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+        onSave={handleSaveService}
       />
     </div>
   );

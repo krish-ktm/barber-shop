@@ -11,244 +11,322 @@ This document outlines the API server implementation required to support the Bar
   - Fast, lightweight, and excellent for JSON APIs
   - Large ecosystem of middleware
 
-### Database Options
-
-#### Recommended: MongoDB
+### Database: MySQL
 - **Pros**:
-  - Flexible schema that matches our data models
-  - JSON-based document storage aligns with frontend models
-  - Excellent for rapid development and iterations
-  - Scalable for future growth
-  - Strong support for geospatial queries (for future location-based features)
+  - Strong relational data model supports complex relationships between entities
+  - ACID compliance ensures data integrity for appointments and financial transactions
+  - Excellent for complex reporting and analytics
+  - Mature technology with extensive documentation and community support
+  - Strong query optimization capabilities
 - **Cons**:
-  - Less robust for complex transactions
-  - May require careful index planning
+  - Less flexible schema changes compared to NoSQL
+  - Additional setup for handling JSON data (for complex fields)
 
-#### Alternative: PostgreSQL
-- **Pros**:
-  - ACID compliance for reliable transactions
-  - Strong data integrity with foreign keys
-  - Advanced reporting capabilities
-  - JSON support for flexible data
-- **Cons**:
-  - More rigid schema changes
-  - Higher setup complexity
+### ORM
+- **Sequelize or TypeORM**
+  - Object-Relational Mapping for MySQL
+  - Simplifies database operations
+  - Provides data validation and migration support
 
 ### Authentication
 - **JWT (JSON Web Tokens)**
   - Stateless authentication
   - Role-based access control for admin, staff, and billing users
 
-## Data Models
+## Database Schema
 
-Based on the existing frontend implementation, the following data models are required:
+Based on the existing frontend implementation, the following MySQL database schema is required:
 
-### User
-```json
-{
-  "id": "string",
-  "name": "string",
-  "email": "string",
-  "password": "string (hashed)",
-  "phone": "string",
-  "role": "enum (admin, staff, billing)",
-  "image": "string (URL)",
-  "createdAt": "date",
-  "updatedAt": "date"
-}
+### Database Tables
+
+#### users
+```sql
+CREATE TABLE users (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(100) NOT NULL,
+  phone VARCHAR(20),
+  role ENUM('admin', 'staff', 'billing') NOT NULL,
+  image VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 ```
 
-### Staff
-```json
-{
-  "id": "string",
-  "userId": "string (reference to User)",
-  "position": "string",
-  "bio": "string",
-  "services": ["string (service IDs)"],
-  "workingHours": {
-    "monday": [{"start": "string", "end": "string", "isBreak": "boolean"}],
-    "tuesday": [...],
-    "wednesday": [...],
-    "thursday": [...],
-    "friday": [...],
-    "saturday": [...],
-    "sunday": [...]
-  },
-  "commissionPercentage": "number",
-  "isAvailable": "boolean",
-  "createdAt": "date",
-  "updatedAt": "date"
-}
+#### staff
+```sql
+CREATE TABLE staff (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  position VARCHAR(100) NOT NULL,
+  bio TEXT,
+  commission_percentage DECIMAL(5,2) NOT NULL,
+  is_available BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 ```
 
-### Service
-```json
-{
-  "id": "string",
-  "name": "string",
-  "description": "string",
-  "price": "number",
-  "duration": "number (minutes)",
-  "category": "string",
-  "createdAt": "date",
-  "updatedAt": "date"
-}
+#### staff_services
+```sql
+CREATE TABLE staff_services (
+  staff_id VARCHAR(36) NOT NULL,
+  service_id VARCHAR(36) NOT NULL,
+  PRIMARY KEY (staff_id, service_id),
+  FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+);
 ```
 
-### Appointment
-```json
-{
-  "id": "string",
-  "customerId": "string",
-  "staffId": "string",
-  "date": "string (YYYY-MM-DD)",
-  "time": "string (HH:MM)",
-  "endTime": "string (HH:MM)",
-  "services": [
-    {
-      "serviceId": "string",
-      "serviceName": "string",
-      "price": "number",
-      "duration": "number"
-    }
-  ],
-  "status": "enum (scheduled, confirmed, completed, cancelled, no-show)",
-  "totalAmount": "number",
-  "notes": "string",
-  "createdAt": "date",
-  "updatedAt": "date"
-}
+#### working_hours
+```sql
+CREATE TABLE working_hours (
+  id VARCHAR(36) PRIMARY KEY,
+  staff_id VARCHAR(36) NOT NULL,
+  day_of_week ENUM('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday') NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  is_break BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
+  UNIQUE KEY (staff_id, day_of_week, start_time)
+);
 ```
 
-### Customer
-```json
-{
-  "id": "string",
-  "name": "string",
-  "email": "string",
-  "phone": "string",
-  "visitCount": "number",
-  "totalSpent": "number",
-  "lastVisit": "date",
-  "notes": "string",
-  "createdAt": "date",
-  "updatedAt": "date"
-}
+#### services
+```sql
+CREATE TABLE services (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) NOT NULL,
+  duration INT NOT NULL, -- in minutes
+  category VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 ```
 
-### Invoice
-```json
-{
-  "id": "string",
-  "appointmentId": "string",
-  "customerId": "string",
-  "staffId": "string",
-  "date": "string (YYYY-MM-DD)",
-  "services": [
-    {
-      "serviceId": "string",
-      "serviceName": "string",
-      "price": "number",
-      "quantity": "number",
-      "total": "number"
-    }
-  ],
-  "subtotal": "number",
-  "discountType": "enum (percentage, fixed)",
-  "discountValue": "number",
-  "discountAmount": "number",
-  "tipAmount": "number",
-  "tax": "number",
-  "taxAmount": "number",
-  "taxComponents": [
-    {
-      "name": "string",
-      "rate": "number",
-      "amount": "number"
-    }
-  ],
-  "total": "number",
-  "paymentMethod": "enum (cash, card, mobile, pending)",
-  "status": "enum (paid, pending, cancelled)",
-  "notes": "string",
-  "createdAt": "date",
-  "updatedAt": "date"
-}
+#### customers
+```sql
+CREATE TABLE customers (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100),
+  phone VARCHAR(20) NOT NULL,
+  visit_count INT DEFAULT 0,
+  total_spent DECIMAL(10,2) DEFAULT 0.00,
+  last_visit DATE,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 ```
 
-### BusinessSettings
-```json
-{
-  "name": "string",
-  "address": "string",
-  "phone": "string",
-  "email": "string",
-  "logo": "string",
-  "workingHours": {
-    "monday": {"open": "string", "close": "string"},
-    "tuesday": {"open": "string", "close": "string"},
-    "wednesday": {"open": "string", "close": "string"},
-    "thursday": {"open": "string", "close": "string"},
-    "friday": {"open": "string", "close": "string"},
-    "saturday": {"open": "string", "close": "string"},
-    "sunday": {"open": "string", "close": "string"}
-  },
-  "slotDuration": "number",
-  "taxRate": "number",
-  "allowDiscounts": "boolean",
-  "allowTips": "boolean",
-  "defaultCommission": "number",
-  "updatedAt": "date"
-}
+#### appointments
+```sql
+CREATE TABLE appointments (
+  id VARCHAR(36) PRIMARY KEY,
+  customer_id VARCHAR(36) NOT NULL,
+  staff_id VARCHAR(36) NOT NULL,
+  date DATE NOT NULL,
+  time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  status ENUM('scheduled', 'confirmed', 'completed', 'cancelled', 'no-show') NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL,
+  notes TEXT,
+  customer_name VARCHAR(100) NOT NULL,
+  customer_phone VARCHAR(20) NOT NULL,
+  customer_email VARCHAR(100),
+  staff_name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
+);
 ```
 
-### GSTRate
-```json
-{
-  "id": "string",
-  "name": "string",
-  "components": [
-    {
-      "id": "string",
-      "name": "string",
-      "rate": "number"
-    }
-  ],
-  "isActive": "boolean",
-  "totalRate": "number",
-  "createdAt": "date",
-  "updatedAt": "date"
-}
+#### appointment_services
+```sql
+CREATE TABLE appointment_services (
+  id VARCHAR(36) PRIMARY KEY,
+  appointment_id VARCHAR(36) NOT NULL,
+  service_id VARCHAR(36) NOT NULL,
+  service_name VARCHAR(100) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  duration INT NOT NULL,
+  FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+);
 ```
 
-### Log
-```json
-{
-  "id": "string",
-  "userId": "string",
-  "userName": "string",
-  "userRole": "string",
-  "action": "string",
-  "details": "string",
-  "timestamp": "date"
-}
+#### invoices
+```sql
+CREATE TABLE invoices (
+  id VARCHAR(36) PRIMARY KEY,
+  appointment_id VARCHAR(36),
+  customer_id VARCHAR(36) NOT NULL,
+  staff_id VARCHAR(36) NOT NULL,
+  date DATE NOT NULL,
+  customer_name VARCHAR(100) NOT NULL,
+  staff_name VARCHAR(100) NOT NULL,
+  subtotal DECIMAL(10,2) NOT NULL,
+  discount_type ENUM('percentage', 'fixed'),
+  discount_value DECIMAL(10,2),
+  discount_amount DECIMAL(10,2) DEFAULT 0.00,
+  tip_amount DECIMAL(10,2) DEFAULT 0.00,
+  tax DECIMAL(5,2) NOT NULL,
+  tax_amount DECIMAL(10,2) NOT NULL,
+  total DECIMAL(10,2) NOT NULL,
+  payment_method ENUM('cash', 'card', 'mobile', 'pending') NOT NULL,
+  status ENUM('paid', 'pending', 'cancelled') NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL,
+  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
+);
 ```
 
-### Review
-```json
-{
-  "id": "string",
-  "customerId": "string",
-  "customerName": "string",
-  "staffId": "string",
-  "rating": "number",
-  "text": "string",
-  "date": "date",
-  "isApproved": "boolean",
-  "createdAt": "date",
-  "updatedAt": "date"
-}
+#### invoice_services
+```sql
+CREATE TABLE invoice_services (
+  id VARCHAR(36) PRIMARY KEY,
+  invoice_id VARCHAR(36) NOT NULL,
+  service_id VARCHAR(36) NOT NULL,
+  service_name VARCHAR(100) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  quantity INT NOT NULL,
+  total DECIMAL(10,2) NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
+);
+```
+
+#### tax_components
+```sql
+CREATE TABLE tax_components (
+  id VARCHAR(36) PRIMARY KEY,
+  invoice_id VARCHAR(36) NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  rate DECIMAL(5,2) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+);
+```
+
+#### business_settings
+```sql
+CREATE TABLE business_settings (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL,
+  address TEXT NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  logo VARCHAR(255),
+  slot_duration INT NOT NULL,
+  tax_rate DECIMAL(5,2) NOT NULL,
+  allow_discounts BOOLEAN DEFAULT TRUE,
+  allow_tips BOOLEAN DEFAULT TRUE,
+  default_commission DECIMAL(5,2) NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+#### business_hours
+```sql
+CREATE TABLE business_hours (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  day_of_week ENUM('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday') NOT NULL,
+  open_time TIME,
+  close_time TIME,
+  UNIQUE KEY (day_of_week)
+);
+```
+
+#### shop_closures
+```sql
+CREATE TABLE shop_closures (
+  id VARCHAR(36) PRIMARY KEY,
+  date DATE NOT NULL,
+  reason TEXT NOT NULL,
+  is_full_day BOOLEAN DEFAULT TRUE,
+  start_time TIME,
+  end_time TIME,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+#### gst_rates
+```sql
+CREATE TABLE gst_rates (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  is_active BOOLEAN DEFAULT FALSE,
+  total_rate DECIMAL(5,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+#### gst_components
+```sql
+CREATE TABLE gst_components (
+  id VARCHAR(36) PRIMARY KEY,
+  gst_rate_id VARCHAR(36) NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  rate DECIMAL(5,2) NOT NULL,
+  FOREIGN KEY (gst_rate_id) REFERENCES gst_rates(id) ON DELETE CASCADE
+);
+```
+
+#### activity_logs
+```sql
+CREATE TABLE activity_logs (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  user_name VARCHAR(100) NOT NULL,
+  user_role ENUM('admin', 'staff', 'billing') NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  details TEXT,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+#### reviews
+```sql
+CREATE TABLE reviews (
+  id VARCHAR(36) PRIMARY KEY,
+  customer_id VARCHAR(36) NOT NULL,
+  staff_id VARCHAR(36) NOT NULL,
+  rating INT NOT NULL,
+  text TEXT,
+  date DATE NOT NULL,
+  is_approved BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+  FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
+);
+```
+
+#### gallery_images
+```sql
+CREATE TABLE gallery_images (
+  id VARCHAR(36) PRIMARY KEY,
+  title VARCHAR(100) NOT NULL,
+  description TEXT,
+  url VARCHAR(255) NOT NULL,
+  category VARCHAR(50),
+  display_order INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 ```
 
 ## API Endpoints
@@ -540,6 +618,11 @@ Based on the existing frontend implementation, the following data models are req
 - **Response**: Business information object
 - **Status Codes**: 200 OK
 
+#### GET /api/public/gallery
+- **Description**: Retrieves gallery images for public display
+- **Response**: `{ "images": [{ "id": string, "url": string, "title": string }] }`
+- **Status Codes**: 200 OK
+
 #### GET /api/public/services
 - **Description**: Retrieves services for public display
 - **Query Parameters**: `category`
@@ -598,13 +681,17 @@ Based on the existing frontend implementation, the following data models are req
 
 ### Phase 2: Booking Logic
 - Appointment scheduling with conflict detection
-- Availability calculation
-- Staff management with working hours
+- Availability calculation based on staff working hours
+- Shop closure handling for holidays and special events
+- Business hours management
+- Recurring break time handling for staff members
 
 ### Phase 3: Financial Features
 - Invoice generation and management
-- GST/tax calculation
-- Reports and analytics
+- GST/tax calculation with multiple tax components
+- Discount and tip handling
+- Advanced reporting and analytics with sales trends and staff performance
+- Commission calculation for staff
 
 ### Phase 4: Advanced Features
 - Email and SMS notifications
@@ -612,8 +699,240 @@ Based on the existing frontend implementation, the following data models are req
 - Reviews and ratings
 - Activity logging
 
+## Database Relationships
+
+```mermaid
+erDiagram
+    USERS {
+        varchar(36) id PK
+        varchar(100) name
+        varchar(100) email
+        varchar(100) password
+        varchar(20) phone
+        enum role
+        varchar(255) image
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    STAFF {
+        varchar(36) id PK
+        varchar(36) user_id FK
+        varchar(100) position
+        text bio
+        decimal commission_percentage
+        boolean is_available
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    SERVICES {
+        varchar(36) id PK
+        varchar(100) name
+        text description
+        decimal price
+        int duration
+        varchar(50) category
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    STAFF_SERVICES {
+        varchar(36) staff_id FK
+        varchar(36) service_id FK
+    }
+    
+    WORKING_HOURS {
+        varchar(36) id PK
+        varchar(36) staff_id FK
+        enum day_of_week
+        time start_time
+        time end_time
+        boolean is_break
+    }
+    
+    CUSTOMERS {
+        varchar(36) id PK
+        varchar(100) name
+        varchar(100) email
+        varchar(20) phone
+        int visit_count
+        decimal total_spent
+        date last_visit
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    APPOINTMENTS {
+        varchar(36) id PK
+        varchar(36) customer_id FK
+        varchar(36) staff_id FK
+        date date
+        time time
+        time end_time
+        enum status
+        decimal total_amount
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    APPOINTMENT_SERVICES {
+        varchar(36) id PK
+        varchar(36) appointment_id FK
+        varchar(36) service_id FK
+        varchar(100) service_name
+        decimal price
+        int duration
+    }
+    
+    INVOICES {
+        varchar(36) id PK
+        varchar(36) appointment_id FK
+        varchar(36) customer_id FK
+        varchar(36) staff_id FK
+        date date
+        decimal subtotal
+        enum discount_type
+        decimal discount_value
+        decimal discount_amount
+        decimal tip_amount
+        decimal tax
+        decimal tax_amount
+        decimal total
+        enum payment_method
+        enum status
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    INVOICE_SERVICES {
+        varchar(36) id PK
+        varchar(36) invoice_id FK
+        varchar(36) service_id FK
+        varchar(100) service_name
+        decimal price
+        int quantity
+        decimal total
+    }
+    
+    TAX_COMPONENTS {
+        varchar(36) id PK
+        varchar(36) invoice_id FK
+        varchar(50) name
+        decimal rate
+        decimal amount
+    }
+    
+    GST_RATES {
+        varchar(36) id PK
+        varchar(50) name
+        boolean is_active
+        decimal total_rate
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    GST_COMPONENTS {
+        varchar(36) id PK
+        varchar(36) gst_rate_id FK
+        varchar(50) name
+        decimal rate
+    }
+    
+    REVIEWS {
+        varchar(36) id PK
+        varchar(36) customer_id FK
+        varchar(36) staff_id FK
+        int rating
+        text text
+        date date
+        boolean is_approved
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    ACTIVITY_LOGS {
+        varchar(36) id PK
+        varchar(36) user_id FK
+        varchar(100) user_name
+        enum user_role
+        varchar(100) action
+        text details
+        timestamp timestamp
+    }
+    
+    BUSINESS_SETTINGS {
+        int id PK
+        varchar(100) name
+        text address
+        varchar(20) phone
+        varchar(100) email
+        varchar(255) logo
+        int slot_duration
+        decimal tax_rate
+        boolean allow_discounts
+        boolean allow_tips
+        decimal default_commission
+        timestamp updated_at
+    }
+    
+    BUSINESS_HOURS {
+        int id PK
+        enum day_of_week
+        time open_time
+        time close_time
+    }
+    
+    USERS ||--o{ STAFF : has
+    STAFF ||--o{ WORKING_HOURS : has
+    STAFF ||--o{ STAFF_SERVICES : offers
+    SERVICES ||--o{ STAFF_SERVICES : provided_by
+    CUSTOMERS ||--o{ APPOINTMENTS : books
+    STAFF ||--o{ APPOINTMENTS : handles
+    APPOINTMENTS ||--o{ APPOINTMENT_SERVICES : includes
+    SERVICES ||--o{ APPOINTMENT_SERVICES : used_in
+    APPOINTMENTS ||--o{ INVOICES : generates
+    CUSTOMERS ||--o{ INVOICES : pays
+    STAFF ||--o{ INVOICES : receives
+    INVOICES ||--o{ INVOICE_SERVICES : lists
+    SERVICES ||--o{ INVOICE_SERVICES : billed_as
+    INVOICES ||--o{ TAX_COMPONENTS : applies
+    GST_RATES ||--o{ GST_COMPONENTS : consists_of
+    CUSTOMERS ||--o{ REVIEWS : submits
+    STAFF ||--o{ REVIEWS : receives
+    USERS ||--o{ ACTIVITY_LOGS : generates
+```
+
+## Implementation Process
+
+### 1. Database Setup
+1. Create a new MySQL database
+2. Execute the SQL schema definitions to create all tables
+3. Create necessary indexes for performance optimization
+4. Set up user privileges and security
+
+### 2. API Server Implementation
+1. Initialize a Node.js project with Express
+2. Install necessary dependencies:
+   ```bash
+   npm install express mysql2 sequelize sequelize-cli cors dotenv jsonwebtoken bcrypt helmet express-validator uuid
+   ```
+3. Set up Sequelize ORM models that map to the database tables
+4. Create controllers for each API endpoint
+5. Implement middleware for authentication and validation
+6. Configure error handling and logging
+
+### 3. Frontend Integration
+1. Update the frontend service layer to connect to the API instead of using mock data
+2. Implement authentication token management
+3. Add error handling for API responses
+4. Ensure the UI updates appropriately based on API responses
+
 ## Conclusion
 
-This API documentation provides a comprehensive roadmap for implementing the backend services required by the Barber Shop Management System. MongoDB is recommended as the primary database due to its flexibility and alignment with the existing data models, though PostgreSQL is a viable alternative for scenarios requiring more complex transactions.
+This API documentation provides a comprehensive roadmap for implementing the backend services required by the Barber Shop Management System. MySQL is recommended as the database due to its strong relational data model, excellent support for complex queries needed in reporting, and ACID compliance for ensuring data integrity in financial transactions.
 
-The implementation should follow REST principles with proper authentication, authorization, and error handling to ensure a secure and robust system. 
+The implementation should follow REST principles with proper authentication, authorization, and error handling to ensure a secure and robust system. Using Sequelize as an ORM will simplify database operations while maintaining type safety and validation.

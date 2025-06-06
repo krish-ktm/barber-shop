@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -28,8 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Service } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+import { Service } from '@/api/services/serviceService';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -52,7 +51,6 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
   onOpenChange,
   onSave,
 }) => {
-  const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,11 +62,25 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
     },
   });
 
+  // Update form values when service changes
+  useEffect(() => {
+    if (service) {
+      form.reset({
+        name: service.name,
+        description: service.description || '',
+        price: service.price,
+        duration: service.duration,
+        category: service.category,
+      });
+    }
+  }, [form, service]);
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    onSave(values);
-    toast({
-      title: 'Success',
-      description: 'Service details updated successfully',
+    if (!service) return;
+    
+    onSave({
+      ...values,
+      id: service.id
     });
     onOpenChange(false);
   };

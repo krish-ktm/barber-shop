@@ -1,5 +1,5 @@
 // Rename file to StaffManagement.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, SortAsc, X } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { StaffList } from '@/features/staff/StaffList';
@@ -29,14 +29,42 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/utils';
+import { useApi } from '@/hooks/useApi';
+import { getAllStaff, createStaff, updateStaff, deleteStaff, Staff as ApiStaff } from '@/api';
+
+// Convert API staff to our internal Staff type
+const mapApiStaffToInternal = (apiStaff: ApiStaff): Staff => {
+  return {
+    id: apiStaff.id,
+    name: apiStaff.name,
+    email: apiStaff.email,
+    phone: apiStaff.phone || '',
+    position: apiStaff.position,
+    bio: apiStaff.bio || '',
+    services: apiStaff.services || [],
+    commissionPercentage: apiStaff.commission_percentage,
+    isAvailable: apiStaff.is_available,
+    image: apiStaff.image || '/placeholder.jpg',
+    totalEarnings: 0, // These would need to come from a separate API call
+    totalAppointments: 0,
+  };
+};
 
 export const StaffManagement: React.FC = () => {
-  const [staff, setStaff] = useState<Staff[]>(staffData);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filterAvailability, setFilterAvailability] = useState<string>('all');
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // API fetch hook
+  const {
+    loading: staffLoading,
+    error: staffError,
+    execute: fetchStaff
+  } = useApi(getAllStaff);
   
   // Advanced filters
   const [showFilters, setShowFilters] = useState(false);
@@ -44,6 +72,42 @@ export const StaffManagement: React.FC = () => {
   const [commissionRange, setCommissionRange] = useState<[number, number]>([0, 50]);
   const [earningsRange, setEarningsRange] = useState<[number, number]>([0, 10000]);
   const [appointmentsRange, setAppointmentsRange] = useState<[number, number]>([0, 100]);
+  
+  // Fetch staff data on component mount
+  useEffect(() => {
+    const loadStaff = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetchStaff();
+        
+        if (response.success) {
+          // Map API staff to our internal format
+          const mappedStaff = response.staff.map(mapApiStaffToInternal);
+          setStaff(mappedStaff);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Failed to load staff data',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load staff:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load staff data',
+          variant: 'destructive',
+        });
+        
+        // Fallback to mock data for demo purposes
+        setStaff(staffData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadStaff();
+  }, [fetchStaff, toast]);
   
   // Get all unique services across all staff
   const allServices = Array.from(
@@ -137,20 +201,91 @@ export const StaffManagement: React.FC = () => {
     });
   };
 
-  const handleAddStaff = (newStaff: Staff) => {
-    setStaff(prev => [...prev, newStaff]);
-    toast({
-      title: 'Staff member added',
-      description: `${newStaff.name} has been added to your team.`,
-    });
+  const handleAddStaff = async (newStaff: Staff) => {
+    try {
+      setIsLoading(true);
+      
+      // Convert to API format
+      const apiStaffData = {
+        name: newStaff.name,
+        email: newStaff.email,
+        phone: newStaff.phone,
+        position: newStaff.position,
+        bio: newStaff.bio,
+        commission_percentage: newStaff.commissionPercentage,
+        is_available: newStaff.isAvailable,
+        services: newStaff.services,
+        // Add other required fields for your API
+        password: 'tempPassword123', // This would be changed by the user later
+      };
+      
+      // Call the API
+      const response = await createStaff(apiStaffData);
+      
+      if (response.success) {
+        // Add the new staff to the local state
+        const mappedStaff = mapApiStaffToInternal(response.staff);
+        setStaff(prev => [...prev, mappedStaff]);
+        
+        toast({
+          title: 'Staff member added',
+          description: `${newStaff.name} has been added to your team.`,
+        });
+      } else {
+        throw new Error('Failed to add staff member');
+      }
+    } catch (error) {
+      console.error('Failed to add staff:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add staff member',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleUpdateStaff = (updatedStaff: Staff) => {
-    setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
-    toast({
-      title: 'Staff profile updated',
-      description: `${updatedStaff.name}'s profile has been updated.`,
-    });
+  const handleUpdateStaff = async (updatedStaff: Staff) => {
+    try {
+      setIsLoading(true);
+      
+      // Convert to API format
+      const apiStaffData = {
+        name: updatedStaff.name,
+        email: updatedStaff.email,
+        phone: updatedStaff.phone,
+        position: updatedStaff.position,
+        bio: updatedStaff.bio,
+        commission_percentage: updatedStaff.commissionPercentage,
+        is_available: updatedStaff.isAvailable,
+        services: updatedStaff.services
+      };
+      
+      // Call the API
+      const response = await updateStaff(updatedStaff.id, apiStaffData);
+      
+      if (response.success) {
+        // Update the staff in local state
+        setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
+        
+        toast({
+          title: 'Staff profile updated',
+          description: `${updatedStaff.name}'s profile has been updated.`,
+        });
+      } else {
+        throw new Error('Failed to update staff member');
+      }
+    } catch (error) {
+      console.error('Failed to update staff:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update staff member',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -199,200 +334,148 @@ export const StaffManagement: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Staff</SelectItem>
-                  <SelectItem value="available">Active</SelectItem>
-                  <SelectItem value="unavailable">Inactive</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="unavailable">Unavailable</SelectItem>
                 </SelectContent>
               </Select>
-              
-              <Button variant="outline" onClick={() => setShowFilters(true)}>
+
+              <Button 
+                variant="outline" 
+                onClick={() => setShowFilters(true)}
+                className="flex items-center"
+              >
                 <Filter className="h-4 w-4 mr-2" />
                 Advanced Filters
                 {getActiveFilterCount() > 0 && (
-                  <Badge variant="secondary" className="ml-2">
+                  <Badge className="ml-2" variant="secondary">
                     {getActiveFilterCount()}
                   </Badge>
                 )}
               </Button>
-
-              {getActiveFilterCount() > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="h-9"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear All
-                </Button>
-              )}
             </div>
           </div>
         </div>
 
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <Badge variant="secondary" className="h-9 px-4">
-              {filteredStaff.length} staff member{filteredStaff.length !== 1 ? 's' : ''}
-            </Badge>
+        {isLoading ? (
+          <div className="p-8 flex justify-center">
+            <div className="animate-pulse text-center">
+              <p>Loading staff data...</p>
+            </div>
           </div>
-
-          <StaffList staff={filteredStaff} onUpdateStaff={handleUpdateStaff} />
-        </div>
+        ) : filteredStaff.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-muted-foreground">No staff members found with the current filters.</p>
+            {getActiveFilterCount() > 0 && (
+              <Button variant="link" onClick={clearFilters}>
+                Clear all filters
+              </Button>
+            )}
+          </div>
+        ) : (
+          <StaffList 
+            staff={filteredStaff} 
+            onUpdate={handleUpdateStaff} 
+          />
+        )}
       </div>
-      
+
+      <AddStaffDialog 
+        open={showAddDialog} 
+        onOpenChange={setShowAddDialog}
+        onSubmit={handleAddStaff}
+        existingServices={allServices}
+      />
+
       <Sheet open={showFilters} onOpenChange={setShowFilters}>
-        <SheetContent side="right" className="w-full max-w-md">
-          <SheetHeader className="mb-6">
+        <SheetContent>
+          <SheetHeader>
             <SheetTitle>Advanced Filters</SheetTitle>
           </SheetHeader>
           
-          <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] p-4">
+          <div className="py-4 space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Sort By</label>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="appointments">Appointments (High to Low)</SelectItem>
-                  <SelectItem value="earnings">Earnings (High to Low)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Availability</label>
-              <Select value={filterAvailability} onValueChange={setFilterAvailability}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Staff</SelectItem>
-                  <SelectItem value="available">Active</SelectItem>
-                  <SelectItem value="unavailable">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-4">
-              <label className="text-sm font-medium">Services</label>
-              <div className="grid grid-cols-2 gap-2">
+              <h3 className="text-sm font-medium">Services</h3>
+              <div className="space-y-2">
                 {allServices.map(service => (
-                  <div key={service} className="flex items-center gap-2">
+                  <div key={service} className="flex items-center space-x-2">
                     <Checkbox 
                       id={`service-${service}`} 
                       checked={selectedServices.includes(service)}
                       onCheckedChange={() => handleServiceChange(service)}
                     />
-                    <Label htmlFor={`service-${service}`} className="cursor-pointer">
-                      {service}
-                    </Label>
+                    <Label htmlFor={`service-${service}`}>{service}</Label>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div className="space-y-4">
-              <label className="text-sm font-medium">Commission Range</label>
-              <div className="px-1">
-                <Slider
-                  defaultValue={[0, maxCommission]}
-                  min={0}
-                  max={maxCommission}
-                  step={1}
-                  value={commissionRange}
-                  onValueChange={(value) => setCommissionRange(value as [number, number])}
-                />
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <div>{commissionRange[0]}%</div>
-                <div>{commissionRange[1]}%</div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <label className="text-sm font-medium">Earnings Range</label>
-              <div className="px-1">
-                <Slider
-                  defaultValue={[0, maxEarnings]}
-                  min={0}
-                  max={maxEarnings}
-                  step={500}
-                  value={earningsRange}
-                  onValueChange={(value) => setEarningsRange(value as [number, number])}
-                />
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <div>{formatCurrency(earningsRange[0])}</div>
-                <div>{formatCurrency(earningsRange[1])}</div>
-              </div>
-            </div>
             
-            <div className="space-y-4">
-              <label className="text-sm font-medium">Appointments Range</label>
-              <div className="px-1">
-                <Slider
-                  defaultValue={[0, maxAppointments]}
-                  min={0}
-                  max={maxAppointments}
-                  step={5}
-                  value={appointmentsRange}
-                  onValueChange={(value) => setAppointmentsRange(value as [number, number])}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Commission Rate</h3>
+              <div className="pt-4 px-2">
+                <Slider 
+                  value={commissionRange} 
+                  onValueChange={value => setCommissionRange(value as [number, number])} 
+                  min={0} 
+                  max={maxCommission} 
+                  step={1}
                 />
-              </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <div>{appointmentsRange[0]}</div>
-                <div>{appointmentsRange[1]}</div>
+                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                  <span>{commissionRange[0]}%</span>
+                  <span>{commissionRange[1]}%</span>
+                </div>
               </div>
             </div>
             
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={() => {
-                  // Set high commission staff
-                  setCommissionRange([20, maxCommission]);
-                }}>
-                  High Commission
-                </Button>
-                <Button variant="outline" onClick={() => {
-                  // Set top performers
-                  setEarningsRange([5000, maxEarnings]);
-                }}>
-                  Top Performers
-                </Button>
-                <Button variant="outline" onClick={() => {
-                  // Set high appointment staff
-                  setAppointmentsRange([50, maxAppointments]);
-                }}>
-                  Busy Staff
-                </Button>
-                <Button variant="outline" onClick={() => {
-                  // Set haircut specialists
-                  setSelectedServices(['haircut']);
-                }}>
-                  Haircut Experts
-                </Button>
+              <h3 className="text-sm font-medium">Total Earnings</h3>
+              <div className="pt-4 px-2">
+                <Slider 
+                  value={earningsRange} 
+                  onValueChange={value => setEarningsRange(value as [number, number])} 
+                  min={0} 
+                  max={maxEarnings} 
+                  step={100}
+                />
+                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                  <span>{formatCurrency(earningsRange[0])}</span>
+                  <span>{formatCurrency(earningsRange[1])}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Total Appointments</h3>
+              <div className="pt-4 px-2">
+                <Slider 
+                  value={appointmentsRange} 
+                  onValueChange={value => setAppointmentsRange(value as [number, number])} 
+                  min={0} 
+                  max={maxAppointments} 
+                  step={5}
+                />
+                <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                  <span>{appointmentsRange[0]}</span>
+                  <span>{appointmentsRange[1]}</span>
+                </div>
               </div>
             </div>
           </div>
           
-          <SheetFooter className="flex justify-between pt-4 mt-4 border-t">
-            <Button variant="outline" onClick={clearFilters}>
-              Reset filters
+          <SheetFooter className="flex flex-row gap-2 sm:justify-between">
+            <Button 
+              variant="destructive" 
+              onClick={clearFilters}
+              className="flex items-center gap-1"
+            >
+              <X className="h-4 w-4" />
+              Clear Filters
             </Button>
             <SheetClose asChild>
-              <Button>Apply filters</Button>
+              <Button>Apply Filters</Button>
             </SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>
-
-      <AddStaffDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        onAdd={handleAddStaff}
-      />
     </div>
   );
 };
