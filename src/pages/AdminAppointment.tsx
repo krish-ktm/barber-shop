@@ -61,38 +61,22 @@ import { Sliders } from 'lucide-react';
 // API imports
 import { useApi } from '@/hooks/useApi';
 import { 
-  getAllAppointments,
+  getAdminAppointments,
   Appointment as ApiAppointment 
 } from '@/api/services/appointmentService';
-import { getAllStaff } from '@/api/services/staffService';
-import { getAllServices } from '@/api/services/serviceService';
 import { useToast } from '@/hooks/use-toast';
 import { Appointment as UIAppointment } from '@/types';
 
 export const AdminAppointment: React.FC = () => {
   const { toast } = useToast();
 
-  // API data loading hooks
+  // API data loading hook - using the new endpoint
   const {
-    data: appointmentsData,
-    loading: appointmentsLoading,
-    error: appointmentsError,
-    execute: fetchAppointments
-  } = useApi(getAllAppointments);
-
-  const {
-    data: staffData,
-    loading: staffLoading,
-    error: staffError,
-    execute: fetchStaff
-  } = useApi(getAllStaff);
-
-  const {
-    data: servicesData,
-    loading: servicesLoading,
-    error: servicesError,
-    execute: fetchServices
-  } = useApi(getAllServices);
+    data: adminData,
+    loading: isLoading,
+    error: apiError,
+    execute: fetchAdminData
+  } = useApi(getAdminAppointments);
 
   // Basic filters
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -119,50 +103,32 @@ export const AdminAppointment: React.FC = () => {
   // Fetch data on component mount
   useEffect(() => {
     const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-    fetchAppointments(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
-    fetchStaff();
-    fetchServices();
-  }, [fetchAppointments, fetchStaff, fetchServices, selectedDate, staffFilter, statusFilter]);
+    fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+  }, [fetchAdminData, selectedDate, staffFilter, statusFilter]);
 
   // Refetch appointments when date changes
   useEffect(() => {
     if (!useAdvancedFilters) {
       const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-      fetchAppointments(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+      fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
     }
-  }, [selectedDate, staffFilter, statusFilter, useAdvancedFilters, fetchAppointments]);
+  }, [selectedDate, staffFilter, statusFilter, useAdvancedFilters, fetchAdminData]);
 
   // Handle errors
   useEffect(() => {
-    if (appointmentsError) {
+    if (apiError) {
       toast({
         title: 'Error',
-        description: `Failed to load appointments: ${appointmentsError.message}`,
+        description: `Failed to load data: ${apiError.message}`,
         variant: 'destructive',
       });
     }
-    
-    if (staffError) {
-      toast({
-        title: 'Error',
-        description: `Failed to load staff: ${staffError.message}`,
-        variant: 'destructive',
-      });
-    }
-    
-    if (servicesError) {
-      toast({
-        title: 'Error',
-        description: `Failed to load services: ${servicesError.message}`,
-        variant: 'destructive',
-      });
-    }
-  }, [appointmentsError, staffError, servicesError, toast]);
+  }, [apiError, toast]);
 
-  // Get the actual appointment data from API or use empty array if not loaded
-  const appointments = appointmentsData?.appointments || [];
-  const staff = staffData?.staff || [];
-  const services = servicesData?.services || [];
+  // Get the actual data from API or use empty arrays if not loaded
+  const appointments = adminData?.appointments || [];
+  const staff = adminData?.staff || [];
+  const services = adminData?.services || [];
 
   // Helpers for managing time
   const formatTimeForFilter = (time: string) => {
@@ -353,7 +319,7 @@ export const AdminAppointment: React.FC = () => {
       />
       
       {/* Loading indicator */}
-      {(appointmentsLoading || staffLoading || servicesLoading) && !appointments.length && (
+      {isLoading && !appointments.length && (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           <span className="ml-3">Loading appointments...</span>
@@ -361,7 +327,7 @@ export const AdminAppointment: React.FC = () => {
       )}
       
       {/* Rest of UI */}
-      {(!appointmentsLoading || appointments.length > 0) && (
+      {(!isLoading || appointments.length > 0) && (
         <div className="bg-card border rounded-lg">
           <div className="p-4 border-b">
             <div className="flex flex-col sm:flex-row gap-4">

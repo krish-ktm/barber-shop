@@ -50,6 +50,35 @@ interface AvailableSlotsResponse {
   slots: TimeSlot[];
 }
 
+// Staff interface
+export interface Staff {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  avatar: string | null;
+}
+
+// Service interface
+export interface Service {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  description: string;
+}
+
+// Admin dashboard response interface
+export interface AdminAppointmentsResponse {
+  success: boolean;
+  appointments: Appointment[];
+  staff: Staff[];
+  services: Service[];
+  totalCount: number;
+  pages: number;
+}
+
 /**
  * Get all appointments
  */
@@ -70,6 +99,28 @@ export const getAllAppointments = async (
   if (status) url += `&status=${status}`;
   
   return get<AppointmentListResponse>(url);
+};
+
+/**
+ * Get all data needed for admin appointments page in a single request
+ */
+export const getAdminAppointments = async (
+  page = 1,
+  limit = 100,
+  sort = 'date_asc',
+  date?: string,
+  staffId?: string,
+  customerId?: string,
+  status?: string
+): Promise<AdminAppointmentsResponse> => {
+  let url = `/appointments/admin-dashboard?page=${page}&limit=${limit}&sort=${sort}`;
+  
+  if (date) url += `&date=${date}`;
+  if (staffId) url += `&staffId=${staffId}`;
+  if (customerId) url += `&customerId=${customerId}`;
+  if (status) url += `&status=${status}`;
+  
+  return get<AdminAppointmentsResponse>(url);
 };
 
 /**
