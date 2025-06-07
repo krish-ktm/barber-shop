@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, isAfter, parseISO } from 'date-fns';
 import {
   Bell,
@@ -16,7 +16,8 @@ import {
   Clock,
   Plus,
   Edit,
-  Trash
+  Trash,
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { ShopClosure } from '@/types';
-import { businessHoursData } from '@/mocks';
 import {
   Dialog,
   DialogContent,
@@ -48,34 +48,98 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 
+// API imports
+import { useApi } from '@/hooks/useApi';
+import { 
+  getBusinessSettings, 
+  updateBusinessSettings,
+  BusinessSettings
+} from '@/api/services/settingsService';
+
 export const Settings: React.FC = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('general');
 
-  // General Settings
-  const [businessName, setBusinessName] = useState('Modern Cuts Barber Shop');
-  const [address, setAddress] = useState('123 Main Street, City, State 12345');
-  const [phone, setPhone] = useState('(555) 123-4567');
-  const [email, setEmail] = useState('contact@moderncuts.com');
-  const [website, setWebsite] = useState('www.moderncuts.com');
+  // API hooks
+  const {
+    data: settingsData,
+    loading: settingsLoading,
+    error: settingsError,
+    execute: fetchSettings
+  } = useApi(getBusinessSettings);
+
+  const {
+    loading: updateLoading,
+    error: updateError,
+    execute: saveSettings
+  } = useApi(updateBusinessSettings);
+
+  // State for settings with additional website field that doesn't exist in API type
+  interface ExtendedBusinessSettings extends Partial<BusinessSettings> {
+    website?: string;
+  }
+
+  const [businessSettings, setBusinessSettings] = useState<ExtendedBusinessSettings>({
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    slot_duration: 30,
+    tax_rate: 7.5,
+    allow_discounts: true,
+    allow_tips: true,
+    default_commission: 20
+  });
+
+  // Fetch settings on component mount
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  // Update state when API data is loaded
+  useEffect(() => {
+    if (settingsData?.settings) {
+      setBusinessSettings({
+        ...settingsData.settings,
+        website: '' // Add website field that's only in UI
+      });
+    }
+  }, [settingsData]);
+
+  // Handle API errors
+  useEffect(() => {
+    if (settingsError) {
+      toast({
+        title: 'Error loading settings',
+        description: settingsError.message,
+        variant: 'destructive',
+      });
+    }
+
+    if (updateError) {
+      toast({
+        title: 'Error saving settings',
+        description: updateError.message,
+        variant: 'destructive',
+      });
+    }
+  }, [settingsError, updateError, toast]);
+
+  // Additional state for UI settings not in API
   const [currency, setCurrency] = useState('USD');
   const [timezone, setTimezone] = useState('America/New_York');
-
-  // Notifications
   const [emailNotifications, setEmailNotifications] = useState({
     appointments: true,
     reminders: true,
     marketing: false,
     reports: true,
   });
-
   const [smsNotifications, setSmsNotifications] = useState({
     appointments: true,
     reminders: true,
     marketing: false,
   });
-
-  // Booking Settings
   const [bookingSettings, setBookingSettings] = useState({
     allowWalkIns: true,
     requireDeposit: false,
@@ -85,19 +149,16 @@ export const Settings: React.FC = () => {
     allowCancellation: true,
     cancellationPeriod: 24, // hours
   });
-
-  // Payment Settings
   const [paymentSettings, setPaymentSettings] = useState({
     acceptCash: true,
     acceptCard: true,
     acceptMobile: true,
     autoTip: true,
     defaultTip: 15,
-    taxRate: 7.5,
   });
 
   // Shop Closures
-  const [shopClosures, setShopClosures] = useState<ShopClosure[]>(businessHoursData.shopClosures || []);
+  const [shopClosures, setShopClosures] = useState<ShopClosure[]>([]);
   const [isClosureDialogOpen, setIsClosureDialogOpen] = useState(false);
   const [currentClosure, setCurrentClosure] = useState<ShopClosure | null>(null);
   const [newClosure, setNewClosure] = useState<Partial<ShopClosure>>({
@@ -108,13 +169,31 @@ export const Settings: React.FC = () => {
     endTime: '17:00',
   });
 
-  const handleSave = () => {
-    toast({
-      title: 'Settings saved',
-      description: 'Your settings have been updated successfully.',
-    });
+  // Handle input changes for business settings
+  type BusinessSettingKey = keyof ExtendedBusinessSettings;
+  
+  const handleBusinessSettingChange = (key: BusinessSettingKey, value: unknown) => {
+    setBusinessSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
 
+  const handleSave = async () => {
+    try {
+      // Remove UI-only fields before sending to API
+      const { website, ...apiSettings } = businessSettings;
+      await saveSettings(apiSettings);
+      toast({
+        title: 'Settings saved',
+        description: 'Your business settings have been updated successfully.',
+      });
+    } catch (error) {
+      // Error is already handled in the useEffect
+    }
+  };
+
+  // Shop closure functions
   const handleAddClosure = () => {
     setCurrentClosure(null);
     setNewClosure({
@@ -195,6 +274,16 @@ export const Settings: React.FC = () => {
     isAfter(parseISO(closure.date), new Date())
   );
 
+  // Show loading state
+  if (settingsLoading && !settingsData) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-3">Loading settings...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -247,8 +336,8 @@ export const Settings: React.FC = () => {
                     <Label htmlFor="businessName">Business Name</Label>
                     <Input
                       id="businessName"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
+                      value={businessSettings.name}
+                      onChange={(e) => handleBusinessSettingChange('name', e.target.value)}
                     />
                   </div>
 
@@ -256,8 +345,8 @@ export const Settings: React.FC = () => {
                     <Label htmlFor="address">Address</Label>
                     <Textarea
                       id="address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      value={businessSettings.address}
+                      onChange={(e) => handleBusinessSettingChange('address', e.target.value)}
                     />
                   </div>
 
@@ -265,8 +354,8 @@ export const Settings: React.FC = () => {
                     <Label htmlFor="phone">Phone</Label>
                     <Input
                       id="phone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      value={businessSettings.phone}
+                      onChange={(e) => handleBusinessSettingChange('phone', e.target.value)}
                     />
                   </div>
 
@@ -275,8 +364,8 @@ export const Settings: React.FC = () => {
                     <Input
                       id="email"
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={businessSettings.email}
+                      onChange={(e) => handleBusinessSettingChange('email', e.target.value)}
                     />
                   </div>
 
@@ -284,8 +373,8 @@ export const Settings: React.FC = () => {
                     <Label htmlFor="website">Website</Label>
                     <Input
                       id="website"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
+                      value={businessSettings.website}
+                      onChange={(e) => handleBusinessSettingChange('website', e.target.value)}
                     />
                   </div>
                 </div>
@@ -575,107 +664,108 @@ export const Settings: React.FC = () => {
           <TabsContent value="payment">
             <Card>
               <CardHeader>
-                <CardTitle>Payment Methods</CardTitle>
+                <CardTitle>Payment Methods & Taxes</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Accept Cash</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow cash payments
-                      </p>
+                      <Label>Accept Cash Payments</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Allow cash payments for services
+                      </div>
                     </div>
                     <Switch
                       checked={paymentSettings.acceptCash}
-                      onCheckedChange={(checked) =>
-                        setPaymentSettings({ ...paymentSettings, acceptCash: checked })
+                      onCheckedChange={(checked) => 
+                        setPaymentSettings({...paymentSettings, acceptCash: checked})
                       }
                     />
                   </div>
-
+                  
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Accept Card</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow card payments
-                      </p>
+                      <Label>Accept Card Payments</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Allow credit/debit card payments
+                      </div>
                     </div>
                     <Switch
                       checked={paymentSettings.acceptCard}
-                      onCheckedChange={(checked) =>
-                        setPaymentSettings({ ...paymentSettings, acceptCard: checked })
+                      onCheckedChange={(checked) => 
+                        setPaymentSettings({...paymentSettings, acceptCard: checked})
                       }
                     />
                   </div>
-
+                  
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Accept Mobile Payments</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow mobile payment methods
-                      </p>
+                      <div className="text-sm text-muted-foreground">
+                        Allow payments via mobile apps
+                      </div>
                     </div>
                     <Switch
                       checked={paymentSettings.acceptMobile}
-                      onCheckedChange={(checked) =>
-                        setPaymentSettings({ ...paymentSettings, acceptMobile: checked })
+                      onCheckedChange={(checked) => 
+                        setPaymentSettings({...paymentSettings, acceptMobile: checked})
                       }
                     />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle>Payment Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-4">
+                  
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Automatic Tip Suggestion</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Show tip suggestions during payment
-                      </p>
+                      <Label>Auto-Calculate Tips</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Automatically suggest tip amounts on checkout
+                      </div>
                     </div>
                     <Switch
                       checked={paymentSettings.autoTip}
-                      onCheckedChange={(checked) =>
-                        setPaymentSettings({ ...paymentSettings, autoTip: checked })
+                      onCheckedChange={(checked) => 
+                        setPaymentSettings({...paymentSettings, autoTip: checked})
                       }
                     />
                   </div>
-
-                  {paymentSettings.autoTip && (
-                    <div className="grid gap-2">
-                      <Label>Default Tip Percentage</Label>
-                      <Input
-                        type="number"
-                        value={paymentSettings.defaultTip}
-                        onChange={(e) =>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultTip">Default Tip Percentage</Label>
+                      <Select
+                        value={paymentSettings.defaultTip.toString()}
+                        onValueChange={(value) => 
                           setPaymentSettings({
-                            ...paymentSettings,
-                            defaultTip: Number(e.target.value),
+                            ...paymentSettings, 
+                            defaultTip: parseInt(value)
                           })
+                        }
+                      >
+                        <SelectTrigger id="defaultTip">
+                          <SelectValue placeholder="Select percentage" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10%</SelectItem>
+                          <SelectItem value="15">15%</SelectItem>
+                          <SelectItem value="18">18%</SelectItem>
+                          <SelectItem value="20">20%</SelectItem>
+                          <SelectItem value="25">25%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                      <Input
+                        id="taxRate"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={businessSettings.tax_rate}
+                        onChange={(e) => 
+                          handleBusinessSettingChange('tax_rate', parseFloat(e.target.value))
                         }
                       />
                     </div>
-                  )}
-
-                  <div className="grid gap-2">
-                    <Label>Tax Rate (%)</Label>
-                    <Input
-                      type="number"
-                      value={paymentSettings.taxRate}
-                      onChange={(e) =>
-                        setPaymentSettings({
-                          ...paymentSettings,
-                          taxRate: Number(e.target.value),
-                        })
-                      }
-                    />
                   </div>
                 </div>
               </CardContent>

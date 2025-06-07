@@ -5,9 +5,7 @@ import {
   MoreHorizontal, 
   Phone, 
   Trash,
-  Calendar,
-  Clock,
-  DollarSign
+  Clock
 } from 'lucide-react';
 import { Staff } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,9 +27,10 @@ import { useToast } from '@/hooks/use-toast';
 interface StaffListProps {
   staff: Staff[];
   onUpdateStaff?: (updatedStaff: Staff) => void;
+  onDeleteStaff?: (staffId: string) => void;
 }
 
-export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff }) => {
+export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDeleteStaff }) => {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -84,7 +83,10 @@ export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff }) =>
                       Edit Profile
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuItem 
+                      className="text-destructive"
+                      onClick={() => onDeleteStaff && onDeleteStaff(member.id)}
+                    >
                       <Trash className="mr-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>

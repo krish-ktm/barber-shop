@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import { Customer } from '@/api/services/customerService';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -33,13 +33,14 @@ const formSchema = z.object({
 interface AddCustomerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSave: (customer: Partial<Customer>) => void;
 }
 
 export const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
   open,
   onOpenChange,
+  onSave,
 }) => {
-  const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -51,11 +52,7 @@ export const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
-    toast({
-      title: 'Customer added',
-      description: 'New customer has been added successfully.',
-    });
+    onSave(values);
     onOpenChange(false);
     form.reset();
   };

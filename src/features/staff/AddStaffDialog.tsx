@@ -49,12 +49,14 @@ interface AddStaffDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd?: (newStaff: Staff) => void;
+  onAddStaff?: (newStaff: Staff) => void;
 }
 
 export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
   open,
   onOpenChange,
   onAdd,
+  onAddStaff,
 }) => {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
@@ -92,10 +94,12 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
       isAvailable: values.isActive, // Map isActive to isAvailable
     };
 
-    if (onAdd) {
+    if (onAddStaff) {
+      onAddStaff(newStaff);
+    } else if (onAdd) {
       onAdd(newStaff);
     } else {
-      // If no onAdd handler provided, just log
+      // If no handler provided, just log
       console.log(newStaff);
     }
     

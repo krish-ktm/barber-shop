@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { format } from 'date-fns';
-import { Copy, Download } from 'lucide-react';
+import { Copy, Download, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Customer, Invoice } from '@/types';
 import { formatCurrency, formatPhoneNumber } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
-import { invoiceData } from '@/mocks';
 import {
   Table,
   TableBody,
@@ -29,11 +27,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useApi } from '@/hooks/useApi';
+import { Customer } from '@/api/services/customerService';
+import { getCustomerInvoices } from '@/api/services/customerService';
 
 interface CustomerDetailsDialogProps {
   customer: Customer | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUpdate?: (id: string, customerData: Partial<Customer>) => void;
 }
 
 export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
@@ -42,15 +44,38 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
   onOpenChange,
 }) => {
   const { toast } = useToast();
+  
+  // API Hook for customer invoices
+  const {
+    data: invoicesData,
+    loading: isLoading,
+    error: invoicesError,
+    execute: fetchInvoices
+  } = useApi(getCustomerInvoices);
+  
+  useEffect(() => {
+    if (customer && open) {
+      fetchInvoices(customer.id);
+    }
+  }, [customer, open, fetchInvoices]);
+  
+  // Error handling for invoices
+  useEffect(() => {
+    if (invoicesError) {
+      toast({
+        title: "Error loading invoices",
+        description: invoicesError.message,
+        variant: "destructive"
+      });
+    }
+  }, [invoicesError, toast]);
 
   if (!customer) return null;
 
   // Get customer's invoice history
-  const customerInvoices = invoiceData
-    .filter(invoice => invoice.customerId === customer.id)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const customerInvoices = invoicesData?.invoices || [];
 
-  const getStatusBadge = (status: Invoice['status']) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
         return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
@@ -63,7 +88,7 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
     }
   };
 
-  const getPaymentMethodBadge = (method: Invoice['paymentMethod']) => {
+  const getPaymentMethodBadge = (method: string) => {
     switch (method) {
       case 'cash':
         return <Badge variant="outline">Cash</Badge>;
@@ -121,18 +146,18 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
                   </div>
                 )}
                 <div className="text-sm text-muted-foreground">
-                  Member since: {format(new Date(customer.createdAt), 'MMMM d, yyyy')}
+                  Member since: {customer.created_at ? format(new Date(customer.created_at), 'MMMM d, yyyy') : 'N/A'}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-lg border p-4">
                   <div className="text-sm font-medium mb-1">Total Visits</div>
-                  <div className="text-2xl font-bold">{customer.visitCount}</div>
+                  <div className="text-2xl font-bold">{customer.visit_count || 0}</div>
                 </div>
                 <div className="rounded-lg border p-4">
                   <div className="text-sm font-medium mb-1">Total Spent</div>
-                  <div className="text-2xl font-bold">{formatCurrency(customer.totalSpent)}</div>
+                  <div className="text-2xl font-bold">{formatCurrency(customer.total_spent || 0)}</div>
                 </div>
               </div>
             </div>
@@ -155,7 +180,16 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {customerInvoices.length === 0 ? (
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-6">
+                          <div className="flex justify-center items-center">
+                            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                            <span>Loading invoices...</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : customerInvoices.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
                           No invoices found for this customer
@@ -171,15 +205,15 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="max-w-[200px] truncate cursor-help">
-                                    {invoice.services.map(s => s.serviceName).join(', ')}
+                                    {invoice.services?.map(s => s.service_name).join(', ')}
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="right" align="start" className="max-w-[300px]">
                                   <div className="space-y-1 text-sm">
-                                    {invoice.services.map((service, idx) => (
+                                    {invoice.services?.map((service, idx) => (
                                       <div key={idx} className="flex justify-between gap-4">
                                         <span>
-                                          {service.serviceName}
+                                          {service.service_name}
                                           {service.quantity > 1 && <span className="text-muted-foreground"> × {service.quantity}</span>}
                                         </span>
                                         <span className="font-medium">{formatCurrency(service.total)}</span>
@@ -197,7 +231,7 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
                             </TooltipProvider>
                           </TableCell>
                           <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                          <TableCell>{getPaymentMethodBadge(invoice.paymentMethod)}</TableCell>
+                          <TableCell>{getPaymentMethodBadge(invoice.payment_method)}</TableCell>
                           <TableCell className="text-right font-medium">
                             {formatCurrency(invoice.total)}
                           </TableCell>
@@ -208,14 +242,29 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
                 </Table>
               </div>
             </div>
+
+            {/* Notes Section */}
+            {customer.notes && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Notes</h4>
+                  <div className="rounded-lg border p-4 text-sm">
+                    {customer.notes}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </ScrollArea>
 
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t">
+        <div className="flex justify-between pt-4 mt-4 border-t">
           <Button variant="outline" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
-            Download PDF
+            Export
+          </Button>
+          <Button variant="default" onClick={() => onOpenChange(false)}>
+            Close
           </Button>
         </div>
       </DialogContent>

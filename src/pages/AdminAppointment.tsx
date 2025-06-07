@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, parse, startOfDay, endOfDay, isWithinInterval, isAfter } from 'date-fns';
 import {
   Calendar as CalendarIcon,
@@ -8,11 +8,11 @@ import {
   Plus,
   Search,
   X,
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
 import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
-import { appointmentData, staffData, serviceData } from '@/mocks';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -58,7 +58,42 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Sliders } from 'lucide-react';
 
+// API imports
+import { useApi } from '@/hooks/useApi';
+import { 
+  getAllAppointments,
+  Appointment as ApiAppointment 
+} from '@/api/services/appointmentService';
+import { getAllStaff } from '@/api/services/staffService';
+import { getAllServices } from '@/api/services/serviceService';
+import { useToast } from '@/hooks/use-toast';
+import { Appointment as UIAppointment } from '@/types';
+
 export const AdminAppointment: React.FC = () => {
+  const { toast } = useToast();
+
+  // API data loading hooks
+  const {
+    data: appointmentsData,
+    loading: appointmentsLoading,
+    error: appointmentsError,
+    execute: fetchAppointments
+  } = useApi(getAllAppointments);
+
+  const {
+    data: staffData,
+    loading: staffLoading,
+    error: staffError,
+    execute: fetchStaff
+  } = useApi(getAllStaff);
+
+  const {
+    data: servicesData,
+    loading: servicesLoading,
+    error: servicesError,
+    execute: fetchServices
+  } = useApi(getAllServices);
+
   // Basic filters
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,6 +115,54 @@ export const AdminAppointment: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+    fetchAppointments(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+    fetchStaff();
+    fetchServices();
+  }, [fetchAppointments, fetchStaff, fetchServices, selectedDate, staffFilter, statusFilter]);
+
+  // Refetch appointments when date changes
+  useEffect(() => {
+    if (!useAdvancedFilters) {
+      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      fetchAppointments(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+    }
+  }, [selectedDate, staffFilter, statusFilter, useAdvancedFilters, fetchAppointments]);
+
+  // Handle errors
+  useEffect(() => {
+    if (appointmentsError) {
+      toast({
+        title: 'Error',
+        description: `Failed to load appointments: ${appointmentsError.message}`,
+        variant: 'destructive',
+      });
+    }
+    
+    if (staffError) {
+      toast({
+        title: 'Error',
+        description: `Failed to load staff: ${staffError.message}`,
+        variant: 'destructive',
+      });
+    }
+    
+    if (servicesError) {
+      toast({
+        title: 'Error',
+        description: `Failed to load services: ${servicesError.message}`,
+        variant: 'destructive',
+      });
+    }
+  }, [appointmentsError, staffError, servicesError, toast]);
+
+  // Get the actual appointment data from API or use empty array if not loaded
+  const appointments = appointmentsData?.appointments || [];
+  const staff = staffData?.staff || [];
+  const services = servicesData?.services || [];
 
   // Helpers for managing time
   const formatTimeForFilter = (time: string) => {
@@ -108,19 +191,20 @@ export const AdminAppointment: React.FC = () => {
   };
 
   // Filter appointments
-  const filteredAppointments = appointmentData
+  const filteredAppointments = appointments
     .filter(appointment => {
       // Basic filtering
       const searchLower = searchQuery.toLowerCase();
       const isSearchMatch = searchQuery === '' || 
-        appointment.customerName.toLowerCase().includes(searchLower) ||
-        appointment.staffName.toLowerCase().includes(searchLower) ||
-        appointment.customerPhone.includes(searchQuery) ||
-        (appointment.customerEmail?.toLowerCase().includes(searchLower) || false);
+        appointment.customer_name.toLowerCase().includes(searchLower) ||
+        appointment.staff_name.toLowerCase().includes(searchLower) ||
+        appointment.customer_phone.includes(searchQuery) ||
+        (appointment.customer_email?.toLowerCase().includes(searchLower) || false);
+      
       const isStatusMatch = statusFilter === 'all' || appointment.status === statusFilter;
-      const isStaffMatch = staffFilter === 'all' || appointment.staffId === staffFilter;
+      const isStaffMatch = staffFilter === 'all' || appointment.staff_id === staffFilter;
       const isServiceMatch = serviceFilter === 'all' || 
-        appointment.services.some(service => service.serviceId === serviceFilter);
+        appointment.services.some(service => service.service_id === serviceFilter);
       
       // Basic date filtering (if not using advanced filters)
       let isDateMatch = true;
@@ -151,7 +235,7 @@ export const AdminAppointment: React.FC = () => {
         const isTimeMatch = isTimeInRange(appointment.time, timeRange);
         
         // Price range filtering
-        const isPriceMatch = isPriceInRange(appointment.totalAmount, priceRange);
+        const isPriceMatch = isPriceInRange(appointment.total_amount, priceRange);
         
         // Duration range filtering
         const totalDuration = appointment.services.reduce((sum, service) => sum + service.duration, 0);
@@ -169,6 +253,48 @@ export const AdminAppointment: React.FC = () => {
       return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
     });
 
+  // Convert API appointments to UI format for the appointment list
+  const convertApiToUIAppointment = (apiAppointment: ApiAppointment): UIAppointment => {
+    return {
+      id: apiAppointment.id,
+      customerId: apiAppointment.customer_id,
+      customerName: apiAppointment.customer_name,
+      customerPhone: apiAppointment.customer_phone,
+      customerEmail: apiAppointment.customer_email,
+      staffId: apiAppointment.staff_id,
+      staffName: apiAppointment.staff_name,
+      date: apiAppointment.date,
+      time: apiAppointment.time,
+      endTime: apiAppointment.end_time || calculateEndTime(apiAppointment),
+      status: apiAppointment.status,
+      services: apiAppointment.services.map(service => ({
+        serviceId: service.service_id,
+        serviceName: service.service_name,
+        price: service.price,
+        duration: service.duration
+      })),
+      totalAmount: apiAppointment.total_amount,
+      notes: apiAppointment.notes || '',
+      createdAt: apiAppointment.created_at || new Date().toISOString(),
+      updatedAt: apiAppointment.updated_at || new Date().toISOString()
+    };
+  };
+
+  // Helper to calculate end time if not provided by API
+  const calculateEndTime = (appointment: ApiAppointment): string => {
+    // Simple implementation - can be improved with proper time calculation
+    const totalDuration = appointment.services.reduce((sum, service) => sum + service.duration, 0);
+    const [hours, minutes] = appointment.time.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + totalDuration;
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMinutes = totalMinutes % 60;
+    return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+  };
+
+  // Get UI appointments
+  const uiAppointments = filteredAppointments.map(convertApiToUIAppointment);
+
+  // Navigation helpers
   const goToPreviousDay = () => setSelectedDate(prev => {
     const newDate = new Date(prev);
     newDate.setDate(prev.getDate() - 1);
@@ -226,314 +352,333 @@ export const AdminAppointment: React.FC = () => {
         }}
       />
       
-      <div className="bg-card border rounded-lg">
-        <div className="p-4 border-b">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {!useAdvancedFilters && (
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={goToPreviousDay}
-                  className="h-9 w-9"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-[140px] sm:w-[180px] justify-start text-left font-normal',
-                        !selectedDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? (
-                        format(selectedDate, 'MMM d, yyyy')
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={goToNextDay}
-                  className="h-9 w-9"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  onClick={goToToday}
-                  className="hidden sm:inline-flex h-9"
-                >
-                  Today
-                </Button>
-              </div>
-            )}
-            
-            {useAdvancedFilters && (
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="justify-start text-left font-normal min-w-[220px]"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.from ? (
-                        dateRange.to ? (
-                          <>
-                            {format(dateRange.from, 'MMM d, yyyy')} -{' '}
-                            {format(dateRange.to, 'MMM d, yyyy')}
-                          </>
+      {/* Loading indicator */}
+      {(appointmentsLoading || staffLoading || servicesLoading) && !appointments.length && (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-3">Loading appointments...</span>
+        </div>
+      )}
+      
+      {/* Rest of UI */}
+      {(!appointmentsLoading || appointments.length > 0) && (
+        <div className="bg-card border rounded-lg">
+          <div className="p-4 border-b">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {!useAdvancedFilters && (
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={goToPreviousDay}
+                    className="h-9 w-9"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-[140px] sm:w-[180px] justify-start text-left font-normal',
+                          !selectedDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? (
+                          format(selectedDate, 'MMM d, yyyy')
                         ) : (
-                          format(dateRange.from, 'MMM d, yyyy')
-                        )
-                      ) : (
-                        <span>Select date range</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      initialFocus
-                      mode="range"
-                      defaultMonth={dateRange?.from}
-                      selected={dateRange}
-                      onSelect={setDateRange}
-                      numberOfMonths={2}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 ml-auto">
-              <Badge variant="secondary" className="h-9 px-4">
-                {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? 's' : ''}
-              </Badge>
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={goToNextDay}
+                    className="h-9 w-9"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    onClick={goToToday}
+                    className="hidden sm:inline-flex h-9"
+                  >
+                    Today
+                  </Button>
+                </div>
+              )}
               
-              <div className="flex items-center">
-                <Label htmlFor="advancedFilters" className="mr-2 text-sm">Advanced</Label>
-                <Switch
-                  id="advancedFilters"
-                  checked={useAdvancedFilters}
-                  onCheckedChange={(checked) => {
-                    setUseAdvancedFilters(checked);
-                    if (!checked) {
-                      // Reset advanced filters when switching to basic mode
-                      setDateRange({ from: undefined, to: undefined });
-                    }
-                  }}
-                />
+              {useAdvancedFilters && (
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="justify-start text-left font-normal min-w-[220px]"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange?.from ? (
+                          dateRange.to ? (
+                            <>
+                              {format(dateRange.from, 'MMM d, yyyy')} -{' '}
+                              {format(dateRange.to, 'MMM d, yyyy')}
+                            </>
+                          ) : (
+                            format(dateRange.from, 'MMM d, yyyy')
+                          )
+                        ) : (
+                          <span>Select date range</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        numberOfMonths={2}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 ml-auto">
+                <Badge variant="secondary" className="h-9 px-4">
+                  {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? 's' : ''}
+                </Badge>
+                
+                <div className="flex items-center">
+                  <Label htmlFor="advancedFilters" className="mr-2 text-sm">Advanced</Label>
+                  <Switch
+                    id="advancedFilters"
+                    checked={useAdvancedFilters}
+                    onCheckedChange={(checked) => {
+                      setUseAdvancedFilters(checked);
+                      if (!checked) {
+                        // Reset advanced filters when switching to basic mode
+                        setDateRange({ from: undefined, to: undefined });
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="p-4 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search appointments..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          
+          <div className="p-4 flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search appointments..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-          <div className="hidden sm:flex items-center gap-3 flex-wrap">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="no-show">No Show</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="hidden sm:flex items-center gap-3 flex-wrap">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="no-show">No Show</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={staffFilter} onValueChange={setStaffFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by staff" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                {staffData.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={staffFilter} onValueChange={setStaffFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  {staff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      {staff.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by service" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Services</SelectItem>
-                {serviceData.map((service) => (
-                  <SelectItem key={service.id} value={service.id}>
-                    {service.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by service" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Services</SelectItem>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {getActiveFiltersCount() > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="h-9"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Clear filters
-              </Button>
-            )}
-            
-            {useAdvancedFilters && (
-              <>
+              {getActiveFiltersCount() > 0 && (
                 <Button
-                  variant="outline"
-                  onClick={() => setShowAdvancedFilters(true)}
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
                   className="h-9"
                 >
-                  <Sliders className="h-4 w-4 mr-2" />
-                  More Filters
+                  <X className="h-4 w-4 mr-2" />
+                  Clear filters
                 </Button>
-                
-                <Dialog open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
-                  <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                      <DialogTitle>Advanced Filters</DialogTitle>
-                      <DialogDescription>
-                        Configure advanced filters for appointments
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="space-y-6 py-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label>Time Range</Label>
-                          <div className="flex gap-2 items-center">
-                            <Select
-                              value={timeRange?.[0] || '09:00'}
-                              onValueChange={(value) => setTimeRange([value, timeRange?.[1] || '18:00'])}
-                            >
-                              <SelectTrigger className="w-[100px]">
-                                <SelectValue placeholder="Start" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
-                                  <SelectItem key={`start-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
-                                    {`${hour.toString().padStart(2, '0')}:00`}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <span>to</span>
-                            <Select
-                              value={timeRange?.[1] || '18:00'}
-                              onValueChange={(value) => setTimeRange([timeRange?.[0] || '09:00', value])}
-                            >
-                              <SelectTrigger className="w-[100px]">
-                                <SelectValue placeholder="End" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
-                                  <SelectItem key={`end-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
-                                    {`${hour.toString().padStart(2, '0')}:00`}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label>Price Range (${priceRange?.[0]} - ${priceRange?.[1]})</Label>
-                          </div>
-                          <Slider
-                            value={priceRange || [0, 100]}
-                            min={0}
-                            max={100}
-                            step={5}
-                            onValueChange={(value) => setPriceRange(value as [number, number])}
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label>Duration Range ({durationRange?.[0]} - {durationRange?.[1]} mins)</Label>
-                          </div>
-                          <Slider
-                            value={durationRange || [15, 120]}
-                            min={15}
-                            max={120}
-                            step={15}
-                            onValueChange={(value) => setDurationRange(value as [number, number])}
-                          />
-                        </div>
-                      </div>
+              )}
+              
+              {useAdvancedFilters && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAdvancedFilters(true)}
+                    className="h-9"
+                  >
+                    <Sliders className="h-4 w-4 mr-2" />
+                    More Filters
+                  </Button>
+                  
+                  <Dialog open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>Advanced Filters</DialogTitle>
+                        <DialogDescription>
+                          Configure advanced filters for appointments
+                        </DialogDescription>
+                      </DialogHeader>
                       
-                      <DialogFooter className="mt-6">
-                        <div className="flex gap-2 ml-auto">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              clearFilters();
-                              setShowAdvancedFilters(false);
-                            }}
-                          >
-                            Reset
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => setShowAdvancedFilters(false)}
-                          >
-                            Apply
-                          </Button>
+                      <div className="space-y-6 py-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label>Time Range</Label>
+                            <div className="flex gap-2 items-center">
+                              <Select
+                                value={timeRange?.[0] || '09:00'}
+                                onValueChange={(value) => setTimeRange([value, timeRange?.[1] || '18:00'])}
+                              >
+                                <SelectTrigger className="w-[100px]">
+                                  <SelectValue placeholder="Start" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
+                                    <SelectItem key={`start-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
+                                      {`${hour.toString().padStart(2, '0')}:00`}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <span>to</span>
+                              <Select
+                                value={timeRange?.[1] || '18:00'}
+                                onValueChange={(value) => setTimeRange([timeRange?.[0] || '09:00', value])}
+                              >
+                                <SelectTrigger className="w-[100px]">
+                                  <SelectValue placeholder="End" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
+                                    <SelectItem key={`end-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
+                                      {`${hour.toString().padStart(2, '0')}:00`}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label>Price Range (${priceRange?.[0]} - ${priceRange?.[1]})</Label>
+                            </div>
+                            <Slider
+                              value={priceRange || [0, 100]}
+                              min={0}
+                              max={100}
+                              step={5}
+                              onValueChange={(value) => setPriceRange(value as [number, number])}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label>Duration Range ({durationRange?.[0]} - {durationRange?.[1]} mins)</Label>
+                            </div>
+                            <Slider
+                              value={durationRange || [15, 120]}
+                              min={15}
+                              max={120}
+                              step={15}
+                              onValueChange={(value) => setDurationRange(value as [number, number])}
+                            />
+                          </div>
                         </div>
-                      </DialogFooter>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </>
+                        
+                        <DialogFooter className="mt-6">
+                          <div className="flex gap-2 ml-auto">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                clearFilters();
+                                setShowAdvancedFilters(false);
+                              }}
+                            >
+                              Reset
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => setShowAdvancedFilters(false)}
+                            >
+                              Apply
+                            </Button>
+                          </div>
+                        </DialogFooter>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
+            </div>
+          </div>
+          
+          <div className="p-4">
+            {filteredAppointments.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No appointments found for the selected criteria.
+              </div>
+            ) : (
+              <AppointmentList 
+                appointments={uiAppointments}
+                showActions={true}
+                isStaffView={false}
+              />
             )}
           </div>
         </div>
-        
-        <AppointmentList
-          appointments={filteredAppointments}
-          showActions
-          staffView={false}
-        />
-      </div>
-
+      )}
+      
       <Sheet open={showFilters} onOpenChange={setShowFilters}>
         <SheetTrigger asChild>
           <Button
@@ -612,7 +757,7 @@ export const AdminAppointment: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Staff</SelectItem>
-                    {staffData.map((staff) => (
+                    {staff.map((staff) => (
                       <SelectItem key={staff.id} value={staff.id}>
                         {staff.name}
                       </SelectItem>
@@ -631,7 +776,7 @@ export const AdminAppointment: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Services</SelectItem>
-                    {serviceData.map((service) => (
+                    {services.map((service) => (
                       <SelectItem key={service.id} value={service.id}>
                         {service.name}
                       </SelectItem>
@@ -736,7 +881,7 @@ export const AdminAppointment: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Staff</SelectItem>
-                    {staffData.map((staff) => (
+                    {staff.map((staff) => (
                       <SelectItem key={staff.id} value={staff.id}>
                         {staff.name}
                       </SelectItem>
@@ -753,7 +898,7 @@ export const AdminAppointment: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Services</SelectItem>
-                    {serviceData.map((service) => (
+                    {services.map((service) => (
                       <SelectItem key={service.id} value={service.id}>
                         {service.name}
                       </SelectItem>
