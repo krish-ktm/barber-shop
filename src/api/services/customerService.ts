@@ -1,4 +1,4 @@
-import { get, post, put } from '../apiClient';
+import { get, post, put, del } from '../apiClient';
 import { Appointment } from './appointmentService';
 import { Invoice } from './invoiceService';
 
@@ -17,16 +17,24 @@ export interface Customer {
 }
 
 // Response interfaces
-interface CustomerListResponse {
+export interface CustomerListResponse {
   success: boolean;
   customers: Customer[];
   totalCount: number;
   pages: number;
 }
 
-interface CustomerResponse {
+export interface CustomerResponse {
   success: boolean;
   customer: Customer;
+}
+
+export interface CustomerStatsResponse {
+  success: boolean;
+  totalCustomers: number;
+  newCustomersThisMonth: number;
+  activeCustomers: number;
+  inactiveCustomers: number;
 }
 
 interface AppointmentListResponse {
@@ -46,14 +54,27 @@ export const getAllCustomers = async (
   page = 1,
   limit = 10,
   sort = 'name_asc',
-  search?: string
+  search?: string,
+  dateRange?: { from: string; to: string },
+  spendingRange?: { min: number; max: number }
 ): Promise<CustomerListResponse> => {
+  console.log('getAllCustomers called with sort:', sort);
+  
   let url = `/customers?page=${page}&limit=${limit}&sort=${sort}`;
   
   if (search) {
     url += `&search=${encodeURIComponent(search)}`;
   }
   
+  if (dateRange?.from && dateRange?.to) {
+    url += `&visitFrom=${dateRange.from}&visitTo=${dateRange.to}`;
+  }
+  
+  if (spendingRange?.min !== undefined && spendingRange?.max !== undefined) {
+    url += `&minSpent=${spendingRange.min}&maxSpent=${spendingRange.max}`;
+  }
+  
+  console.log('Requesting URL:', url);
   return get<CustomerListResponse>(url);
 };
 
@@ -62,6 +83,13 @@ export const getAllCustomers = async (
  */
 export const getCustomerById = async (id: string): Promise<CustomerResponse> => {
   return get<CustomerResponse>(`/customers/${id}`);
+};
+
+/**
+ * Get customer by phone number
+ */
+export const getCustomerByPhone = async (phone: string): Promise<CustomerResponse> => {
+  return get<CustomerResponse>(`/customers/lookup/${phone}`);
 };
 
 /**
@@ -82,6 +110,13 @@ export const updateCustomer = async (
 };
 
 /**
+ * Delete customer
+ */
+export const deleteCustomer = async (id: string): Promise<{ success: boolean; message: string }> => {
+  return del<{ success: boolean; message: string }>(`/customers/${id}`);
+};
+
+/**
  * Get customer appointments
  */
 export const getCustomerAppointments = async (id: string): Promise<AppointmentListResponse> => {
@@ -93,4 +128,11 @@ export const getCustomerAppointments = async (id: string): Promise<AppointmentLi
  */
 export const getCustomerInvoices = async (id: string): Promise<InvoiceListResponse> => {
   return get<InvoiceListResponse>(`/customers/${id}/invoices`);
+};
+
+/**
+ * Get customer statistics
+ */
+export const getCustomerStats = async (): Promise<CustomerStatsResponse> => {
+  return get<CustomerStatsResponse>('/customers/stats');
 }; 

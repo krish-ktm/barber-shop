@@ -25,7 +25,10 @@ import { Customer } from '@/api/services/customerService';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  email: z.string()
+    .refine(email => email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), {
+      message: 'Invalid email format. Leave empty if no email.'
+    }),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   notes: z.string().optional(),
 });
@@ -52,7 +55,12 @@ export const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    onSave(values);
+    // Convert empty email to null to avoid validation issues in the backend
+    const customerData = {
+      ...values,
+      email: values.email.trim() === '' ? null : values.email.trim()
+    };
+    onSave(customerData);
     onOpenChange(false);
     form.reset();
   };

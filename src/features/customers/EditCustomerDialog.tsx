@@ -21,12 +21,15 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Customer } from '@/types';
+import { Customer } from '@/api/services/customerService';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  email: z.string()
+    .refine(email => email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), {
+      message: 'Invalid email format. Leave empty if no email.'
+    }),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   notes: z.string().optional(),
 });
@@ -56,7 +59,12 @@ export const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    onSave(values);
+    // Convert empty email to null to avoid validation issues in the backend
+    const customerData = {
+      ...values,
+      email: values.email.trim() === '' ? null : values.email.trim()
+    };
+    onSave(customerData);
     toast({
       title: 'Success',
       description: 'Customer details updated successfully',
