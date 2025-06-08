@@ -6,6 +6,51 @@ export interface AppointmentService {
   service_name: string;
   price: number;
   duration: number;
+  id?: string;
+  appointment_id?: string;
+  service?: {
+    id: string;
+    name: string;
+    price: string | number;
+    duration: number;
+    category?: string;
+  };
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string;
+  visit_count?: number;
+  total_spent?: string | number;
+  last_visit?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StaffMember {
+  id: string;
+  user_id?: string;
+  position?: string;
+  bio?: string;
+  commission_percentage?: string | number;
+  is_available?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    image: string | null;
+  };
 }
 
 export interface Appointment {
@@ -22,9 +67,14 @@ export interface Appointment {
   customer_phone: string;
   customer_email?: string;
   staff_name: string;
-  services: AppointmentService[];
+  services?: AppointmentService[];
+  appointmentServices?: AppointmentService[];
   created_at?: string;
   updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  customer?: Customer;
+  staff?: StaffMember;
 }
 
 export interface TimeSlot {

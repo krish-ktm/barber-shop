@@ -162,8 +162,12 @@ export const AdminAppointment: React.FC = () => {
       
       const isStatusMatch = statusFilter === 'all' || appointment.status === statusFilter;
       const isStaffMatch = staffFilter === 'all' || appointment.staff_id === staffFilter;
+      
+      // Get services from either appointmentServices or services
+      const appointmentServices = appointment.appointmentServices || appointment.services || [];
+      
       const isServiceMatch = serviceFilter === 'all' || 
-        appointment.services.some(service => service.service_id === serviceFilter);
+        appointmentServices.some(service => service.service_id === serviceFilter);
       
       // Basic date filtering (if not using advanced filters)
       let isDateMatch = true;
@@ -197,14 +201,15 @@ export const AdminAppointment: React.FC = () => {
         const isPriceMatch = isPriceInRange(appointment.total_amount, priceRange);
         
         // Duration range filtering
-        const totalDuration = appointment.services.reduce((sum, service) => sum + service.duration, 0);
+        const totalDuration = appointmentServices.reduce((sum, service) => sum + service.duration, 0);
         const isDurationMatch = isDurationInRange(totalDuration, durationRange);
         
-        return isSearchMatch && isStatusMatch && isStaffMatch && isServiceMatch && 
-               isDateMatch && isTimeMatch && isPriceMatch && isDurationMatch;
+        return isSearchMatch && isStatusMatch && isStaffMatch && 
+               isServiceMatch && isDateMatch && isTimeMatch && 
+               isPriceMatch && isDurationMatch;
       }
       
-      return isDateMatch && isSearchMatch && isStatusMatch && isStaffMatch && isServiceMatch;
+      return isSearchMatch && isStatusMatch && isStaffMatch && isServiceMatch && isDateMatch;
     })
     .sort((a, b) => {
       const timeA = a.time.split(':').map(Number);
@@ -226,12 +231,12 @@ export const AdminAppointment: React.FC = () => {
       time: apiAppointment.time,
       endTime: apiAppointment.end_time || calculateEndTime(apiAppointment),
       status: apiAppointment.status,
-      services: apiAppointment.services.map(service => ({
+      services: apiAppointment.appointmentServices ? apiAppointment.appointmentServices.map(service => ({
         serviceId: service.service_id,
         serviceName: service.service_name,
         price: service.price,
         duration: service.duration
-      })),
+      })) : [],
       totalAmount: apiAppointment.total_amount,
       notes: apiAppointment.notes || '',
       createdAt: apiAppointment.created_at || new Date().toISOString(),
@@ -242,7 +247,8 @@ export const AdminAppointment: React.FC = () => {
   // Helper to calculate end time if not provided by API
   const calculateEndTime = (appointment: ApiAppointment): string => {
     // Simple implementation - can be improved with proper time calculation
-    const totalDuration = appointment.services.reduce((sum, service) => sum + service.duration, 0);
+    const services = appointment.appointmentServices || appointment.services || [];
+    const totalDuration = services.reduce((sum, service) => sum + service.duration, 0);
     const [hours, minutes] = appointment.time.split(':').map(Number);
     const totalMinutes = hours * 60 + minutes + totalDuration;
     const newHours = Math.floor(totalMinutes / 60) % 24;
@@ -587,6 +593,7 @@ export const AdminAppointment: React.FC = () => {
               appointments={uiAppointments}
               showActions={true}
               isStaffView={false}
+              staffList={staff}
             />
           )}
         </div>
@@ -845,6 +852,13 @@ export const AdminAppointment: React.FC = () => {
         open={showNewAppointment}
         onOpenChange={setShowNewAppointment}
         selectedDate={selectedDate}
+        staffList={staff}
+        serviceList={services}
+        onAppointmentCreated={() => {
+          // Refresh appointments data
+          const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+          fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+        }}
       />
     </div>
   );

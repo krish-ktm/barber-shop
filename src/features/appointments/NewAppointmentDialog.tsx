@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -37,11 +37,12 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { staffData, serviceData } from '@/mocks';
 import { createTimeSlots } from '@/utils/dates';
 import { useToast } from '@/hooks/use-toast';
-import { businessHoursData } from '@/mocks';
 import { ServicePicker } from './ServicePicker';
+import { Staff, Service, createAppointment } from '@/api/services/appointmentService';
+import { createCustomer, getAllCustomers } from '@/api/services/customerService';
+import { useApi } from '@/hooks/useApi';
 
 const formSchema = z.object({
   customerName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -58,15 +59,36 @@ interface NewAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate?: Date;
+  staffList: Staff[];
+  serviceList: Service[];
+  onAppointmentCreated?: () => void;
 }
 
 export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   open,
   onOpenChange,
   selectedDate,
+  staffList,
+  serviceList,
+  onAppointmentCreated
 }) => {
   const { toast } = useToast();
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
+
+  // API hooks
+  const {
+    execute: searchCustomers,
+  } = useApi(getAllCustomers);
+
+  const {
+    execute: createNewCustomer,
+  } = useApi(createCustomer);
+
+  const {
+    execute: createNewAppointment,
+  } = useApi(createAppointment);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -82,11 +104,52 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
     },
   });
 
+  // When the form opens, reset it with the selected date
+  useEffect(() => {
+    if (open && selectedDate) {
+      form.setValue('date', selectedDate);
+    }
+  }, [open, selectedDate, form]);
+
   // Get the formatted date for time slot creation
   const selectedDateValue = form.watch('date');
   const formattedDate = selectedDateValue 
     ? format(selectedDateValue instanceof Date ? selectedDateValue : parseISO(selectedDateValue), 'yyyy-MM-dd')
     : '';
+
+  // Watch for customer phone changes to check if customer exists
+  const customerPhone = form.watch('customerPhone');
+  
+  useEffect(() => {
+    const checkExistingCustomer = async () => {
+      if (customerPhone && customerPhone.length >= 10) {
+        setIsCheckingCustomer(true);
+        try {
+          const result = await searchCustomers(1, 10, 'name_asc', customerPhone);
+          if (result && result.customers && result.customers.length > 0) {
+            const existingCustomer = result.customers[0];
+            form.setValue('customerName', existingCustomer.name);
+            if (existingCustomer.email) {
+              form.setValue('customerEmail', existingCustomer.email);
+            }
+            toast({
+              title: 'Customer found',
+              description: `Found existing customer: ${existingCustomer.name}`,
+              variant: 'default',
+            });
+          }
+        } catch (error) {
+          console.error('Error checking customer:', error);
+        } finally {
+          setIsCheckingCustomer(false);
+        }
+      }
+    };
+
+    // Debounce the check to avoid too many API calls
+    const timeoutId = setTimeout(checkExistingCustomer, 500);
+    return () => clearTimeout(timeoutId);
+  }, [customerPhone, searchCustomers, form, toast]);
 
   // Get available time slots
   const timeSlots = createTimeSlots(
@@ -94,7 +157,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
     '20:00', 
     30, 
     [{ start: '12:00', end: '13:00' }],
-    businessHoursData.shopClosures,
+    [],
     formattedDate
   );
 
@@ -102,10 +165,16 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   const calculateTotals = () => {
     return selectedServices.reduce(
       (acc, serviceId) => {
-        const service = serviceData.find((s) => s.id === serviceId);
+        const service = serviceList.find((s) => s.id === serviceId);
         if (service) {
-          acc.duration += service.duration;
-          acc.price += service.price;
+          // Ensure duration is a number
+          const duration = typeof service.duration === 'number' ? service.duration : parseInt(String(service.duration), 10) || 0;
+          
+          // Ensure price is a number - Sequelize often returns decimal values as strings
+          const price = typeof service.price === 'number' ? service.price : parseFloat(String(service.price)) || 0;
+          
+          acc.duration += duration;
+          acc.price += price;
         }
         return acc;
       },
@@ -115,15 +184,76 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
 
   const { duration, price } = calculateTotals();
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
-    toast({
-      title: 'Appointment created',
-      description: 'New appointment has been scheduled successfully.',
-    });
-    onOpenChange(false);
-    form.reset();
-    setSelectedServices([]);
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Format date to YYYY-MM-DD
+      const formattedDate = format(values.date, 'yyyy-MM-dd');
+      
+      // First check if we need to create a customer
+      let customerId = '';
+      
+      // Search for existing customer by phone
+      const customerResult = await searchCustomers(1, 10, 'name_asc', values.customerPhone);
+      
+      if (customerResult && customerResult.customers.length > 0) {
+        // Use existing customer
+        customerId = customerResult.customers[0].id;
+      } else {
+        // Create new customer
+        const newCustomerResult = await createNewCustomer({
+          name: values.customerName,
+          phone: values.customerPhone,
+          email: values.customerEmail || undefined,
+        });
+        
+        if (newCustomerResult && newCustomerResult.success) {
+          customerId = newCustomerResult.customer.id;
+        } else {
+          throw new Error('Failed to create customer');
+        }
+      }
+      
+      // Now create the appointment
+      const result = await createNewAppointment({
+        customer_id: customerId,
+        staff_id: values.staffId,
+        date: formattedDate,
+        time: values.time,
+        services: values.services,
+        notes: values.notes,
+      });
+      
+      if (result && result.success) {
+        toast({
+          title: 'Success',
+          description: 'Appointment created successfully',
+          variant: 'default',
+        });
+        
+        // Reset form and close dialog
+        form.reset();
+        setSelectedServices([]);
+        onOpenChange(false);
+        
+        // Callback to refresh appointments
+        if (onAppointmentCreated) {
+          onAppointmentCreated();
+        }
+      } else {
+        throw new Error('Failed to create appointment');
+      }
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create appointment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -160,7 +290,12 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                     name="customerPhone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <FormLabel>
+                          Phone Number
+                          {isCheckingCustomer && (
+                            <Loader2 className="inline ml-2 h-3 w-3 animate-spin" />
+                          )}
+                        </FormLabel>
                         <FormControl>
                           <Input placeholder="Enter phone number" {...field} />
                         </FormControl>
@@ -200,7 +335,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {staffData.map((staff) => (
+                          {staffList.map((staff) => (
                             <SelectItem key={staff.id} value={staff.id}>
                               {staff.name}
                             </SelectItem>
@@ -220,6 +355,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                       <FormLabel>Services</FormLabel>
                       <ServicePicker
                         selectedServices={field.value}
+                        serviceList={serviceList}
                         onServiceSelect={(serviceId) => {
                           const currentServices = field.value;
                           const isSelected = currentServices.includes(serviceId);
@@ -330,7 +466,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                     </div>
                     <div className="flex justify-between text-sm font-medium">
                       <span>Total Price:</span>
-                      <span>${price.toFixed(2)}</span>
+                      <span>${(Math.round(price * 100) / 100).toFixed(2)}</span>
                     </div>
                   </div>
                 )}
@@ -340,7 +476,19 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
         </ScrollArea>
 
         <DialogFooter className="mt-4">
-          <Button onClick={form.handleSubmit(onSubmit)}>Create Appointment</Button>
+          <Button 
+            onClick={form.handleSubmit(onSubmit)} 
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Appointment'
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

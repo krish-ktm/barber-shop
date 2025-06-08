@@ -22,14 +22,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { staffData } from '@/mocks';
 import { formatTime, formatCurrency } from '@/utils';
+import { Staff } from '@/api/services/appointmentService';
 
 interface AppointmentListProps {
   appointments: Appointment[];
   showActions?: boolean;
   isStaffView?: boolean;
   onViewAppointment?: (appointmentId: string) => void;
+  staffList?: Staff[];
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
@@ -37,10 +38,11 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   showActions = false,
   isStaffView = false,
   onViewAppointment,
+  staffList = [],
 }) => {
   const getStaffImage = (staffId: string) => {
-    const staff = staffData.find(s => s.id === staffId);
-    return staff?.image;
+    const staff = staffList.find(s => s.id === staffId);
+    return staff?.avatar || null;
   };
 
   const getStatusStyle = (status: Appointment['status']) => {
