@@ -24,21 +24,24 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { EditStaffDialog } from '@/features/admin/staff-management/components/EditStaffDialog';
 import { useToast } from '@/hooks/use-toast';
+import { Service } from '@/api/services/serviceService';
 
 interface StaffListProps {
   staff: Staff[];
-  onUpdateStaff?: (updatedStaff: Staff) => void;
+  onUpdateStaff?: (updatedStaff: Staff) => Promise<void>;
   onDeleteStaff?: (staffId: string) => void;
-  updatingStaffId?: string | null;
   deletingStaffId?: string | null;
+  services: Service[];
+  isLoadingServices?: boolean;
 }
 
 export const StaffList: React.FC<StaffListProps> = ({ 
   staff, 
   onUpdateStaff, 
   onDeleteStaff,
-  updatingStaffId = null,
-  deletingStaffId = null
+  deletingStaffId = null,
+  services = [],
+  isLoadingServices = false
 }) => {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -51,13 +54,15 @@ export const StaffList: React.FC<StaffListProps> = ({
 
   const handleUpdateStaff = (updatedStaff: Staff) => {
     if (onUpdateStaff) {
-      onUpdateStaff(updatedStaff);
+      // Just pass through to the parent component's handler
+      return onUpdateStaff(updatedStaff);
     } else {
       // If no update handler is provided, just show a toast
       toast({
         title: "Update simulated",
         description: "In a real application, this would update the staff member in the database.",
       });
+      return Promise.resolve();
     }
   };
 
@@ -65,14 +70,12 @@ export const StaffList: React.FC<StaffListProps> = ({
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {staff.map((member) => (
-          <Card key={member.id} className={`overflow-hidden relative ${updatingStaffId === member.id || deletingStaffId === member.id ? 'opacity-70' : ''}`}>
-            {(updatingStaffId === member.id || deletingStaffId === member.id) && (
+          <Card key={member.id} className={`overflow-hidden relative ${deletingStaffId === member.id ? 'opacity-70' : ''}`}>
+            {deletingStaffId === member.id && (
               <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
                 <div className="flex flex-col items-center gap-2 bg-background p-3 rounded-md shadow-md">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm font-medium">
-                    {updatingStaffId === member.id ? 'Updating...' : 'Deleting...'}
-                  </p>
+                  <p className="text-sm font-medium">Deleting...</p>
                 </div>
               </div>
             )}
@@ -102,7 +105,7 @@ export const StaffList: React.FC<StaffListProps> = ({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={() => handleEditStaff(member)}
-                      disabled={updatingStaffId === member.id || deletingStaffId === member.id}
+                      disabled={deletingStaffId === member.id}
                     >
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Profile
@@ -111,7 +114,7 @@ export const StaffList: React.FC<StaffListProps> = ({
                     <DropdownMenuItem 
                       className="text-destructive"
                       onClick={() => onDeleteStaff && onDeleteStaff(member.id)}
-                      disabled={updatingStaffId === member.id || deletingStaffId === member.id}
+                      disabled={deletingStaffId === member.id}
                     >
                       <Trash className="mr-2 h-4 w-4" />
                       Delete
@@ -189,6 +192,8 @@ export const StaffList: React.FC<StaffListProps> = ({
           onOpenChange={setIsEditDialogOpen}
           staff={selectedStaff}
           onUpdate={handleUpdateStaff}
+          services={services}
+          isLoadingServices={isLoadingServices}
         />
       )}
     </>

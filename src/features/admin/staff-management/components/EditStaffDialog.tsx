@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,10 +22,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { serviceData } from '@/mocks';
 import { useToast } from '@/hooks/use-toast';
 import { Staff } from '@/types';
 import { Switch } from '@/components/ui/switch';
+import { Loader2 } from 'lucide-react';
+import { Service } from '@/api/services/serviceService';
 
 const formSchema = z.object({
   id: z.string(),
@@ -43,6 +44,8 @@ interface EditStaffDialogProps {
   onOpenChange: (open: boolean) => void;
   staff: Staff;
   onUpdate: (updatedStaff: Staff) => void;
+  services: Service[];
+  isLoadingServices?: boolean;
 }
 
 export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
@@ -50,8 +53,12 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
   onOpenChange,
   staff,
   onUpdate,
+  services = [],
+  isLoadingServices = false,
 }) => {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -66,26 +73,43 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Create updated staff object (preserving other properties not in the form)
-    const updatedStaff = {
-      ...staff,
-      ...values,
-      isAvailable: values.isActive,
-    };
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
     
-    onUpdate(updatedStaff);
-    
-    toast({
-      title: 'Staff profile updated',
-      description: 'Staff profile has been updated successfully.',
-    });
-    
-    onOpenChange(false);
+    try {
+      // Create updated staff object (preserving other properties not in the form)
+      const updatedStaff = {
+        ...staff,
+        ...values,
+        isAvailable: values.isActive,
+      };
+      
+      await onUpdate(updatedStaff);
+      
+      toast({
+        title: 'Staff profile updated',
+        description: 'Staff profile has been updated successfully.',
+      });
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error updating staff:', error);
+      toast({
+        title: 'Update failed',
+        description: 'Failed to update staff profile. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isSubmitting) {
+        onOpenChange(isOpen);
+      }
+    }}>
       <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit Staff Profile</DialogTitle>
@@ -191,30 +215,40 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Services Offered</FormLabel>
-                      <div className="grid grid-cols-2 gap-2 border rounded-md p-4">
-                        {serviceData.map((service) => (
-                          <label
-                            key={service.id}
-                            className="flex items-center space-x-2 text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={field.value.includes(service.id)}
-                              onChange={(e) => {
-                                const value = service.id;
-                                if (e.target.checked) {
-                                  field.onChange([...field.value, value]);
-                                } else {
-                                  field.onChange(
-                                    field.value.filter((v) => v !== value)
-                                  );
-                                }
-                              }}
-                              className="form-checkbox h-4 w-4"
-                            />
-                            <span>{service.name}</span>
-                          </label>
-                        ))}
+                      <div className="grid grid-cols-2 gap-2 border rounded-md p-4 relative">
+                        {isLoadingServices ? (
+                          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                          </div>
+                        ) : services.length === 0 ? (
+                          <div className="col-span-2 py-2 text-center text-muted-foreground">
+                            No services available
+                          </div>
+                        ) : (
+                          services.map((service) => (
+                            <label
+                              key={service.id}
+                              className="flex items-center space-x-2 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={field.value.includes(service.id)}
+                                onChange={(e) => {
+                                  const value = service.id;
+                                  if (e.target.checked) {
+                                    field.onChange([...field.value, value]);
+                                  } else {
+                                    field.onChange(
+                                      field.value.filter((v) => v !== value)
+                                    );
+                                  }
+                                }}
+                                className="form-checkbox h-4 w-4"
+                              />
+                              <span>{service.name}</span>
+                            </label>
+                          ))
+                        )}
                       </div>
                       <FormMessage />
                     </FormItem>
@@ -246,7 +280,19 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
         </ScrollArea>
 
         <DialogFooter className="mt-6">
-          <Button onClick={form.handleSubmit(onSubmit)}>Update Profile</Button>
+          <Button 
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              'Update Profile'
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

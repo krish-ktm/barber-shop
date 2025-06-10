@@ -129,7 +129,6 @@ export const StaffManagement: React.FC = () => {
   const [pendingCommissionRange, setPendingCommissionRange] = useState<[number, number]>([0, 50]);
   
   // Additional states for loading indicators
-  const [updatingStaffId, setUpdatingStaffId] = useState<string | null>(null);
   const [deletingStaffId, setDeletingStaffId] = useState<string | null>(null);
   
   // Advanced filters
@@ -458,7 +457,6 @@ export const StaffManagement: React.FC = () => {
 
   const handleUpdateStaff = async (updatedStaff: Staff) => {
     try {
-      setUpdatingStaffId(updatedStaff.id);
       const apiStaffData = mapInternalStaffToApi(updatedStaff) as Partial<ApiStaff>;
       await executeUpdateStaff(updatedStaff.id, apiStaffData);
       
@@ -471,8 +469,8 @@ export const StaffManagement: React.FC = () => {
       fetchStaff(currentPage, itemsPerPage, getSortParam());
     } catch (error) {
       console.error('Error updating staff:', error);
-    } finally {
-      setUpdatingStaffId(null);
+      // Error will be handled by the dialog component
+      throw error;
     }
   };
   
@@ -648,8 +646,9 @@ export const StaffManagement: React.FC = () => {
                 staff={filteredStaff} 
                 onUpdateStaff={handleUpdateStaff}
                 onDeleteStaff={handleDeleteStaff}
-                updatingStaffId={updatingStaffId}
                 deletingStaffId={deletingStaffId}
+                services={allServices}
+                isLoadingServices={isLoading && allServices.length === 0}
               />
               
               {/* Pagination controls */}
