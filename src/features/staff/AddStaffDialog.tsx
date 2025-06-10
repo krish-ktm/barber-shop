@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,24 +21,18 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { serviceData } from '@/mocks';
 import { useToast } from '@/hooks/use-toast';
 import { Staff } from '@/types';
 import { Switch } from '@/components/ui/switch';
+import { Loader2 } from 'lucide-react';
+import { Service } from '@/api/services/serviceService';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  position: z.string().min(1, 'Position is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   bio: z.string().optional(),
   services: z.array(z.string()).min(1, 'Select at least one service'),
   commissionPercentage: z.number().min(0).max(100),
@@ -48,8 +42,10 @@ const formSchema = z.object({
 interface AddStaffDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd?: (newStaff: Staff) => void;
-  onAddStaff?: (newStaff: Staff) => void;
+  onAdd?: (newStaff: Staff & { password: string }) => void;
+  onAddStaff?: (newStaff: Staff & { password: string }) => void;
+  services: Service[];
+  isLoadingServices?: boolean;
 }
 
 export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
@@ -57,15 +53,19 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
   onOpenChange,
   onAdd,
   onAddStaff,
+  services,
+  isLoadingServices = false,
 }) => {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       email: '',
       phone: '',
-      position: '',
+      password: '',
       bio: '',
       services: [],
       commissionPercentage: 40,
@@ -73,47 +73,65 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Create a new staff member object
-    const newStaff: Staff = {
-      ...values,
-      id: `staff-${Date.now()}`, // Generate a unique ID (in a real app this would be from the backend)
-      role: 'staff',
-      image: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg', // Default image
-      workingHours: {
-        monday: [],
-        tuesday: [],
-        wednesday: [],
-        thursday: [],
-        friday: [],
-        saturday: [],
-        sunday: [],
-      },
-      totalEarnings: 0,
-      totalAppointments: 0,
-      isAvailable: values.isActive, // Map isActive to isAvailable
-    };
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
+    
+    try {
+      // Create a new staff member object
+      const newStaff: Staff & { password: string } = {
+        ...values,
+        id: `staff-${Date.now()}`, // Generate a unique ID (in a real app this would be from the backend)
+        role: 'staff',
+        image: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg', // Default image
+        workingHours: {
+          monday: [],
+          tuesday: [],
+          wednesday: [],
+          thursday: [],
+          friday: [],
+          saturday: [],
+          sunday: [],
+        },
+        totalEarnings: 0,
+        totalAppointments: 0,
+        isAvailable: values.isActive, // Map isActive to isAvailable
+        password: values.password, // Explicitly include password
+      };
 
-    if (onAddStaff) {
-      onAddStaff(newStaff);
-    } else if (onAdd) {
-      onAdd(newStaff);
-    } else {
-      // If no handler provided, just log
-      console.log(newStaff);
+      if (onAddStaff) {
+        await onAddStaff(newStaff);
+      } else if (onAdd) {
+        await onAdd(newStaff);
+      } else {
+        // If no handler provided, just log
+        console.log(newStaff);
+      }
+      
+      toast({
+        title: 'Staff member added',
+        description: 'New staff member has been added successfully.',
+      });
+      
+      onOpenChange(false);
+      form.reset();
+    } catch (error) {
+      console.error('Error adding staff:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add staff member. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    toast({
-      title: 'Staff member added',
-      description: 'New staff member has been added successfully.',
-    });
-    
-    onOpenChange(false);
-    form.reset();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isSubmitting) {
+        onOpenChange(isOpen);
+      }
+    }}>
       <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add New Staff Member</DialogTitle>
@@ -163,35 +181,6 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="position"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Position</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select position" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Junior Barber">Junior Barber</SelectItem>
-                            <SelectItem value="Senior Barber">Senior Barber</SelectItem>
-                            <SelectItem value="Master Barber">Master Barber</SelectItem>
-                            <SelectItem value="Style Specialist">Style Specialist</SelectItem>
-                            <SelectItem value="Color Specialist">Color Specialist</SelectItem>
-                            <SelectItem value="Senior Stylist">Senior Stylist</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -226,6 +215,24 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
 
                 <FormField
                   control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="Enter password for staff account" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="bio"
                   render={({ field }) => (
                     <FormItem>
@@ -248,30 +255,40 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Services Offered</FormLabel>
-                      <div className="grid grid-cols-2 gap-2 border rounded-md p-4">
-                        {serviceData.map((service) => (
-                          <label
-                            key={service.id}
-                            className="flex items-center space-x-2 text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={field.value.includes(service.id)}
-                              onChange={(e) => {
-                                const value = service.id;
-                                if (e.target.checked) {
-                                  field.onChange([...field.value, value]);
-                                } else {
-                                  field.onChange(
-                                    field.value.filter((v) => v !== value)
-                                  );
-                                }
-                              }}
-                              className="form-checkbox h-4 w-4"
-                            />
-                            <span>{service.name}</span>
-                          </label>
-                        ))}
+                      <div className="grid grid-cols-2 gap-2 border rounded-md p-4 relative">
+                        {isLoadingServices ? (
+                          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                          </div>
+                        ) : services.length === 0 ? (
+                          <div className="col-span-2 py-2 text-center text-muted-foreground">
+                            No services available
+                          </div>
+                        ) : (
+                          services.map((service) => (
+                            <label
+                              key={service.id}
+                              className="flex items-center space-x-2 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={field.value.includes(service.id)}
+                                onChange={(e) => {
+                                  const value = service.id;
+                                  if (e.target.checked) {
+                                    field.onChange([...field.value, value]);
+                                  } else {
+                                    field.onChange(
+                                      field.value.filter((v) => v !== value)
+                                    );
+                                  }
+                                }}
+                                className="form-checkbox h-4 w-4"
+                              />
+                              <span>{service.name}</span>
+                            </label>
+                          ))
+                        )}
                       </div>
                       <FormMessage />
                     </FormItem>
@@ -303,7 +320,19 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
         </ScrollArea>
 
         <DialogFooter className="mt-6">
-          <Button onClick={form.handleSubmit(onSubmit)}>Add Staff Member</Button>
+          <Button 
+            onClick={form.handleSubmit(onSubmit)} 
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding Staff...
+              </>
+            ) : (
+              'Add Staff Member'
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

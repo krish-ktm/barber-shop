@@ -12,7 +12,6 @@ export interface User {
 }
 
 export interface Staff extends User {
-  position: string;
   bio?: string;
   services: string[];
   workingHours: WorkingHours;

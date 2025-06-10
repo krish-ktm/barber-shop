@@ -1,20 +1,30 @@
 import { get, post, put, del } from '../apiClient';
+import { Service } from './serviceService';
 
 // Type definitions
-export interface Staff {
+export interface User {
   id: string;
-  user_id: string;
   name: string;
   email: string;
   phone: string;
-  position: string;
+  role: string;
+  image?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Staff {
+  id: string;
+  user_id: string;
   bio?: string;
-  commission_percentage: number;
+  commission_percentage: number | string;
   is_available: boolean;
   image?: string;
   services?: string[];
   created_at?: string;
   updated_at?: string;
+  user?: User;
+  workingHours?: WorkingHour[];
 }
 
 export interface WorkingHour {
@@ -26,12 +36,22 @@ export interface WorkingHour {
   is_break: boolean;
 }
 
+// Interface for creating a new staff member (includes password)
+export interface CreateStaffRequest extends Omit<Partial<Staff>, 'id' | 'user_id' | 'user'> {
+  password: string;
+  name: string;
+  email: string;
+  phone?: string;
+  image?: string;
+}
+
 // Response interfaces
 interface StaffListResponse {
   success: boolean;
   staff: Staff[];
   totalCount: number;
   pages: number;
+  services?: Service[];
 }
 
 interface StaffResponse {
@@ -45,14 +65,61 @@ interface WorkingHoursResponse {
 }
 
 /**
- * Get all staff members
+ * Get all staff members with filtering options
  */
 export const getAllStaff = async (
   page = 1,
   limit = 10,
-  sort = 'name_asc'
+  sort = 'name_asc',
+  searchQuery?: string,
+  availability?: 'all' | 'available' | 'unavailable',
+  services?: string[],
+  commissionRange?: [number, number],
+  searchFields?: string[],
+  includeServices = true
 ): Promise<StaffListResponse> => {
-  return get<StaffListResponse>(`/staff?page=${page}&limit=${limit}&sort=${sort}`);
+  // Map frontend sort fields to actual database fields
+  let sortParam = sort;
+  
+  // Handle special sort cases that don't exist as direct database columns
+  if (sort.startsWith('appointments_') || sort.startsWith('earnings_')) {
+    // Default to name sorting for fields that need to be handled in the frontend
+    sortParam = sort.includes('_asc') ? 'name_asc' : 'name_desc';
+  }
+  
+  let url = `/staff?page=${page}&limit=${limit}&sort=${sortParam}`;
+  
+  // Add search query parameter
+  if (searchQuery) {
+    url += `&search=${encodeURIComponent(searchQuery)}`;
+    
+    // Add specific fields to search in if provided
+    if (searchFields && searchFields.length > 0) {
+      url += `&searchFields=${searchFields.join(',')}`;
+    }
+  }
+  
+  // Add availability filter
+  if (availability && availability !== 'all') {
+    url += `&isAvailable=${availability === 'available' ? 'true' : 'false'}`;
+  }
+  
+  // Add services filter
+  if (services && services.length > 0) {
+    url += `&services=${services.join(',')}`;
+  }
+  
+  // Add commission range filter
+  if (commissionRange && (commissionRange[0] > 0 || commissionRange[1] < 100)) {
+    url += `&minCommission=${commissionRange[0]}&maxCommission=${commissionRange[1]}`;
+  }
+  
+  // Add includeServices parameter to get services data
+  if (includeServices) {
+    url += '&includeServices=true';
+  }
+  
+  return get<StaffListResponse>(url);
 };
 
 /**
@@ -65,7 +132,7 @@ export const getStaffById = async (id: string): Promise<StaffResponse> => {
 /**
  * Create new staff member
  */
-export const createStaff = async (staffData: Partial<Staff>): Promise<StaffResponse> => {
+export const createStaff = async (staffData: CreateStaffRequest): Promise<StaffResponse> => {
   return post<StaffResponse>('/staff', staffData);
 };
 

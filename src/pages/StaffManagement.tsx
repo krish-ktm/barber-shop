@@ -1,5 +1,5 @@
 // Rename file to StaffManagement.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Search, Filter, SortAsc, X, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { StaffList } from '@/features/staff/StaffList';
@@ -16,13 +16,12 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetClose,
   SheetFooter,
+  SheetHeader,
+  SheetTitle
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { Staff } from '@/types';
+import { Staff, UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -34,23 +33,30 @@ import {
   createStaff, 
   updateStaff, 
   deleteStaff, 
-  Staff as ApiStaff 
+  Staff as ApiStaff,
+  CreateStaffRequest 
 } from '@/api/services/staffService';
+import { Service } from '@/api/services/serviceService';
 
 // Convert API staff to our internal Staff type
 const mapApiStaffToInternal = (apiStaff: ApiStaff): Staff => {
+  // Validate that role is a valid UserRole
+  const userRole = apiStaff.user?.role || '';
+  const validRole: UserRole = (userRole === 'admin' || userRole === 'staff' || userRole === 'billing') 
+    ? userRole as UserRole 
+    : 'staff';
+
   return {
     id: apiStaff.id,
-    name: apiStaff.name,
-    email: apiStaff.email,
-    phone: apiStaff.phone || '',
-    position: apiStaff.position,
-    role: 'staff', // Default role
+    name: apiStaff.user?.name || '',
+    email: apiStaff.user?.email || '',
+    phone: apiStaff.user?.phone || '',
+    role: validRole,
     bio: apiStaff.bio || '',
     services: apiStaff.services || [],
-    commissionPercentage: apiStaff.commission_percentage,
-    isAvailable: apiStaff.is_available,
-    image: apiStaff.image || '/placeholder.jpg',
+    commissionPercentage: parseFloat(apiStaff.commission_percentage?.toString() || '0'),
+    isAvailable: apiStaff.is_available ?? true,
+    image: apiStaff.user?.image || '/placeholder.jpg',
     totalEarnings: 0, // These would need to come from a separate API call
     totalAppointments: 0,
     workingHours: {
@@ -66,26 +72,65 @@ const mapApiStaffToInternal = (apiStaff: ApiStaff): Staff => {
 };
 
 // Convert internal Staff type to API format for updating/creating
-const mapInternalStaffToApi = (staff: Staff): Partial<ApiStaff> => {
-  return {
-    name: staff.name,
-    email: staff.email,
-    phone: staff.phone,
-    position: staff.position,
+const mapInternalStaffToApi = (staff: Staff & { password?: string }): CreateStaffRequest | Partial<ApiStaff> => {
+  // For creating new staff (with password)
+  if ('password' in staff && staff.password) {
+    // These fields match the CreateStaffRequest interface
+    return {
+      password: staff.password,
+      name: staff.name,
+      email: staff.email,
+      phone: staff.phone,
+      bio: staff.bio,
+      services: staff.services,
+      commission_percentage: staff.commissionPercentage,
+      is_available: staff.isAvailable,
+      image: staff.image !== '/placeholder.jpg' ? staff.image : undefined
+    };
+  }
+  
+  // For updating existing staff (no password)
+  const updateData: Partial<ApiStaff> & { 
+    name?: string;
+    email?: string;
+    phone?: string;
+    image?: string;
+  } = {
     bio: staff.bio,
     services: staff.services,
     commission_percentage: staff.commissionPercentage,
     is_available: staff.isAvailable,
-    image: staff.image !== '/placeholder.jpg' ? staff.image : undefined
   };
+
+  // Add user fields that will be extracted in the controller
+  if (staff.name) updateData.name = staff.name;
+  if (staff.email) updateData.email = staff.email;
+  if (staff.phone) updateData.phone = staff.phone;
+  if (staff.image && staff.image !== '/placeholder.jpg') updateData.image = staff.image;
+
+  return updateData;
 };
 
 export const StaffManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState<string>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filterAvailability, setFilterAvailability] = useState<string>('all');
   const { toast } = useToast();
+  
+  // States for advanced filters (these don't trigger API calls until applied)
+  const [pendingSortBy, setPendingSortBy] = useState<string>('name');
+  const [pendingSortOrder, setPendingSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [pendingFilterAvailability, setPendingFilterAvailability] = useState<string>('all');
+  const [pendingSelectedServices, setPendingSelectedServices] = useState<string[]>([]);
+  const [pendingCommissionRange, setPendingCommissionRange] = useState<[number, number]>([0, 50]);
+  
+  // Additional states for loading indicators
+  const [updatingStaffId, setUpdatingStaffId] = useState<string | null>(null);
+  const [deletingStaffId, setDeletingStaffId] = useState<string | null>(null);
   
   // Advanced filters
   const [showFilters, setShowFilters] = useState(false);
@@ -93,6 +138,39 @@ export const StaffManagement: React.FC = () => {
   const [commissionRange, setCommissionRange] = useState<[number, number]>([0, 50]);
   const [earningsRange, setEarningsRange] = useState<[number, number]>([0, 10000]);
   const [appointmentsRange, setAppointmentsRange] = useState<[number, number]>([0, 100]);
+  
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState({
+    searchQuery: '',
+    availability: 'all' as 'all' | 'available' | 'unavailable',
+    services: [] as string[],
+    commissionRange: [0, 100] as [number, number]
+  });
+
+  // For services data
+  const [allServices, setAllServices] = useState<Service[]>([]);
+  
+  // Initialize pending filters when opening the filter panel
+  useEffect(() => {
+    if (showFilters) {
+      setPendingSortBy(sortBy);
+      setPendingSortOrder(sortOrder);
+      setPendingFilterAvailability(filterAvailability);
+      setPendingSelectedServices([...selectedServices]);
+      setPendingCommissionRange([...commissionRange]);
+    }
+  }, [showFilters, sortBy, sortOrder, filterAvailability, selectedServices, commissionRange]);
+  
+  // Add debounce for search query when using it in the URL params
+  // This prevents API calls on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Only update when user stops typing for 500ms
+      // This doesn't trigger the API call directly - that happens in handleSearch
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   // API Hooks
   const {
@@ -117,12 +195,90 @@ export const StaffManagement: React.FC = () => {
     execute: executeDeleteStaff
   } = useApi(deleteStaff);
   
-  // Fetch staff data on component mount
-  useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
+  // Generate the sort parameter for the API call
+  const getSortParam = useCallback(() => {
+    let sortField = '';
+    
+    switch (sortBy) {
+      case 'name':
+        sortField = 'name';
+        break;
+      case 'appointments':
+        // We'll handle the actual sorting client-side, but still inform the backend
+        sortField = 'appointments';
+        break;
+      case 'earnings':
+        // We'll handle the actual sorting client-side, but still inform the backend
+        sortField = 'earnings';
+        break;
+      default:
+        sortField = 'name';
+    }
+    
+    return `${sortField}_${sortOrder}`;
+  }, [sortBy, sortOrder]);
   
-  // Error handling
+  // Apply filters when the Apply button is clicked
+  const applyFilters = useCallback(() => {
+    // Update the main states from pending states
+    setSortBy(pendingSortBy);
+    setSortOrder(pendingSortOrder);
+    setFilterAvailability(pendingFilterAvailability);
+    setSelectedServices([...pendingSelectedServices]);
+    setCommissionRange([...pendingCommissionRange]);
+    
+    // Update applied filters
+    setAppliedFilters({
+      searchQuery: debouncedSearchQuery,
+      availability: pendingFilterAvailability as 'all' | 'available' | 'unavailable',
+      services: pendingSelectedServices,
+      commissionRange: pendingCommissionRange as [number, number]
+    });
+    
+    // Close the filter panel
+    setShowFilters(false);
+  }, [
+    pendingSortBy, 
+    pendingSortOrder, 
+    pendingFilterAvailability, 
+    pendingSelectedServices, 
+    pendingCommissionRange, 
+    debouncedSearchQuery
+  ]);
+  
+  // Fetch staff data when relevant parameters change
+  useEffect(() => {
+    // Use a try-catch to handle potential errors
+    const fetchData = async () => {
+      try {
+        await fetchStaff(
+          currentPage, 
+          itemsPerPage, 
+          getSortParam(),
+          appliedFilters.searchQuery,
+          appliedFilters.availability,
+          appliedFilters.services.length > 0 ? appliedFilters.services : undefined,
+          appliedFilters.commissionRange[0] > 0 || appliedFilters.commissionRange[1] < 100 
+            ? appliedFilters.commissionRange 
+            : undefined
+        );
+      } catch (error) {
+        console.error('Error fetching staff data:', error);
+        // The error will be handled by the useApi hook's error state
+      }
+    };
+    
+    fetchData();
+  }, [fetchStaff, currentPage, itemsPerPage, getSortParam, appliedFilters]);
+  
+  // Update services when staff data is loaded (services are included in the response)
+  useEffect(() => {
+    if (staffData?.services) {
+      setAllServices(staffData.services);
+    }
+  }, [staffData]);
+  
+  // Show error if services fail to load
   useEffect(() => {
     if (staffError) {
       toast({
@@ -158,19 +314,22 @@ export const StaffManagement: React.FC = () => {
   }, [staffError, createError, updateError, deleteError, toast]);
 
   // Convert API staff to internal format
-  const staff: Staff[] = staffData?.staff 
+  const allStaff: Staff[] = staffData?.staff 
     ? staffData.staff.map(mapApiStaffToInternal) 
     : [];
   
-  // Get all unique services across all staff
-  const allServices = Array.from(
-    new Set(staff.flatMap(staffMember => staffMember.services))
-  );
-  
   // Computed values
-  const maxCommission = Math.max(...staff.map(s => s.commissionPercentage), 50);
-  const maxEarnings = Math.max(...staff.map(s => s.totalEarnings), 10000);
-  const maxAppointments = Math.max(...staff.map(s => s.totalAppointments), 100);
+  const maxCommission = Math.max(...allStaff.map(s => s.commissionPercentage), 50);
+  const maxEarnings = Math.max(...allStaff.map(s => s.totalEarnings), 10000);
+  const maxAppointments = Math.max(...allStaff.map(s => s.totalAppointments), 100);
+  
+  // Total pages for pagination
+  const totalPages = staffData?.pages || 1;
+  
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   // Get active filter count
   const getActiveFilterCount = () => {
@@ -185,78 +344,104 @@ export const StaffManagement: React.FC = () => {
     return count;
   };
 
-  // Filter and sort staff
-  const filteredStaff = staff
-    .filter(staffMember => {
-      // Text search
-      const searchLower = searchQuery.toLowerCase();
-      const searchMatch = searchQuery === '' || 
-        staffMember.name.toLowerCase().includes(searchLower) ||
-        staffMember.email.toLowerCase().includes(searchLower) ||
-        staffMember.phone.includes(searchQuery);
-      if (!searchMatch) return false;
-      
-      // Availability filter
-      const availabilityMatch = filterAvailability === 'all' || 
-        (filterAvailability === 'available' ? staffMember.isAvailable : !staffMember.isAvailable);
-      if (!availabilityMatch) return false;
-      
-      // Services filter
-      if (selectedServices.length > 0 && 
-          !selectedServices.some(service => staffMember.services.includes(service))) {
-        return false;
-      }
-      
-      // Commission range
-      if (staffMember.commissionPercentage < commissionRange[0] || 
-          staffMember.commissionPercentage > commissionRange[1]) return false;
-      
-      // Earnings range
+  // Return filtered staff
+  const filteredStaff = useMemo(() => {
+    // If we have no staff data, return empty array
+    if (!allStaff || !Array.isArray(allStaff)) {
+      return [];
+    }
+
+    // Server already applies most filters, but we still need to filter by earnings and appointments locally
+    return allStaff.filter(staffMember => {
+      // Earnings range filter (this is only applied client-side)
       if (staffMember.totalEarnings < earningsRange[0] || 
           staffMember.totalEarnings > earningsRange[1]) return false;
       
-      // Appointments range
+      // Appointments range filter (this is only applied client-side)
       if (staffMember.totalAppointments < appointmentsRange[0] || 
           staffMember.totalAppointments > appointmentsRange[1]) return false;
       
       return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'appointments':
-          return b.totalAppointments - a.totalAppointments;
-        case 'earnings':
-          return b.totalEarnings - a.totalEarnings;
-        default:
-          return 0;
+    }).sort((a, b) => {
+      // The basic sorting is done by the server, but we need to handle the special cases
+      if (sortBy === 'appointments') {
+        return sortOrder === 'asc'
+          ? a.totalAppointments - b.totalAppointments
+          : b.totalAppointments - a.totalAppointments;
+      } else if (sortBy === 'earnings') {
+        return sortOrder === 'asc'
+          ? a.totalEarnings - b.totalEarnings
+          : b.totalEarnings - a.totalEarnings;
       }
+      
+      // For name sorting, do a client-side sort even though server does it too
+      // This ensures consistent behavior even if server sorting fails
+      if (sortBy === 'name') {
+        return sortOrder === 'asc'
+          ? (a.name || '').localeCompare(b.name || '')
+          : (b.name || '').localeCompare(a.name || '');
+      }
+      
+      return 0;
     });
+  }, [allStaff, earningsRange, appointmentsRange, sortBy, sortOrder]);
 
+  // Clear all filters (both applied and pending)
   const clearFilters = () => {
+    // Clear main states
     setSearchQuery('');
     setSortBy('name');
+    setSortOrder('asc');
     setFilterAvailability('all');
     setSelectedServices([]);
     setCommissionRange([0, maxCommission]);
     setEarningsRange([0, maxEarnings]);
     setAppointmentsRange([0, maxAppointments]);
-  };
-  
-  const handleServiceChange = (value: string) => {
-    setSelectedServices(prev => {
-      if (prev.includes(value)) {
-        return prev.filter(s => s !== value);
-      } else {
-        return [...prev, value];
-      }
+    
+    // Clear pending states
+    setPendingSortBy('name');
+    setPendingSortOrder('asc');
+    setPendingFilterAvailability('all');
+    setPendingSelectedServices([]);
+    setPendingCommissionRange([0, maxCommission]);
+    
+    // Apply the cleared filters
+    setAppliedFilters({
+      searchQuery: '',
+      availability: 'all',
+      services: [],
+      commissionRange: [0, 100]
     });
   };
 
-  const handleAddStaff = async (newStaff: Staff) => {
+  // Handle search button click
+  const handleSearch = () => {
+    setDebouncedSearchQuery(searchQuery);
+    setAppliedFilters(prev => ({
+      ...prev,
+      searchQuery: searchQuery
+    }));
+  };
+
+  // Handle Enter key in search field
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+  
+  // Handle service selection in filter panel
+  const handlePendingServiceChange = (value: string) => {
+    setPendingSelectedServices(prev => {
+      return prev.includes(value) 
+        ? prev.filter(s => s !== value) 
+        : [...prev, value];
+    });
+  };
+
+  const handleAddStaff = async (newStaff: Staff & { password: string }) => {
     try {
-      const apiStaffData = mapInternalStaffToApi(newStaff);
+      const apiStaffData = mapInternalStaffToApi(newStaff) as CreateStaffRequest;
       await executeCreateStaff(apiStaffData);
       
       toast({
@@ -265,7 +450,7 @@ export const StaffManagement: React.FC = () => {
       });
       
       // Refresh staff list
-      fetchStaff();
+      fetchStaff(currentPage, itemsPerPage, getSortParam());
     } catch (error) {
       console.error('Error adding staff:', error);
     }
@@ -273,7 +458,8 @@ export const StaffManagement: React.FC = () => {
 
   const handleUpdateStaff = async (updatedStaff: Staff) => {
     try {
-      const apiStaffData = mapInternalStaffToApi(updatedStaff);
+      setUpdatingStaffId(updatedStaff.id);
+      const apiStaffData = mapInternalStaffToApi(updatedStaff) as Partial<ApiStaff>;
       await executeUpdateStaff(updatedStaff.id, apiStaffData);
       
       toast({
@@ -282,14 +468,17 @@ export const StaffManagement: React.FC = () => {
       });
       
       // Refresh staff list
-      fetchStaff();
+      fetchStaff(currentPage, itemsPerPage, getSortParam());
     } catch (error) {
       console.error('Error updating staff:', error);
+    } finally {
+      setUpdatingStaffId(null);
     }
   };
   
   const handleDeleteStaff = async (staffId: string) => {
     try {
+      setDeletingStaffId(staffId);
       await executeDeleteStaff(staffId);
       
       toast({
@@ -298,9 +487,21 @@ export const StaffManagement: React.FC = () => {
       });
       
       // Refresh staff list
-      fetchStaff();
+      fetchStaff(currentPage, itemsPerPage, getSortParam());
     } catch (error) {
       console.error('Error deleting staff:', error);
+    } finally {
+      setDeletingStaffId(null);
+    }
+  };
+
+  // Toggle sort order when clicking on the same sort option
+  const handleSortChange = (value: string) => {
+    if (value === sortBy) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(value);
+      setSortOrder('asc');
     }
   };
 
@@ -319,31 +520,54 @@ export const StaffManagement: React.FC = () => {
       <div className="bg-card border rounded-lg">
         <div className="p-4 border-b">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-[400px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search staff..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="relative flex-1 min-w-[200px] max-w-[400px] flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search staff..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                />
+                {isLoading && searchQuery !== debouncedSearchQuery && (
+                  <div className="absolute right-2.5 top-2.5">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleSearch}
+                disabled={isLoading}
+              >
+                Search
+              </Button>
             </div>
 
             <div className="hidden sm:flex items-center gap-3">
-              <Select value={sortBy} onValueChange={setSortBy}>
+              <Select value={sortBy} onValueChange={handleSortChange}>
                 <SelectTrigger className="w-[180px]">
                   <SortAsc className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="appointments">Appointments</SelectItem>
-                  <SelectItem value="earnings">Earnings</SelectItem>
+                  <SelectItem value="name">Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</SelectItem>
+                  <SelectItem value="appointments">Appointments {sortBy === 'appointments' && (sortOrder === 'asc' ? '↑' : '↓')}</SelectItem>
+                  <SelectItem value="earnings">Earnings {sortBy === 'earnings' && (sortOrder === 'asc' ? '↑' : '↓')}</SelectItem>
                 </SelectContent>
               </Select>
 
-              <Select value={filterAvailability} onValueChange={setFilterAvailability}>
+              <Select value={filterAvailability} onValueChange={(value) => {
+                setFilterAvailability(value);
+                // Apply filters when availability changes
+                setAppliedFilters(prev => ({
+                  ...prev,
+                  availability: value as 'all' | 'available' | 'unavailable'
+                }));
+              }}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by availability" />
@@ -362,6 +586,9 @@ export const StaffManagement: React.FC = () => {
                   <Badge variant="secondary" className="ml-2">
                     {getActiveFilterCount()}
                   </Badge>
+                )}
+                {isLoading && (
+                  <Loader2 className="ml-2 h-3 w-3 animate-spin" />
                 )}
               </Button>
 
@@ -386,6 +613,23 @@ export const StaffManagement: React.FC = () => {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <span className="ml-3 text-lg text-muted-foreground">Loading staff...</span>
             </div>
+          ) : staffError ? (
+            <div className="text-center py-12">
+              <div className="text-destructive mb-2">Error loading staff data</div>
+              <p className="text-muted-foreground">{staffError.message || 'An unknown error occurred'}</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => {
+                  // Reset to defaults and try again
+                  clearFilters();
+                  fetchStaff(1, itemsPerPage, 'name_asc');
+                }}
+              >
+                <span className="mr-2">↺</span>
+                Reset Filters & Try Again
+              </Button>
+            </div>
           ) : filteredStaff.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-lg text-muted-foreground">No staff members found</p>
@@ -399,11 +643,53 @@ export const StaffManagement: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <StaffList 
-              staff={filteredStaff} 
-              onUpdateStaff={handleUpdateStaff}
-              onDeleteStaff={handleDeleteStaff}
-            />
+            <>
+              <StaffList 
+                staff={filteredStaff} 
+                onUpdateStaff={handleUpdateStaff}
+                onDeleteStaff={handleDeleteStaff}
+                updatingStaffId={updatingStaffId}
+                deletingStaffId={deletingStaffId}
+              />
+              
+              {/* Pagination controls */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center mt-6 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1 || isLoading}
+                  >
+                    Previous
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                        disabled={isLoading}
+                        className="w-8 h-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || isLoading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -417,14 +703,47 @@ export const StaffManagement: React.FC = () => {
           <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] p-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Sort By</label>
-              <Select value={sortBy} onValueChange={setSortBy}>
+              <Select value={pendingSortBy} onValueChange={setPendingSortBy}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="appointments">Appointments</SelectItem>
-                  <SelectItem value="earnings">Earnings</SelectItem>
+                  <SelectItem value="name">Name {pendingSortBy === 'name' && (pendingSortOrder === 'asc' ? '↑' : '↓')}</SelectItem>
+                  <SelectItem value="appointments">Appointments {pendingSortBy === 'appointments' && (pendingSortOrder === 'asc' ? '↑' : '↓')}</SelectItem>
+                  <SelectItem value="earnings">Earnings {pendingSortBy === 'earnings' && (pendingSortOrder === 'asc' ? '↑' : '↓')}</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  variant={pendingSortOrder === 'asc' ? "default" : "outline"} 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => setPendingSortOrder('asc')}
+                >
+                  Ascending
+                </Button>
+                <Button 
+                  variant={pendingSortOrder === 'desc' ? "default" : "outline"} 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => setPendingSortOrder('desc')}
+                >
+                  Descending
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Availability</label>
+              <Select value={pendingFilterAvailability} onValueChange={setPendingFilterAvailability}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by availability" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Staff</SelectItem>
+                  <SelectItem value="available">Active Only</SelectItem>
+                  <SelectItem value="unavailable">Inactive Only</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -432,18 +751,28 @@ export const StaffManagement: React.FC = () => {
             <div className="space-y-4">
               <label className="text-sm font-medium">Services</label>
               <div className="grid grid-cols-2 gap-2">
-                {allServices.map(service => (
-                  <div key={service} className="flex items-center gap-2">
-                    <Checkbox 
-                      id={`service-${service}`} 
-                      checked={selectedServices.includes(service)}
-                      onCheckedChange={() => handleServiceChange(service)}
-                    />
-                    <Label htmlFor={`service-${service}`} className="cursor-pointer">
-                      {service}
-                    </Label>
+                {isLoading ? (
+                  <div className="col-span-2 py-4 flex justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
-                ))}
+                ) : allServices.length > 0 ? (
+                  allServices.map(service => (
+                    <div key={service.id} className="flex items-center gap-2">
+                      <Checkbox 
+                        id={`service-${service.id}`} 
+                        checked={pendingSelectedServices.includes(service.id)}
+                        onCheckedChange={() => handlePendingServiceChange(service.id)}
+                      />
+                      <Label htmlFor={`service-${service.id}`} className="cursor-pointer">
+                        {service.name}
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-2 py-2 text-center text-muted-foreground">
+                    No services available
+                  </div>
+                )}
               </div>
             </div>
 
@@ -455,13 +784,15 @@ export const StaffManagement: React.FC = () => {
                   min={0}
                   max={maxCommission}
                   step={1}
-                  value={commissionRange}
-                  onValueChange={(value) => setCommissionRange(value as [number, number])}
+                  value={pendingCommissionRange}
+                  onValueChange={(value) => {
+                    setPendingCommissionRange(value as [number, number]);
+                  }}
                 />
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
-                <div>{commissionRange[0]}%</div>
-                <div>{commissionRange[1]}%</div>
+                <div>{pendingCommissionRange[0]}%</div>
+                <div>{pendingCommissionRange[1]}%</div>
               </div>
             </div>
 
@@ -502,21 +833,28 @@ export const StaffManagement: React.FC = () => {
             </div>
           </div>
           
-          <SheetFooter className="flex justify-between pt-4 mt-4 border-t">
-            <Button variant="outline" onClick={clearFilters}>
-              Reset filters
+          <SheetFooter className="mt-6">
+            <Button variant="outline" onClick={clearFilters}>Reset Filters</Button>
+            <Button onClick={applyFilters} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Applying...
+                </>
+              ) : (
+                'Apply Filters'
+              )}
             </Button>
-            <SheetClose asChild>
-              <Button>Apply filters</Button>
-            </SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>
-
+      
       <AddStaffDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
-        onAddStaff={handleAddStaff}
+        onAddStaff={handleAddStaff as (newStaff: Staff & { password: string }) => void}
+        services={allServices}
+        isLoadingServices={isLoading && allServices.length === 0}
       />
     </div>
   );

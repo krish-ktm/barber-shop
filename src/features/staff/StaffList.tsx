@@ -5,7 +5,8 @@ import {
   MoreHorizontal, 
   Phone, 
   Trash,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react';
 import { Staff } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,9 +29,17 @@ interface StaffListProps {
   staff: Staff[];
   onUpdateStaff?: (updatedStaff: Staff) => void;
   onDeleteStaff?: (staffId: string) => void;
+  updatingStaffId?: string | null;
+  deletingStaffId?: string | null;
 }
 
-export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDeleteStaff }) => {
+export const StaffList: React.FC<StaffListProps> = ({ 
+  staff, 
+  onUpdateStaff, 
+  onDeleteStaff,
+  updatingStaffId = null,
+  deletingStaffId = null
+}) => {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -56,16 +65,29 @@ export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDe
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {staff.map((member) => (
-          <Card key={member.id} className="overflow-hidden">
+          <Card key={member.id} className={`overflow-hidden relative ${updatingStaffId === member.id || deletingStaffId === member.id ? 'opacity-70' : ''}`}>
+            {(updatingStaffId === member.id || deletingStaffId === member.id) && (
+              <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
+                <div className="flex flex-col items-center gap-2 bg-background p-3 rounded-md shadow-md">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm font-medium">
+                    {updatingStaffId === member.id ? 'Updating...' : 'Deleting...'}
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <div className="relative">
               <div className="h-24 bg-gradient-to-r from-black to-primary"></div>
               <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-16 w-16 border-4 border-background">
-                <AvatarImage src={member.image} alt={member.name} />
+                <AvatarImage src={member.image} alt={member.name || 'Staff'} />
                 <AvatarFallback>
                   {member.name
-                    .split(' ')
-                    .map(n => n[0])
-                    .join('')}
+                    ? member.name
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')
+                    : 'ST'}
                 </AvatarFallback>
               </Avatar>
               <div className="absolute top-2 right-2">
@@ -78,7 +100,10 @@ export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDe
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleEditStaff(member)}>
+                    <DropdownMenuItem 
+                      onClick={() => handleEditStaff(member)}
+                      disabled={updatingStaffId === member.id || deletingStaffId === member.id}
+                    >
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Profile
                     </DropdownMenuItem>
@@ -86,6 +111,7 @@ export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDe
                     <DropdownMenuItem 
                       className="text-destructive"
                       onClick={() => onDeleteStaff && onDeleteStaff(member.id)}
+                      disabled={updatingStaffId === member.id || deletingStaffId === member.id}
                     >
                       <Trash className="mr-2 h-4 w-4" />
                       Delete
@@ -97,8 +123,7 @@ export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDe
             
             <CardContent className="pt-10 pb-6">
               <div className="mb-4">
-                <h3 className="font-semibold text-lg">{member.name}</h3>
-                <p className="text-sm text-muted-foreground">{member.position}</p>
+                <h3 className="font-semibold text-lg">{member.name || 'Unnamed Staff'}</h3>
                 <div className="mt-2 flex items-center gap-2">
                   <Badge variant={member.isAvailable ? "default" : "outline"}>
                     {member.isAvailable ? 'Active' : 'Inactive'}
@@ -110,11 +135,11 @@ export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDe
               <div className="space-y-1 text-sm mb-4">
                 <p className="flex items-center">
                   <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {member.email}
+                  {member.email || 'No email provided'}
                 </p>
                 <p className="flex items-center">
                   <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {formatPhoneNumber(member.phone)}
+                  {member.phone ? formatPhoneNumber(member.phone) : 'No phone provided'}
                 </p>
                 {member.bio && (
                   <p className="text-muted-foreground mt-2">{member.bio}</p>
@@ -128,13 +153,13 @@ export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDe
                 </div>
                 <div className="text-center border-x">
                   <p className="text-2xl font-semibold">
-                    {member.services.length}
+                    {member.services?.length || 0}
                   </p>
                   <p className="text-xs text-muted-foreground">Services</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-semibold">
-                    {formatCurrency(member.totalEarnings).replace('$', '')}
+                    {formatCurrency(member.totalEarnings || 0).replace('$', '')}
                   </p>
                   <p className="text-xs text-muted-foreground">Earnings</p>
                 </div>
@@ -142,7 +167,7 @@ export const StaffList: React.FC<StaffListProps> = ({ staff, onUpdateStaff, onDe
 
               <div className="space-y-2">
                 <h4 className="text-sm font-medium mb-2">Today's Schedule</h4>
-                {member.workingHours[getDayKey(new Date())].length > 0 ? (
+                {member.workingHours && member.workingHours[getDayKey(new Date())]?.length > 0 ? (
                   member.workingHours[getDayKey(new Date())].map((slot, index) => (
                     <div key={index} className="flex items-center text-sm">
                       <Clock className="h-4 w-4 mr-2 text-muted-foreground" />

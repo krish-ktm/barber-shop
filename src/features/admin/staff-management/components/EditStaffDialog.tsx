@@ -21,13 +21,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { serviceData } from '@/mocks';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +32,6 @@ const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  position: z.string().min(1, 'Position is required'),
   bio: z.string().optional(),
   services: z.array(z.string()).min(1, 'Select at least one service'),
   commissionPercentage: z.number().min(0).max(100),
@@ -67,7 +59,6 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       name: staff?.name || '',
       email: staff?.email || '',
       phone: staff?.phone || '',
-      position: staff?.position || '',
       bio: staff?.bio || '',
       services: staff?.services || [],
       commissionPercentage: staff?.commissionPercentage || 0,
@@ -140,35 +131,6 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                         <FormControl>
                           <Input placeholder="Enter full name" {...field} />
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="position"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Position</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select position" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Junior Barber">Junior Barber</SelectItem>
-                            <SelectItem value="Senior Barber">Senior Barber</SelectItem>
-                            <SelectItem value="Master Barber">Master Barber</SelectItem>
-                            <SelectItem value="Style Specialist">Style Specialist</SelectItem>
-                            <SelectItem value="Color Specialist">Color Specialist</SelectItem>
-                            <SelectItem value="Senior Stylist">Senior Stylist</SelectItem>
-                          </SelectContent>
-                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
