@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 // Default API base URL (can be overridden with environment variables)
-const DEFAULT_API_URL = 'http://localhost:5000/api';
+const DEFAULT_API_URL = 'https://barber-shop-api-eight.vercel.app/api';
 
 /**
  * Hook to manage API configuration

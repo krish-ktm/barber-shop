@@ -29,8 +29,11 @@ export const apiClient = async <T>(
     options.body = JSON.stringify(body);
   }
   
+  const url = `${baseUrl}${endpoint}`;
+  console.log(`API Request: ${method} ${url}`, body);
+  
   try {
-    const response = await fetch(`${baseUrl}${endpoint}`, options);
+    const response = await fetch(url, options);
     const data = await response.json();
     
     if (!response.ok) {
@@ -40,9 +43,11 @@ export const apiClient = async <T>(
         window.location.href = '/login';
       }
       
+      console.error(`API Error: ${response.status}`, data);
       throw new Error(data.message || 'Something went wrong');
     }
     
+    console.log(`API Response: ${method} ${url}`, data);
     return data;
   } catch (error) {
     console.error(`Error fetching ${endpoint}:`, error);

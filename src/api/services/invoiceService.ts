@@ -88,7 +88,14 @@ export const getInvoiceById = async (id: string): Promise<InvoiceResponse> => {
  * Create new invoice
  */
 export const createInvoice = async (invoiceData: Partial<Invoice>): Promise<InvoiceResponse> => {
-  return post<InvoiceResponse>('/invoices', invoiceData);
+  console.log('Creating invoice with data:', JSON.stringify(invoiceData));
+  try {
+    const response = await post<InvoiceResponse>('/invoices', invoiceData);
+    return response;
+  } catch (error) {
+    console.error('API error creating invoice:', error);
+    throw error;
+  }
 };
 
 /**

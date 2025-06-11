@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import {
   Download,
@@ -7,10 +7,9 @@ import {
   Search,
   SortAsc,
   X,
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
-import { invoiceData } from '@/mocks';
-import { Invoice } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -40,6 +39,9 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils';
 import { InvoiceDialog } from '@/features/pos/InvoiceDialog';
 import { StepInvoiceDialog } from '@/features/pos/StepInvoiceDialog';
+import { useApi } from '@/hooks/useApi';
+import { getAllInvoices, Invoice } from '@/api/services/invoiceService';
+import { useToast } from '@/hooks/use-toast';
 
 export const POS: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,36 +50,61 @@ export const POS: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showNewInvoiceDialog, setShowNewInvoiceDialog] = useState(false);
+  const [page] = useState(1);
+  const [limit] = useState(100);
+  const { toast } = useToast();
 
-  // Filter and sort invoices
-  const filteredInvoices = invoiceData
-    .filter(invoice => {
+  // Map frontend sort values to API sort parameters
+  const sortMap: Record<string, string> = {
+    'date': 'date_desc',
+    'amount': 'total_desc',
+    'customer': 'customer_name_asc',
+    'staff': 'staff_name_asc'
+  };
+
+  // Use the useApi hook to fetch invoices
+  const {
+    data: invoicesResponse,
+    loading,
+    error,
+    execute: fetchInvoices
+  } = useApi(getAllInvoices);
+
+  // Fetch invoices on component mount and when sort changes
+  useEffect(() => {
+    fetchInvoices(page, limit, sortMap[sortBy]);
+  }, [fetchInvoices, page, limit, sortBy]);
+
+  // Show error toast if API call fails
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Error',
+        description: `Failed to load invoices: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  }, [error, toast]);
+
+  // Filter invoices from the API response
+  const filteredInvoices = React.useMemo(() => {
+    if (!invoicesResponse?.invoices) return [];
+    
+    return invoicesResponse.invoices.filter(invoice => {
       const searchLower = searchQuery.toLowerCase();
       return searchQuery === '' || 
-        invoice.customerName.toLowerCase().includes(searchLower) ||
+        invoice.customer_name.toLowerCase().includes(searchLower) ||
         invoice.id.toLowerCase().includes(searchLower) ||
-        invoice.staffName.toLowerCase().includes(searchLower);
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'date':
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        case 'amount':
-          return b.total - a.total;
-        case 'customer':
-          return a.customerName.localeCompare(b.customerName);
-        case 'staff':
-          return a.staffName.localeCompare(b.staffName);
-        default:
-          return 0;
-      }
+        invoice.staff_name.toLowerCase().includes(searchLower);
     });
+  }, [invoicesResponse, searchQuery]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setSortBy('date');
   };
 
+  // Convert API status to UI badge
   const getStatusBadge = (status: Invoice['status']) => {
     switch (status) {
       case 'paid':
@@ -91,7 +118,8 @@ export const POS: React.FC = () => {
     }
   };
 
-  const getPaymentMethodBadge = (method: Invoice['paymentMethod']) => {
+  // Convert API payment method to UI badge
+  const getPaymentMethodBadge = (method: Invoice['payment_method']) => {
     switch (method) {
       case 'cash':
         return <Badge variant="outline">Cash</Badge>;
@@ -107,6 +135,12 @@ export const POS: React.FC = () => {
   const handleInvoiceClick = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setShowInvoiceDialog(true);
+  };
+
+  const handleInvoiceCreated = () => {
+    // Refresh the invoice list after creating a new invoice
+    fetchInvoices(page, limit, sortMap[sortBy]);
+    setShowNewInvoiceDialog(false);
   };
 
   return (
@@ -221,70 +255,75 @@ export const POS: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Staff</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInvoices.map((invoice) => (
-                <TableRow 
-                  key={invoice.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleInvoiceClick(invoice)}
-                >
-                  <TableCell className="font-medium">
-                    {invoice.id}
-                    {invoice.appointmentId && (
-                      <div className="text-xs text-muted-foreground">
-                        Appointment #{invoice.appointmentId}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>{invoice.customerName}</TableCell>
-                  <TableCell>{invoice.staffName}</TableCell>
-                  <TableCell>
-                    {format(new Date(invoice.date), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell>
-                    {getPaymentMethodBadge(invoice.paymentMethod)}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(invoice.status)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(invoice.total)}
-                    {invoice.tipAmount && invoice.tipAmount > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        Tip: {formatCurrency(invoice.tipAmount)}
-                      </div>
-                    )}
-                  </TableCell>
+          {loading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Staff</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Payment</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredInvoices.length > 0 ? (
+                  filteredInvoices.map((invoice) => (
+                    <TableRow 
+                      key={invoice.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleInvoiceClick(invoice)}
+                    >
+                      <TableCell className="font-medium">
+                        {invoice.id}
+                        {invoice.appointment_id && (
+                          <div className="text-xs text-muted-foreground">
+                            Appointment #{invoice.appointment_id}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>{invoice.customer_name}</TableCell>
+                      <TableCell>{invoice.staff_name}</TableCell>
+                      <TableCell>{format(new Date(invoice.date), 'dd MMM yyyy')}</TableCell>
+                      <TableCell>{getPaymentMethodBadge(invoice.payment_method)}</TableCell>
+                      <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(invoice.total)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {searchQuery ? "No invoices found matching your search" : "No invoices found"}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
-
-      {showInvoiceDialog && selectedInvoice && (
+      
+      {selectedInvoice && (
         <InvoiceDialog
-          invoice={selectedInvoice}
           open={showInvoiceDialog}
           onOpenChange={setShowInvoiceDialog}
+          invoice={selectedInvoice}
+          onInvoiceUpdated={() => fetchInvoices(page, limit, sortMap[sortBy])}
         />
       )}
-
+      
       <StepInvoiceDialog
         open={showNewInvoiceDialog}
         onOpenChange={setShowNewInvoiceDialog}
+        onInvoiceCreated={handleInvoiceCreated}
       />
     </div>
   );

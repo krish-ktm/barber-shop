@@ -14,7 +14,8 @@ import {
   UserCircle2,
   Info,
   Edit,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 import {
   Form,
@@ -46,7 +47,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -57,15 +57,7 @@ import {
 } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-// Guest user constants - will be replaced with actual values during backend integration
-const GUEST_USER: Customer = {
-  id: 'guest-user',
-  name: 'Guest',
-  phone: '',
-  visitCount: 0,
-  totalSpent: 0,
-  createdAt: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss")
-};
+// Guest user handled directly in component, no need for a constant
 
 // Define steps for the invoice creation process
 type Step = 'customer' | 'services' | 'staff' | 'payment' | 'summary';
@@ -101,6 +93,7 @@ export interface InvoiceFormData {
   customerName: string;
   isNewCustomer: boolean;
   isGuestUser: boolean;
+  selectedCustomer?: Customer;
   customerDetails?: {
     name: string;
     email?: string;
@@ -111,11 +104,13 @@ export interface InvoiceFormData {
 interface StepWiseInvoiceFormProps {
   onSubmit: (data: InvoiceFormData) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
 export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   onSubmit,
-  onCancel
+  onCancel,
+  isSubmitting = false
 }) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('customer');
@@ -244,7 +239,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             return;
           }
           setIsGuestUser(false);
-        setCurrentStep('services');
+          setCurrentStep('services');
         } else {
           // Existing customer selected
           setIsGuestUser(false);
@@ -305,165 +300,229 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   };
 
   const handleSubmit = () => {
-    const values = form.getValues();
+    // Don't process if we're already submitting
+    if (isSubmitting) return;
     
-    if (isGuestUser) {
-      // Use guest user details
-      onSubmit({
-        ...values,
-        services,
-        customerName: GUEST_USER.name,
-        isNewCustomer: false,
-        isGuestUser: true,
-        customerDetails: {
-          name: GUEST_USER.name,
-          phone: values.customerPhone || '',
+    // Variables needed in switch cases
+    let customerResult, staffResult, formValues, newCustomerValues, customerDetails;
+    
+    // Validate current step first
+    switch(currentStep) {
+      case 'customer':
+        if (activeTab === 'search') {
+          if (!selectedCustomer && !isGuestUser) {
+            toast({
+              title: 'Customer required',
+              description: 'Please select a customer or create a new one.',
+              variant: 'destructive',
+            });
+            return;
+          }
+        } else if (activeTab === 'new') {
+          customerResult = newCustomerForm.trigger();
+          if (!customerResult) return;
         }
-      });
-    } else {
-      // Use regular customer details
-    onSubmit({
-      ...values,
-      services,
-      customerName: selectedCustomer?.name || newCustomerForm.getValues().name,
-      isNewCustomer,
-        isGuestUser: false,
-      customerDetails: isNewCustomer ? {
-        name: newCustomerForm.getValues().name,
-        email: newCustomerForm.getValues().email,
-        phone: values.customerPhone,
-      } : undefined,
-    });
+        nextStep();
+        break;
+      case 'services':
+        if (services.length === 0) {
+          toast({
+            title: 'Services required',
+            description: 'Please select at least one service.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        nextStep();
+        break;
+      case 'staff':
+        staffResult = form.trigger('staffId');
+        if (!staffResult) return;
+        nextStep();
+        break;
+      case 'payment':
+        nextStep();
+        break;
+      case 'summary':
+        // Submit the final form data
+        formValues = form.getValues();
+        
+        // Prepare customer details based on whether it's a new or existing customer
+        if (isGuestUser) {
+          customerDetails = {
+            name: 'Guest',
+            phone: formValues.customerPhone || '',
+          };
+        } else if (isNewCustomer) {
+          newCustomerValues = newCustomerForm.getValues();
+          customerDetails = {
+            name: newCustomerValues.name,
+            email: newCustomerValues.email,
+            phone: formValues.customerPhone,
+          };
+        }
+        
+        onSubmit({
+          ...formValues,
+          services,
+          customerName: selectedCustomer?.name || customerDetails?.name || 'Guest',
+          isNewCustomer,
+          isGuestUser,
+          selectedCustomer: selectedCustomer,
+          customerDetails,
+        });
+        break;
     }
   };
 
   // Render step indicator
   const renderStepIndicator = () => {
-    const steps: Step[] = ['customer', 'services', 'staff', 'payment', 'summary'];
-    const stepLabels: Record<Step, string> = {
-      customer: 'Customer',
-      services: 'Services',
-      staff: 'Staff',
-      payment: 'Payment',
-      summary: 'Summary'
-    };
-    
     return (
-      <div className="flex items-center justify-between mb-2 px-2 mt-4">
-        {steps.map((step, index) => (
-          <React.Fragment key={step}>
-            <div className="flex flex-col items-center">
-              <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  currentStep === step 
-                    ? 'bg-primary text-primary-foreground' 
-                    : steps.indexOf(currentStep) > index
-                      ? 'bg-primary/80 text-primary-foreground'
-                      : 'bg-muted text-muted-foreground'
+      <div className="flex items-center justify-between border-t py-4 px-6">
+        <div className="flex gap-1">
+          {['customer', 'services', 'staff', 'payment', 'summary'].map((step, index) => (
+            <React.Fragment key={step}>
+              {index > 0 && (
+                <ChevronRight className="h-4 w-4 text-muted-foreground mx-1" />
+              )}
+              <div
+                className={`text-xs font-medium ${
+                  currentStep === step ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
-                {steps.indexOf(currentStep) > index ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  index + 1
-                )}
+                {step.charAt(0).toUpperCase() + step.slice(1)}
               </div>
-              <span className={`text-xs mt-1 ${currentStep === step ? 'font-medium' : 'text-muted-foreground'}`}>
-                {stepLabels[step]}
-              </span>
-            </div>
-            {index < steps.length - 1 && (
-              <div 
-                className={`h-[2px] flex-1 ${
-                  steps.indexOf(currentStep) > index ? 'bg-primary/80' : 'bg-muted'
-                }`}
-              />
-            )}
-          </React.Fragment>
-        ))}
+            </React.Fragment>
+          ))}
+        </div>
+        
+        <div className="flex gap-2">
+          {currentStep !== 'customer' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={prevStep}
+              disabled={isSubmitting}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          )}
+          
+          {currentStep === 'summary' ? (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Create Invoice
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              Next
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
+        </div>
       </div>
     );
   };
 
   // Render the customer step
   const renderCustomerStep = () => {
-  return (
-              <Card className="p-4">
-                <h3 className="text-lg font-medium mb-4">Customer Information</h3>
-                <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="search">Search Customer</TabsTrigger>
-                    <TabsTrigger value="new">New Customer</TabsTrigger>
-                  </TabsList>
+    return (
+      <Card className="p-4">
+        <h3 className="text-lg font-medium mb-4">Customer Information</h3>
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="search">Search Customer</TabsTrigger>
+            <TabsTrigger value="new">New Customer</TabsTrigger>
+          </TabsList>
 
-                  <TabsContent value="search" className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="customerPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
-                          <div className="flex gap-2">
-                            <FormControl>
-                              <Input
-                                placeholder="Enter phone number"
-                                {...field}
-                                onChange={(e) => {
-                                  field.onChange(e);
-                                  setSelectedCustomer(null);
-                                  setIsNewCustomer(false);
+          <TabsContent value="search" className="space-y-4">
+            <FormField
+              control={form.control}
+              name="customerPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input
+                        placeholder="Enter phone number"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setSelectedCustomer(null);
+                          setIsNewCustomer(false);
                           setIsGuestUser(false);
-                                }}
-                              />
-                            </FormControl>
-                            <Button
-                              type="button"
-                              onClick={() => handleSearchCustomer(field.value)}
-                              disabled={isSearching || !field.value}
-                            >
-                              {isSearching ? (
-                                "Searching..."
-                              ) : (
-                                <>
-                                  <Search className="h-4 w-4 mr-2" />
-                                  Search
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
+                        }}
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      onClick={() => handleSearchCustomer(field.value)}
+                      disabled={isSearching || !field.value}
+                    >
+                      {isSearching ? (
+                        "Searching..."
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4 mr-2" />
+                          Search
+                        </>
                       )}
-                    />
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                    {selectedCustomer && (
-                      <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">Customer Details</h4>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedCustomer(null);
-                              setIsNewCustomer(false);
+            {selectedCustomer && (
+              <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">Customer Details</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCustomer(null);
+                      setIsNewCustomer(false);
                       setIsGuestUser(false);
-                              form.setValue('customerPhone', '');
-                            }}
-                          >
-                            Clear
-                          </Button>
-                        </div>
-                        <div className="space-y-1 text-sm">
-                          <p><span className="font-medium">Name:</span> {selectedCustomer.name}</p>
-                          <p><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedCustomer.phone)}</p>
-                          {selectedCustomer.email && (
-                            <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
-                          )}
-                          <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
-                          <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
-                        </div>
-                      </div>
-                    )}
+                      form.setValue('customerPhone', '');
+                    }}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <p><span className="font-medium">Name:</span> {selectedCustomer.name}</p>
+                  <p><span className="font-medium">Phone:</span> {formatPhoneNumber(selectedCustomer.phone)}</p>
+                  {selectedCustomer.email && (
+                    <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
+                  )}
+                  <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
+                  <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
+                </div>
+              </div>
+            )}
 
             {isGuestUser && (
               <div className="rounded-lg border border-primary/30 p-4 bg-primary/5">
@@ -480,53 +539,53 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             <p className="text-xs text-muted-foreground mt-2 text-center">
               Press "Continue" without searching to proceed as guest
             </p>
-                  </TabsContent>
+          </TabsContent>
 
-                  <TabsContent value="new">
-                    <div className="space-y-4">
-                      <FormField
-                        control={newCustomerForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter customer name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+          <TabsContent value="new">
+            <div className="space-y-4">
+              <FormField
+                control={newCustomerForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter customer name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter phone number" 
-                            value={form.watch('customerPhone')} 
-                            onChange={(e) => form.setValue('customerPhone', e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
-                      </FormItem>
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Enter phone number" 
+                    value={form.watch('customerPhone')} 
+                    onChange={(e) => form.setValue('customerPhone', e.target.value)}
+                  />
+                </FormControl>
+                <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
+              </FormItem>
 
-                      <FormField
-                        control={newCustomerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email (Optional)</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="Enter email address" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </Card>
+              <FormField
+                control={newCustomerForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Enter email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </Card>
     );
   };
 
