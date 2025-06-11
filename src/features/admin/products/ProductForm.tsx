@@ -20,8 +20,9 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Image } from 'lucide-react';
+import { Image, Loader2 } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { Product } from '@/api/services/productService';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
@@ -31,14 +32,16 @@ const productSchema = z.object({
   status: z.enum(['active', 'inactive']),
   commission: z.number().min(0, 'Commission must be positive').max(100, 'Commission cannot exceed 100%'),
   imageUrl: z.string().optional(),
+  description: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
-  initialData?: ProductFormValues;
+  initialData?: Product;
   onSubmit: (data: ProductFormValues) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
 const categories = [
@@ -49,7 +52,7 @@ const categories = [
   'Accessories',
 ];
 
-export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
+export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = false }: ProductFormProps) {
   const [imagePreview, setImagePreview] = useState<string | undefined>(initialData?.imageUrl);
 
   const form = useForm<ProductFormValues>({
@@ -62,6 +65,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
       status: 'active',
       commission: 0,
       imageUrl: '',
+      description: '',
     },
   });
 
@@ -215,6 +219,24 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                 )}
               />
             </div>
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <textarea 
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Enter product description"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           {/* Right column - Image upload */}
@@ -291,11 +313,18 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="default">
-            {initialData ? 'Update Product' : 'Add Product'}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {initialData ? 'Updating...' : 'Adding...'}
+              </>
+            ) : (
+              initialData ? 'Update Product' : 'Add Product'
+            )}
           </Button>
         </div>
       </form>

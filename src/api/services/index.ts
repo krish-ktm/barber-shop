@@ -6,4 +6,5 @@ export * from './appointmentService';
 export * from './invoiceService';
 export * from './settingsService';
 export * from './reportService';
-export * from './publicService'; 
+export * from './publicService';
+export * from './productService'; 

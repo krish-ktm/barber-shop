@@ -6,23 +6,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ProductForm } from './ProductForm';
-
-interface Product {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-  status: 'active' | 'inactive';
-  commission: number;
-  imageUrl?: string;
-}
+import { Product } from '@/api/services/productService';
 
 interface ProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: Product;
-  onSubmit: (data: Omit<Product, 'id'>) => void;
+  onSubmit: (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => void;
+  isSubmitting?: boolean;
 }
 
 export function ProductDialog({
@@ -30,6 +21,7 @@ export function ProductDialog({
   onOpenChange,
   initialData,
   onSubmit,
+  isSubmitting = false,
 }: ProductDialogProps) {
   const handleCancel = () => {
     onOpenChange(false);
@@ -53,6 +45,7 @@ export function ProductDialog({
           initialData={initialData}
           onSubmit={onSubmit}
           onCancel={handleCancel}
+          isSubmitting={isSubmitting}
         />
       </DialogContent>
     </Dialog>
