@@ -15,7 +15,7 @@ import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AdminProducts } from './pages/AdminProducts';
-import { Reviews } from './pages/Reviews';
+import AdminReviews from './pages/AdminReviews';
 
 // Staff Routes
 import { StaffDashboard } from './pages/staff/Dashboard';
@@ -81,7 +81,7 @@ function App() {
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
           <Route path="gst-settings" element={<GSTSettings />} />
-          <Route path="reviews" element={<Reviews />} />
+          <Route path="reviews" element={<AdminReviews />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
