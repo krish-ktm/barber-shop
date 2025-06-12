@@ -18,6 +18,11 @@ import {
   UserPlus,
   Info,
   Loader2,
+  TrendingDown,
+  Coins,
+  CreditCard,
+  PercentCircle,
+  DollarSign as DollarSignIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout";
 import {
@@ -92,9 +97,11 @@ import {
   getRevenueReport,
   getServicesReport,
   getStaffReport,
+  getTipsDiscountsReport,
   RevenueData,
   ServicePerformance,
   StaffPerformance,
+  TipsDiscountsData,
 } from "@/api/services/reportService";
 import { getAllStaff } from "@/api/services/staffService";
 import { getAllServices } from "@/api/services/serviceService";
@@ -157,6 +164,13 @@ export const Reports: React.FC = () => {
     error: staffError,
     execute: fetchStaffReport,
   } = useApi(getStaffReport);
+
+  const {
+    data: tipsDiscountsData,
+    loading: tipsDiscountsLoading,
+    error: tipsDiscountsError,
+    execute: fetchTipsDiscountsReport,
+  } = useApi(getTipsDiscountsReport);
 
   const {
     data: staffListData,
@@ -222,6 +236,7 @@ export const Reports: React.FC = () => {
       { error: staffError, source: "staff" },
       { error: staffListError, source: "staff list" },
       { error: servicesListError, source: "services list" },
+      { error: tipsDiscountsError, source: "tips and discounts" },
     ];
 
     errors.forEach(({ error, source }) => {
@@ -239,6 +254,7 @@ export const Reports: React.FC = () => {
     staffError,
     staffListError,
     servicesListError,
+    tipsDiscountsError,
     toast,
   ]);
 
@@ -256,6 +272,7 @@ export const Reports: React.FC = () => {
     );
     fetchServicesReport(fromDateStr, toDateStr, "revenue_desc");
     fetchStaffReport(fromDateStr, toDateStr, "revenue_desc");
+    fetchTipsDiscountsReport(fromDateStr, toDateStr, reportType);
 
     // Also fetch staff and services lists for filters
     fetchStaffList();
@@ -283,6 +300,9 @@ export const Reports: React.FC = () => {
         case "staff":
           fetchStaffReport(fromDateStr, toDateStr, "revenue_desc");
           break;
+        case "tips-discounts":
+          fetchTipsDiscountsReport(fromDateStr, toDateStr, reportType);
+          break;
       }
     }
   }, [
@@ -294,6 +314,7 @@ export const Reports: React.FC = () => {
     fetchRevenueReport,
     fetchServicesReport,
     fetchStaffReport,
+    fetchTipsDiscountsReport,
   ]);
 
   // Apply filters
@@ -494,27 +515,27 @@ export const Reports: React.FC = () => {
           onValueChange={setActiveTab}
           className="space-y-4"
         >
-          <TabsList className="bg-muted p-1">
-            <TabsTrigger value="revenue" className="gap-2">
-              <DollarSign className="h-4 w-4" />
+          <TabsList className="grid grid-cols-4 lg:w-[600px]">
+            <TabsTrigger value="revenue">
+              <DollarSign className="h-4 w-4 mr-2" />
               Revenue
             </TabsTrigger>
-            <TabsTrigger value="staff" className="gap-2">
-              <Users className="h-4 w-4" />
-              Staff
-            </TabsTrigger>
-            <TabsTrigger value="services" className="gap-2">
-              <Scissors className="h-4 w-4" />
+            <TabsTrigger value="services">
+              <Scissors className="h-4 w-4 mr-2" />
               Services
             </TabsTrigger>
-            <TabsTrigger value="appointments" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Appointments
+            <TabsTrigger value="staff">
+              <Users className="h-4 w-4 mr-2" />
+              Staff
             </TabsTrigger>
+                            <TabsTrigger value="tips-discounts">
+                  <Coins className="h-4 w-4 mr-2" />
+                  Tips & Discounts
+                </TabsTrigger>
           </TabsList>
 
           {/* Revenue Tab */}
-          <TabsContent value="revenue" className="space-y-4">
+          <TabsContent value="revenue" className="space-y-6">
             {/* Revenue Overview */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
@@ -875,439 +896,8 @@ export const Reports: React.FC = () => {
             </Tabs>
           </TabsContent>
 
-          {/* Staff Tab */}
-          <TabsContent value="staff" className="space-y-4">
-            {/* Staff Overview Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Total Staff
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{staffData.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Active staff members
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Average Commission
-                  </CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    $
-                    {(
-                      advancedStaffPerformance.reduce(
-                        (sum, staff) => sum + staff.commissionEarned,
-                        0,
-                      ) / staffData.length
-                    ).toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Per staff member
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Utilization Rate
-                  </CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {Math.round(
-                      advancedStaffPerformance.reduce(
-                        (sum, staff) => sum + staff.utilization,
-                        0,
-                      ) / staffData.length,
-                    )}
-                    %
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Average across all staff
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Customer Satisfaction
-                  </CardTitle>
-                  <Star className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {(
-                      advancedStaffPerformance.reduce(
-                        (sum, staff) =>
-                          sum + Number(staff.customerSatisfaction),
-                        0,
-                      ) / staffData.length
-                    ).toFixed(1)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Average rating out of 5
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Staff Performance Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Staff Performance</CardTitle>
-                <CardDescription>
-                  Click on a row to view detailed performance metrics
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Staff Member</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Appointments</TableHead>
-                      <TableHead>Revenue</TableHead>
-                      <TableHead>Satisfaction</TableHead>
-                      <TableHead>Utilization</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {advancedStaffPerformance.map((staff, index) => {
-                      const staffInfo = staffData.find(
-                        (s) => s.name === staff.name,
-                      );
-                      return (
-                        <TableRow
-                          key={index}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() =>
-                            handleStaffRowClick(
-                              staffInfo?.id || `staff-${index}`,
-                            )
-                          }
-                        >
-                          <TableCell className="font-medium">
-                            {staff.name}
-                          </TableCell>
-                          <TableCell>{staffInfo?.position || "-"}</TableCell>
-                          <TableCell>{staff.appointments}</TableCell>
-                          <TableCell>
-                            ${staff.revenue.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            {staff.customerSatisfaction}/5.0
-                          </TableCell>
-                          <TableCell>{staff.utilization}%</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            {/* Staff Detail Dialog */}
-            <Dialog open={showStaffDialog} onOpenChange={setShowStaffDialog}>
-              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Staff Performance Details</DialogTitle>
-                  <DialogDescription>
-                    Detailed performance metrics and analysis
-                  </DialogDescription>
-                </DialogHeader>
-                {selectedStaffMember && (
-                  <div className="mt-4">
-                    {advancedStaffPerformance
-                      .filter((staff, index) => {
-                        const staffInfo = staffData.find(
-                          (s) => s.id === selectedStaffMember,
-                        );
-                        // Only match one record, either by name or by index
-                        if (staffInfo && staffInfo.name === staff.name)
-                          return true;
-                        if (
-                          !staffInfo &&
-                          selectedStaffMember === `staff-${index}`
-                        )
-                          return true;
-                        return false;
-                      })
-                      .slice(0, 1) // Ensure only one record is displayed
-                      .map((staff, index) => {
-                        const staffInfo = staffData.find(
-                          (s) => s.name === staff.name,
-                        );
-                        return (
-                          <div key={index} className="space-y-6">
-                            <div className="flex items-center space-x-4">
-                              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                                {staffInfo?.image ? (
-                                  <img
-                                    src={staffInfo.image}
-                                    alt={staff.name}
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="text-xl font-semibold">
-                                    {staff.name.charAt(0)}
-                                  </span>
-                                )}
-                              </div>
-                              <div>
-                                <h2 className="text-xl font-bold">
-                                  {staff.name}
-                                </h2>
-                                <p className="text-muted-foreground">
-                                  {staffInfo?.position || "Staff Member"}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              <Card className="overflow-hidden">
-                                <CardHeader className="p-3">
-                                  <CardTitle className="text-sm">
-                                    Appointments
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-3 pt-0">
-                                  <p className="text-2xl font-bold">
-                                    {staff.appointments}
-                                  </p>
-                                </CardContent>
-                              </Card>
-
-                              <Card className="overflow-hidden">
-                                <CardHeader className="p-3">
-                                  <CardTitle className="text-sm">
-                                    Revenue
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-3 pt-0">
-                                  <p className="text-2xl font-bold">
-                                    ${staff.revenue.toLocaleString()}
-                                  </p>
-                                </CardContent>
-                              </Card>
-
-                              <Card className="overflow-hidden">
-                                <CardHeader className="p-3">
-                                  <CardTitle className="text-sm">
-                                    Commission
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-3 pt-0">
-                                  <p className="text-2xl font-bold">
-                                    ${staff.commissionEarned.toLocaleString()}
-                                  </p>
-                                </CardContent>
-                              </Card>
-
-                              <Card className="overflow-hidden">
-                                <CardHeader className="p-3">
-                                  <CardTitle className="text-sm">
-                                    Utilization
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-3 pt-0">
-                                  <p className="text-2xl font-bold">
-                                    {staff.utilization}%
-                                  </p>
-                                </CardContent>
-                              </Card>
-                            </div>
-
-                            <Tabs defaultValue="metrics" className="w-full">
-                              <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="metrics">
-                                  Performance Metrics
-                                </TabsTrigger>
-                                <TabsTrigger value="services">
-                                  Top Services
-                                </TabsTrigger>
-                              </TabsList>
-
-                              <TabsContent
-                                value="metrics"
-                                className="space-y-4 pt-4"
-                              >
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Metric</TableHead>
-                                      <TableHead>Value</TableHead>
-                                      <TableHead>Status</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    <TableRow>
-                                      <TableCell>
-                                        Appointment Completion
-                                      </TableCell>
-                                      <TableCell>
-                                        {staff.appointmentCompletionRate}%
-                                      </TableCell>
-                                      <TableCell>
-                                        <Badge
-                                          variant={
-                                            staff.appointmentCompletionRate > 90
-                                              ? "default"
-                                              : staff.appointmentCompletionRate >
-                                                  75
-                                                ? "secondary"
-                                                : "outline"
-                                          }
-                                        >
-                                          {staff.appointmentCompletionRate > 90
-                                            ? "Excellent"
-                                            : staff.appointmentCompletionRate >
-                                                75
-                                              ? "Good"
-                                              : "Needs Improvement"}
-                                        </Badge>
-                                      </TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell>
-                                        Customer Satisfaction
-                                      </TableCell>
-                                      <TableCell>
-                                        {staff.customerSatisfaction}/5.0
-                                      </TableCell>
-                                      <TableCell>
-                                        <Badge
-                                          variant={
-                                            Number(staff.customerSatisfaction) >
-                                            4.5
-                                              ? "default"
-                                              : Number(
-                                                    staff.customerSatisfaction,
-                                                  ) > 4.0
-                                                ? "secondary"
-                                                : "outline"
-                                          }
-                                        >
-                                          {Number(staff.customerSatisfaction) >
-                                          4.5
-                                            ? "Excellent"
-                                            : Number(
-                                                  staff.customerSatisfaction,
-                                                ) > 4.0
-                                              ? "Good"
-                                              : "Needs Improvement"}
-                                        </Badge>
-                                      </TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell>Utilization Rate</TableCell>
-                                      <TableCell>
-                                        {staff.utilization}%
-                                      </TableCell>
-                                      <TableCell>
-                                        <Badge
-                                          variant={
-                                            staff.utilization > 85
-                                              ? "default"
-                                              : staff.utilization > 70
-                                                ? "secondary"
-                                                : "outline"
-                                          }
-                                        >
-                                          {staff.utilization > 85
-                                            ? "High"
-                                            : staff.utilization > 70
-                                              ? "Good"
-                                              : "Low"}
-                                        </Badge>
-                                      </TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell>
-                                        Services Per Appointment
-                                      </TableCell>
-                                      <TableCell>
-                                        {staff.averageServicesPerAppointment}
-                                      </TableCell>
-                                      <TableCell>
-                                        <Badge
-                                          variant={
-                                            Number(
-                                              staff.averageServicesPerAppointment,
-                                            ) > 1.5
-                                              ? "default"
-                                              : "secondary"
-                                          }
-                                        >
-                                          {Number(
-                                            staff.averageServicesPerAppointment,
-                                          ) > 1.5
-                                            ? "High"
-                                            : "Average"}
-                                        </Badge>
-                                      </TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
-                              </TabsContent>
-
-                              <TabsContent
-                                value="services"
-                                className="space-y-4 pt-4"
-                              >
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Service</TableHead>
-                                      <TableHead>Bookings</TableHead>
-                                      <TableHead>Performance</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {staff.topServices.map((service, idx) => (
-                                      <TableRow key={idx}>
-                                        <TableCell className="font-medium">
-                                          {service.name}
-                                        </TableCell>
-                                        <TableCell>{service.count}</TableCell>
-                                        <TableCell>
-                                          <Badge variant="secondary">
-                                            {idx === 0
-                                              ? "Most Popular"
-                                              : idx === 1
-                                                ? "Popular"
-                                                : "Regular"}
-                                          </Badge>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TabsContent>
-                            </Tabs>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-
           {/* Services Tab */}
-          <TabsContent value="services" className="space-y-4">
+          <TabsContent value="services" className="space-y-6">
             {/* Service Metrics Overview */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
@@ -1742,23 +1332,67 @@ export const Reports: React.FC = () => {
             </Dialog>
           </TabsContent>
 
-          {/* Appointments Tab */}
-          <TabsContent value="appointments" className="space-y-4">
-            {/* Appointment Metrics */}
+          {/* Staff Tab */}
+          <TabsContent value="staff" className="space-y-6">
+            {/* Staff Overview Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Total Appointments
+                    Total Staff
+                  </CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{staffData.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Active staff members
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Average Commission
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    $
+                    {(
+                      advancedStaffPerformance.reduce(
+                        (sum, staff) => sum + staff.commissionEarned,
+                        0,
+                      ) / staffData.length
+                    ).toFixed(2)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Per staff member
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Utilization Rate
                   </CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {appointmentMetrics.total}
+                    {Math.round(
+                      advancedStaffPerformance.reduce(
+                        (sum, staff) => sum + staff.utilization,
+                        0,
+                      ) / staffData.length,
+                    )}
+                    %
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    In selected period
+                    Average across all staff
                   </p>
                 </CardContent>
               </Card>
@@ -1766,186 +1400,567 @@ export const Reports: React.FC = () => {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Completion Rate
+                    Customer Satisfaction
                   </CardTitle>
-                  <CheckIcon className="h-4 w-4 text-muted-foreground" />
+                  <Star className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {appointmentMetrics.completionRate}%
+                    {(
+                      advancedStaffPerformance.reduce(
+                        (sum, staff) =>
+                          sum + Number(staff.customerSatisfaction),
+                        0,
+                      ) / staffData.length
+                    ).toFixed(1)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Completed appointments
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Cancellation Rate
-                  </CardTitle>
-                  <X className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {appointmentMetrics.cancellationRate}%
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Cancelled appointments
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    No-show Rate
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {appointmentMetrics.noShowRate}%
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    No-show appointments
+                    Average rating out of 5
                   </p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Appointment Weekly Analysis */}
-            <Card className="overflow-visible">
+            {/* Staff Performance Table */}
+            <Card>
               <CardHeader>
-                <CardTitle>Weekly Appointment Analysis</CardTitle>
+                <CardTitle>Staff Performance</CardTitle>
                 <CardDescription>
-                  Appointment trends and distribution by day of week
+                  Click on a row to view detailed performance metrics
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pb-6">
-                <div className="w-full h-[350px] mb-6">
-                  <ComparisonChart
-                    data={appointmentMetrics.distributionByDay.map((day) => ({
-                      date: day.day,
-                      current: day.appointments,
-                      previous: day.utilization,
-                    }))}
-                    title=""
-                    showLegend
-                    currentLabel="Appointments"
-                    previousLabel="Utilization %"
-                  />
-                </div>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Staff Member</TableHead>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Appointments</TableHead>
+                      <TableHead>Revenue</TableHead>
+                      <TableHead>Satisfaction</TableHead>
+                      <TableHead>Utilization</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {advancedStaffPerformance.map((staff, index) => {
+                      const staffInfo = staffData.find(
+                        (s) => s.name === staff.name,
+                      );
+                      return (
+                        <TableRow
+                          key={index}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() =>
+                            handleStaffRowClick(
+                              staffInfo?.id || `staff-${index}`,
+                            )
+                          }
+                        >
+                          <TableCell className="font-medium">
+                            {staff.name}
+                          </TableCell>
+                          <TableCell>{staffInfo?.position || "-"}</TableCell>
+                          <TableCell>{staff.appointments}</TableCell>
+                          <TableCell>
+                            ${staff.revenue.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            {staff.customerSatisfaction}/5.0
+                          </TableCell>
+                          <TableCell>{staff.utilization}%</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
 
-            {/* Appointment Distribution Cards */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Daily Distribution</CardTitle>
-                    <CardDescription>
-                      Appointments by day of week
-                    </CardDescription>
-                  </div>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Day</TableHead>
-                        <TableHead>Appointments</TableHead>
-                        <TableHead>Utilization</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {appointmentMetrics.distributionByDay.map((day) => (
-                        <TableRow key={day.day}>
-                          <TableCell className="font-medium">
-                            {day.day}
-                          </TableCell>
-                          <TableCell>{day.appointments}</TableCell>
-                          <TableCell>{day.utilization}%</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                day.utilization > 80
-                                  ? "default"
-                                  : day.utilization > 50
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                            >
-                              {day.utilization > 80
-                                ? "High"
-                                : day.utilization > 50
-                                  ? "Medium"
-                                  : "Low"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+            {/* Staff Detail Dialog */}
+            <Dialog open={showStaffDialog} onOpenChange={setShowStaffDialog}>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Staff Performance Details</DialogTitle>
+                  <DialogDescription>
+                    Detailed performance metrics and analysis
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedStaffMember && (
+                  <div className="mt-4">
+                    {advancedStaffPerformance
+                      .filter((staff, index) => {
+                        const staffInfo = staffData.find(
+                          (s) => s.id === selectedStaffMember,
+                        );
+                        // Only match one record, either by name or by index
+                        if (staffInfo && staffInfo.name === staff.name)
+                          return true;
+                        if (
+                          !staffInfo &&
+                          selectedStaffMember === `staff-${index}`
+                        )
+                          return true;
+                        return false;
+                      })
+                      .slice(0, 1) // Ensure only one record is displayed
+                      .map((staff, index) => {
+                        const staffInfo = staffData.find(
+                          (s) => s.name === staff.name,
+                        );
+                        return (
+                          <div key={index} className="space-y-6">
+                            <div className="flex items-center space-x-4">
+                              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                {staffInfo?.image ? (
+                                  <img
+                                    src={staffInfo.image}
+                                    alt={staff.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-xl font-semibold">
+                                    {staff.name.charAt(0)}
+                                  </span>
+                                )}
+                              </div>
+                              <div>
+                                <h2 className="text-xl font-bold">
+                                  {staff.name}
+                                </h2>
+                                <p className="text-muted-foreground">
+                                  {staffInfo?.position || "Staff Member"}
+                                </p>
+                              </div>
+                            </div>
 
-              <Card>
-                <CardHeader className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Time Distribution</CardTitle>
-                    <CardDescription>
-                      Appointments by time of day
-                    </CardDescription>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <Card className="overflow-hidden">
+                                <CardHeader className="p-3">
+                                  <CardTitle className="text-sm">
+                                    Appointments
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3 pt-0">
+                                  <p className="text-2xl font-bold">
+                                    {staff.appointments}
+                                  </p>
+                                </CardContent>
+                              </Card>
+
+                              <Card className="overflow-hidden">
+                                <CardHeader className="p-3">
+                                  <CardTitle className="text-sm">
+                                    Revenue
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3 pt-0">
+                                  <p className="text-2xl font-bold">
+                                    ${staff.revenue.toLocaleString()}
+                                  </p>
+                                </CardContent>
+                              </Card>
+
+                              <Card className="overflow-hidden">
+                                <CardHeader className="p-3">
+                                  <CardTitle className="text-sm">
+                                    Commission
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3 pt-0">
+                                  <p className="text-2xl font-bold">
+                                    ${staff.commissionEarned.toLocaleString()}
+                                  </p>
+                                </CardContent>
+                              </Card>
+
+                              <Card className="overflow-hidden">
+                                <CardHeader className="p-3">
+                                  <CardTitle className="text-sm">
+                                    Utilization
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3 pt-0">
+                                  <p className="text-2xl font-bold">
+                                    {staff.utilization}%
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            </div>
+
+                            <Tabs defaultValue="metrics" className="w-full">
+                              <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="metrics">
+                                  Performance Metrics
+                                </TabsTrigger>
+                                <TabsTrigger value="services">
+                                  Top Services
+                                </TabsTrigger>
+                              </TabsList>
+
+                              <TabsContent
+                                value="metrics"
+                                className="space-y-4 pt-4"
+                              >
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Metric</TableHead>
+                                      <TableHead>Value</TableHead>
+                                      <TableHead>Status</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    <TableRow>
+                                      <TableCell>
+                                        Appointment Completion
+                                      </TableCell>
+                                      <TableCell>
+                                        {staff.appointmentCompletionRate}%
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge
+                                          variant={
+                                            staff.appointmentCompletionRate > 90
+                                              ? "default"
+                                              : staff.appointmentCompletionRate >
+                                                  75
+                                                ? "secondary"
+                                                : "outline"
+                                          }
+                                        >
+                                          {staff.appointmentCompletionRate > 90
+                                            ? "Excellent"
+                                            : staff.appointmentCompletionRate >
+                                                75
+                                              ? "Good"
+                                              : "Needs Improvement"}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        Customer Satisfaction
+                                      </TableCell>
+                                      <TableCell>
+                                        {staff.customerSatisfaction}/5.0
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge
+                                          variant={
+                                            Number(staff.customerSatisfaction) >
+                                            4.5
+                                              ? "default"
+                                              : Number(
+                                                    staff.customerSatisfaction,
+                                                  ) > 4.0
+                                                ? "secondary"
+                                                : "outline"
+                                          }
+                                        >
+                                          {Number(staff.customerSatisfaction) >
+                                          4.5
+                                            ? "Excellent"
+                                            : Number(
+                                                  staff.customerSatisfaction,
+                                                ) > 4.0
+                                              ? "Good"
+                                              : "Needs Improvement"}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>Utilization Rate</TableCell>
+                                      <TableCell>
+                                        {staff.utilization}%
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge
+                                          variant={
+                                            staff.utilization > 85
+                                              ? "default"
+                                              : staff.utilization > 70
+                                                ? "secondary"
+                                                : "outline"
+                                          }
+                                        >
+                                          {staff.utilization > 85
+                                            ? "High"
+                                            : staff.utilization > 70
+                                              ? "Good"
+                                              : "Low"}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell>
+                                        Services Per Appointment
+                                      </TableCell>
+                                      <TableCell>
+                                        {staff.averageServicesPerAppointment}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge
+                                          variant={
+                                            Number(
+                                              staff.averageServicesPerAppointment,
+                                            ) > 1.5
+                                              ? "default"
+                                              : "secondary"
+                                          }
+                                        >
+                                          {Number(
+                                            staff.averageServicesPerAppointment,
+                                          ) > 1.5
+                                            ? "High"
+                                            : "Average"}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                  </TableBody>
+                                </Table>
+                              </TabsContent>
+
+                              <TabsContent
+                                value="services"
+                                className="space-y-4 pt-4"
+                              >
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Service</TableHead>
+                                      <TableHead>Bookings</TableHead>
+                                      <TableHead>Performance</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {staff.topServices.map((service, idx) => (
+                                      <TableRow key={idx}>
+                                        <TableCell className="font-medium">
+                                          {service.name}
+                                        </TableCell>
+                                        <TableCell>{service.count}</TableCell>
+                                        <TableCell>
+                                          <Badge variant="secondary">
+                                            {idx === 0
+                                              ? "Most Popular"
+                                              : idx === 1
+                                                ? "Popular"
+                                                : "Regular"}
+                                          </Badge>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </TabsContent>
+                            </Tabs>
+                          </div>
+                        );
+                      })}
                   </div>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Appointments</TableHead>
-                        <TableHead>Utilization</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {appointmentMetrics.distributionByTime.map((time) => (
-                        <TableRow key={time.time}>
-                          <TableCell className="font-medium">
-                            {time.time}
-                          </TableCell>
-                          <TableCell>{time.appointments}</TableCell>
-                          <TableCell>{time.utilization}%</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                time.utilization > 80
-                                  ? "default"
-                                  : time.utilization > 50
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                            >
-                              {time.utilization > 80
-                                ? "Peak"
-                                : time.utilization > 50
-                                  ? "Busy"
-                                  : "Quiet"}
-                            </Badge>
-                          </TableCell>
+                )}
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          {/* Tips & Discounts Tab */}
+          <TabsContent value="tips-discounts" className="space-y-6">
+            {tipsDiscountsLoading ? (
+              <div className="flex justify-center p-12">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              </div>
+            ) : tipsDiscountsError ? (
+              <div className="p-8 text-center">
+                <p className="text-destructive">Error loading tips and discounts data</p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const formattedFromDate = format(fromDate, "yyyy-MM-dd");
+                    const formattedToDate = format(toDate, "yyyy-MM-dd");
+                    fetchTipsDiscountsReport(formattedFromDate, formattedToDate, reportType);
+                  }}
+                  className="mt-4"
+                >
+                  <RefreshCcw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            ) : tipsDiscountsData && tipsDiscountsData.data ? (
+              <>
+                {/* Summary Cards */}
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Total Tips</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        ${tipsDiscountsData.data.summary.totalTips.toFixed(2)}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {tipsDiscountsData.data.summary.invoicesWithTip} invoices with tips
+                      </p>
+                      <div className="mt-2 text-sm">
+                        <span className="text-muted-foreground">Average:</span>{" "}
+                        <span className="font-medium">
+                          {tipsDiscountsData.data.summary.avgTipPercentage.toFixed(1)}%
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Total Discounts</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        ${tipsDiscountsData.data.summary.totalDiscounts.toFixed(2)}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {tipsDiscountsData.data.summary.invoicesWithDiscount} invoices with discounts
+                      </p>
+                      <div className="mt-2 text-sm">
+                        <span className="text-muted-foreground">Average:</span>{" "}
+                        <span className="font-medium">
+                          {tipsDiscountsData.data.summary.avgDiscountPercentage.toFixed(1)}%
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        ${tipsDiscountsData.data.summary.totalSales.toFixed(2)}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {tipsDiscountsData.data.summary.totalInvoices} total invoices
+                      </p>
+                      <Progress 
+                        value={
+                          (tipsDiscountsData.data.summary.invoicesWithTip / 
+                          tipsDiscountsData.data.summary.totalInvoices) * 100
+                        } 
+                        className="h-2 mt-2"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {Math.round((tipsDiscountsData.data.summary.invoicesWithTip / 
+                        tipsDiscountsData.data.summary.totalInvoices) * 100)}% of invoices include tips
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Discount Rate Analysis</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {tipsDiscountsData.data.discountTypeBreakdown.map((type) => (
+                          <div key={type.discount_type} className="flex justify-between items-center">
+                            <span className="text-sm capitalize">
+                              {type.discount_type || 'No type'} ({type.count})
+                            </span>
+                            <span className="text-sm font-medium">
+                              ${type.totalDiscount.toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Time Series Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tips & Discounts Over Time</CardTitle>
+                    <CardDescription>
+                      Trends for the selected period ({getDisplayDateRange()})
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-2">
+                    <div className="h-[300px]">
+                      {/* In a real app, render a chart component here using the timeSeriesData */}
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Tips</TableHead>
+                              <TableHead>Tip %</TableHead>
+                              <TableHead>Discounts</TableHead>
+                              <TableHead>Discount %</TableHead>
+                              <TableHead>Sales</TableHead>
+                              <TableHead>Invoices</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {tipsDiscountsData.data.timeSeriesData.map((item) => (
+                              <TableRow key={item.date}>
+                                <TableCell>{item.date}</TableCell>
+                                <TableCell>${item.tips.toFixed(2)}</TableCell>
+                                <TableCell>{item.tipPercentage.toFixed(1)}%</TableCell>
+                                <TableCell>${item.discounts.toFixed(2)}</TableCell>
+                                <TableCell>{item.discountPercentage.toFixed(1)}%</TableCell>
+                                <TableCell>${item.totalSales.toFixed(2)}</TableCell>
+                                <TableCell>{item.invoiceCount}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Staff Breakdown */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Staff Performance</CardTitle>
+                    <CardDescription>
+                      Tips and discounts by staff member
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Staff</TableHead>
+                          <TableHead>Total Tips</TableHead>
+                          <TableHead>Avg Tip %</TableHead>
+                          <TableHead>Total Discounts</TableHead>
+                          <TableHead>Avg Discount %</TableHead>
+                          <TableHead>Sales</TableHead>
+                          <TableHead>Invoices</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
+                      </TableHeader>
+                      <TableBody>
+                        {tipsDiscountsData.data.staffBreakdown.map((staff) => (
+                          <TableRow key={staff.staff_id}>
+                            <TableCell>{staff.staff_name}</TableCell>
+                            <TableCell>${staff.totalTips.toFixed(2)}</TableCell>
+                            <TableCell>{staff.tipPercentage.toFixed(1)}%</TableCell>
+                            <TableCell>${staff.totalDiscounts.toFixed(2)}</TableCell>
+                            <TableCell>{staff.discountPercentage.toFixed(1)}%</TableCell>
+                            <TableCell>${staff.totalSales.toFixed(2)}</TableCell>
+                            <TableCell>{staff.invoiceCount}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <div className="p-8 text-center">
+                <p>No tips and discounts data available for the selected period</p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

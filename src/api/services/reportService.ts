@@ -34,6 +34,45 @@ export interface StaffPerformance {
   commission: number;
 }
 
+export interface TipsDiscountsData {
+  summary: {
+    totalTips: number;
+    totalDiscounts: number;
+    totalSubtotal: number;
+    totalSales: number;
+    avgTipPercentage: number;
+    avgDiscountPercentage: number;
+    totalInvoices: number;
+    invoicesWithTip: number;
+    invoicesWithDiscount: number;
+  };
+  timeSeriesData: Array<{
+    date: string;
+    tips: number;
+    discounts: number;
+    totalSales: number;
+    tipPercentage: number;
+    discountPercentage: number;
+    invoiceCount: number;
+  }>;
+  staffBreakdown: Array<{
+    staff_id: string;
+    staff_name: string;
+    totalTips: number;
+    totalDiscounts: number;
+    totalSales: number;
+    tipPercentage: number;
+    discountPercentage: number;
+    invoiceCount: number;
+  }>;
+  discountTypeBreakdown: Array<{
+    discount_type: string;
+    totalDiscount: number;
+    count: number;
+    avgDiscountValue: number;
+  }>;
+}
+
 // Response interfaces
 interface DashboardResponse {
   success: boolean;
@@ -53,6 +92,11 @@ interface ServicesReportResponse {
 interface StaffReportResponse {
   success: boolean;
   data: StaffPerformance[];
+}
+
+interface TipsDiscountsResponse {
+  success: boolean;
+  data: TipsDiscountsData;
 }
 
 /**
@@ -99,4 +143,22 @@ export const getStaffReport = async (
   return get<StaffReportResponse>(
     `/reports/staff?dateFrom=${dateFrom}&dateTo=${dateTo}&sort=${sort}`
   );
+};
+
+/**
+ * Get tips and discounts report
+ */
+export const getTipsDiscountsReport = async (
+  dateFrom: string,
+  dateTo: string,
+  groupBy = 'day',
+  staffId?: string
+): Promise<TipsDiscountsResponse> => {
+  let url = `/reports/tips-discounts?dateFrom=${dateFrom}&dateTo=${dateTo}&groupBy=${groupBy}`;
+  
+  if (staffId) {
+    url += `&staffId=${staffId}`;
+  }
+  
+  return get<TipsDiscountsResponse>(url);
 }; 

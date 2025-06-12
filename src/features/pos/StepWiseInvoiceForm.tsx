@@ -15,7 +15,8 @@ import {
   Info,
   Edit,
   Plus,
-  Loader2
+  Loader2,
+  DollarSign
 } from 'lucide-react';
 import {
   Form,
@@ -701,6 +702,204 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     );
   };
 
+  // Render the payment step with enhanced UI for tips and discounts
+  const renderPaymentStep = () => {
+    // Calculate subtotal
+    const subtotal = services.reduce((sum, service) => {
+      const selectedService = serviceData.find(s => s.id === service.serviceId);
+      return sum + (selectedService?.price || 0);
+    }, 0);
+    
+    // Calculate discount amount
+    let discountAmount = 0;
+    const discountType = form.watch('discountType');
+    const discountValue = Number(form.watch('discountValue')) || 0;
+    
+    if (discountType === 'percentage') {
+      discountAmount = (subtotal * discountValue) / 100;
+    } else if (discountType === 'fixed') {
+      discountAmount = discountValue;
+    }
+    
+    // Get tip amount
+    const tipAmount = Number(form.watch('tipAmount')) || 0;
+    
+    return (
+      <div className="space-y-6">
+        <h3 className="text-lg font-medium">Payment Details</h3>
+        
+        {/* Payment Method Selection */}
+        <Card className="p-4">
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="paymentMethod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Payment Method</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment method" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="mobile">Mobile Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </Card>
+        
+        {/* Discount Section */}
+        <Card>
+          <div className="p-4 border-b">
+            <h4 className="font-medium flex items-center">
+              <Percent className="h-4 w-4 mr-2 text-blue-600" />
+              Discount
+            </h4>
+            <p className="text-sm text-muted-foreground mt-1">
+              Apply a discount to this invoice
+            </p>
+          </div>
+          <div className="p-4 space-y-4">
+            <FormField
+              control={form.control}
+              name="discountType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Discount Type</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value === 'none') {
+                        form.setValue('discountValue', 0);
+                      }
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Discount Type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">No Discount</SelectItem>
+                      <SelectItem value="percentage">Percentage (%)</SelectItem>
+                      <SelectItem value="fixed">Fixed Amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="discountValue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Discount Value</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        step={form.watch('discountType') === 'percentage' ? '1' : '0.01'}
+                        disabled={form.watch('discountType') === 'none'}
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        className={form.watch('discountType') === 'percentage' ? 'pr-8' : ''}
+                      />
+                      {form.watch('discountType') === 'percentage' && (
+                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                          <Percent className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Discount summary */}
+            {discountType !== 'none' && discountValue > 0 && (
+              <div className="p-3 bg-blue-50 rounded-md mt-2">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Discount amount:</span>
+                  <span className="font-medium">{formatCurrency(discountAmount)}</span>
+                </div>
+                {subtotal > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {((discountAmount / subtotal) * 100).toFixed(1)}% of subtotal
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+        
+        {/* Tip Section */}
+        <Card>
+          <div className="p-4 border-b">
+            <h4 className="font-medium flex items-center">
+              <DollarSign className="h-4 w-4 mr-2 text-green-600" />
+              Tip
+            </h4>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add a tip to this invoice
+            </p>
+          </div>
+          <div className="p-4">
+            <FormField
+              control={form.control}
+              name="tipAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tip Amount</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Tip summary */}
+            {tipAmount > 0 && (
+              <div className="p-3 bg-green-50 rounded-md mt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Tip amount:</span>
+                  <span className="font-medium">{formatCurrency(tipAmount)}</span>
+                </div>
+                {subtotal > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {((tipAmount / (subtotal - discountAmount)) * 100).toFixed(1)}% of post-discount total
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+        
+        {/* GST Rate Selection */}
+        {renderGSTRateSelection()}
+      </div>
+    );
+  };
+
   // Render the summary step
   const renderSummaryStep = () => {
     const selectedGstRateId = form.getValues().gstRates[0];
@@ -1140,124 +1339,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             {currentStep === 'staff' && renderStaffStep()}
 
             {/* Step 4: Payment Information */}
-            {currentStep === 'payment' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium">Payment Details</h3>
-                
-                {/* Group payment method, discount and tip together in a card */}
-                <Card className="p-4">
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="paymentMethod"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Payment Method</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select payment method" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="cash">Cash</SelectItem>
-                              <SelectItem value="card">Card</SelectItem>
-                              <SelectItem value="mobile">Mobile Payment</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="discountType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Discount Type</FormLabel>
-                            <Select
-                              value={field.value}
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                if (value === 'none') {
-                                  form.setValue('discountValue', 0);
-                                }
-                              }}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Discount Type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="none">No Discount</SelectItem>
-                                <SelectItem value="percentage">Percentage (%)</SelectItem>
-                                <SelectItem value="fixed">Fixed Amount</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="discountValue"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Discount Value</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step={form.watch('discountType') === 'percentage' ? '1' : '0.01'}
-                                  disabled={form.watch('discountType') === 'none'}
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                  className={form.watch('discountType') === 'percentage' ? 'pr-8' : ''}
-                                />
-                                {form.watch('discountType') === 'percentage' && (
-                                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                                    <Percent className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                )}
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="tipAmount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tip Amount</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </Card>
-                
-                {/* GST Rate Selection */}
-                {renderGSTRateSelection()}
-              </div>
-            )}
+            {currentStep === 'payment' && renderPaymentStep()}
 
             {/* Step 5: Review & Summary */}
             {currentStep === 'summary' && renderSummaryStep()}
