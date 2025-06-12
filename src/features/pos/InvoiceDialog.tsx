@@ -70,10 +70,10 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
     setTimeout(() => {
       window.print();
       setIsPrinting(false);
-      toast({
-        title: 'Print requested',
+    toast({
+      title: 'Print requested',
         description: 'Print dialog opened.',
-      });
+    });
     }, 500);
   };
 
@@ -83,10 +83,10 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
     // Simulate download delay
     setTimeout(() => {
       setIsDownloading(false);
-      toast({
-        title: 'Download started',
-        description: 'Your invoice PDF will be downloaded shortly.',
-      });
+    toast({
+      title: 'Download started',
+      description: 'Your invoice PDF will be downloaded shortly.',
+    });
     }, 1000);
   };
 
@@ -94,10 +94,10 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
     try {
       const response = await executeSendInvoice(invoice.id);
       if (response.success) {
-        toast({
-          title: 'Email sent',
+    toast({
+      title: 'Email sent',
           description: response.message || 'Invoice has been sent to the customer\'s email.',
-        });
+    });
         
         // Call the update callback if provided
         if (onInvoiceUpdated) {
@@ -153,9 +153,9 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 Payment Method: {invoice.payment_method.charAt(0).toUpperCase() + invoice.payment_method.slice(1)}
               </div>
               {invoice.created_at && (
-                <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                   Created: {format(new Date(invoice.created_at), 'MMMM d, yyyy, h:mm a')}
-                </div>
+              </div>
               )}
             </div>
 
@@ -179,7 +179,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Services</h4>
               <div className="space-y-2">
-                {invoice.services.map((service, index) => (
+                {(invoice.invoiceServices || invoice.services || []).map((service, index) => (
                   <div
                     key={`${service.service_id}-${index}`}
                     className="flex justify-between text-sm"
@@ -262,7 +262,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             {isPrinting ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <Printer className="h-4 w-4 mr-2" />
+            <Printer className="h-4 w-4 mr-2" />
             )}
             Print
           </Button>
@@ -270,7 +270,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             {isDownloading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <Download className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4 mr-2" />
             )}
             Download PDF
           </Button>
@@ -278,7 +278,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             {isSendingEmail ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <Mail className="h-4 w-4 mr-2" />
+            <Mail className="h-4 w-4 mr-2" />
             )}
             Send Email
           </Button>

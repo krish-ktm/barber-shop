@@ -34,7 +34,8 @@ export interface Invoice {
   payment_method: 'cash' | 'card' | 'mobile' | 'pending';
   status: 'paid' | 'pending' | 'cancelled';
   notes?: string;
-  services: InvoiceService[];
+  services?: InvoiceService[]; // For backward compatibility
+  invoiceServices?: InvoiceService[]; // Correct alias from the backend
   tax_components?: TaxComponent[];
   created_at?: string;
   updated_at?: string;

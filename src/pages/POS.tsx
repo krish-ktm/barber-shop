@@ -260,41 +260,41 @@ export const POS: React.FC = () => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Staff</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Staff</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Payment</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
                 {filteredInvoices.length > 0 ? (
                   filteredInvoices.map((invoice) => (
-                    <TableRow 
-                      key={invoice.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleInvoiceClick(invoice)}
-                    >
-                      <TableCell className="font-medium">
-                        {invoice.id}
+                <TableRow 
+                  key={invoice.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleInvoiceClick(invoice)}
+                >
+                  <TableCell className="font-medium">
+                    {invoice.id}
                         {invoice.appointment_id && (
-                          <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                             Appointment #{invoice.appointment_id}
-                          </div>
-                        )}
-                      </TableCell>
+                      </div>
+                    )}
+                  </TableCell>
                       <TableCell>{invoice.customer_name}</TableCell>
                       <TableCell>{invoice.staff_name}</TableCell>
                       <TableCell>{format(new Date(invoice.date), 'dd MMM yyyy')}</TableCell>
                       <TableCell>{getPaymentMethodBadge(invoice.payment_method)}</TableCell>
                       <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(invoice.total)}
+                  <TableCell className="text-right">
+                    {formatCurrency(invoice.total)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -302,15 +302,15 @@ export const POS: React.FC = () => {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       {searchQuery ? "No invoices found matching your search" : "No invoices found"}
-                    </TableCell>
-                  </TableRow>
+                  </TableCell>
+                </TableRow>
                 )}
-              </TableBody>
-            </Table>
+            </TableBody>
+          </Table>
           )}
         </div>
       </div>
-      
+
       {selectedInvoice && (
         <InvoiceDialog
           open={showInvoiceDialog}
@@ -319,7 +319,7 @@ export const POS: React.FC = () => {
           onInvoiceUpdated={() => fetchInvoices(page, limit, sortMap[sortBy])}
         />
       )}
-      
+
       <StepInvoiceDialog
         open={showNewInvoiceDialog}
         onOpenChange={setShowNewInvoiceDialog}

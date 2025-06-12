@@ -382,19 +382,6 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
           };
         }
         
-        console.log('Services being submitted from StepWiseInvoiceForm:', JSON.stringify(services, null, 2));
-        console.log('Service count:', services.length);
-        
-        // Make sure services array is not empty
-        if (services.length === 0) {
-          toast({
-            title: 'Services required',
-            description: 'Please select at least one service before submitting.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        
         onSubmit({
           ...formValues,
           services,
@@ -709,15 +696,13 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Calculate subtotal
     const subtotal = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
-      // Ensure price is a valid number
-      const price = selectedService?.price ? Number(selectedService.price) : 0;
-      return sum + price;
+      return sum + (selectedService?.price || 0);
     }, 0);
     
     // Calculate discount
     let discountAmount = 0;
     const discountType = form.getValues().discountType;
-    const discountValue = Number(form.getValues().discountValue) || 0;
+    const discountValue = form.getValues().discountValue;
     
     if (discountType === 'percentage') {
       discountAmount = (subtotal * discountValue) / 100;
@@ -726,12 +711,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     }
     
     // Calculate tax
-    const taxRate = Number(selectedGstRate?.totalRate) || 0;
+    const taxRate = selectedGstRate?.totalRate || 0;
     const taxableAmount = subtotal - discountAmount;
     const taxAmount = (taxableAmount * taxRate) / 100;
     
     // Calculate total
-    const tipAmount = Number(form.getValues().tipAmount) || 0;
+    const tipAmount = form.getValues().tipAmount;
     const total = taxableAmount + taxAmount + tipAmount;
     
     return (
@@ -768,7 +753,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               return (
                 <div key={service.id} className="flex justify-between">
                   <span>{selectedService.name}</span>
-                  <span>{formatCurrency(Number(selectedService.price) || 0)}</span>
+                  <span>{formatCurrency(selectedService.price)}</span>
                 </div>
               );
             })}
@@ -812,7 +797,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 {selectedGstRate.components.map(comp => (
                   <div key={comp.id} className="flex justify-between text-sm text-muted-foreground">
                     <span>{comp.name} ({comp.rate}%)</span>
-                    <span>{formatCurrency((taxableAmount * Number(comp.rate)) / 100)}</span>
+                    <span>{formatCurrency((taxableAmount * comp.rate) / 100)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-medium">
@@ -848,10 +833,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     
     // Pre-populate with default GST name if custom name is empty
     const handleCustomGstAdd = () => {
-      // Ensure customGstValue is a valid number
-      const rateValue = Number(customGstValue) || 0;
-      
-      if (!customGstRate || rateValue <= 0) {
+      if (!customGstRate || customGstValue <= 0) {
         toast({
           title: 'Invalid custom GST',
           description: 'Please provide a name and a positive rate value',
@@ -864,9 +846,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       const customRate = {
         id: `custom-${Date.now()}`,
         name: customGstRate,
-        components: [{ id: `comp-custom-${Date.now()}`, name: 'Custom', rate: rateValue }],
+        components: [{ id: `comp-custom-${Date.now()}`, name: 'Custom', rate: customGstValue }],
         isActive: false,
-        totalRate: rateValue
+        totalRate: customGstValue
       };
       
       // Update the form with the custom rate
@@ -1086,9 +1068,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                                       onClick={() => handleServiceSelection(s.id)}
                                     >
                                       <span>{s.name}</span>
-                                                                          <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
-                                      {formatCurrency(Number(s.price) || 0)}
-                                    </span>
+                                      <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
+                                        {formatCurrency(s.price)}
+                                      </span>
                                     </Button>
                                   );
                                 })}
@@ -1115,7 +1097,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                               </div>
                               <div className="flex items-center gap-4">
                                 <span className="text-sm font-medium">
-                                  {formatCurrency(Number(selectedService.price) || 0)}
+                                  {formatCurrency(selectedService.price)}
                                 </span>
                                 <Button
                                   type="button"

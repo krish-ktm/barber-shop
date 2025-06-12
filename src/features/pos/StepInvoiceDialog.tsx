@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -10,8 +10,11 @@ import { useToast } from '@/hooks/use-toast';
 import { StepWiseInvoiceForm, InvoiceFormData } from './StepWiseInvoiceForm';
 import { useApi } from '@/hooks/useApi';
 import { createInvoice } from '@/api/services/invoiceService';
-import { serviceData, gstRatesData, staffData } from '@/mocks';
+import { getAllStaff } from '@/api/services/staffService';
+import { getAllServices } from '@/api/services/serviceService';
+import { gstRatesData } from '@/mocks';
 import { Customer } from '@/types';
+import { Loader2 } from 'lucide-react';
 
 interface StepInvoiceDialogProps {
   open: boolean;
@@ -27,12 +30,100 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [staffMembers, setStaffMembers] = useState<Array<{
+    id: string;
+    name: string;
+    position: string;
+    image: string;
+  }>>([]);
+  const [serviceItems, setServiceItems] = useState<Array<{
+    id: string;
+    name: string;
+    price: number;
+    duration: number;
+    category: string;
+    description?: string;
+  }>>([]);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
+  const [isLoadingServices, setIsLoadingServices] = useState(false);
   
-  // Use the API hook for creating invoices
+  // Use the API hook for creating invoices and fetching data
   const {
     loading,
     execute: executeCreateInvoice
   } = useApi(createInvoice);
+  
+  const {
+    execute: fetchStaff
+  } = useApi(getAllStaff);
+  
+  const {
+    execute: fetchServices
+  } = useApi(getAllServices);
+  
+  // Fetch staff members and services when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Fetch staff members
+      setIsLoadingStaff(true);
+      fetchStaff(1, 100, 'name_asc', undefined, 'available')
+        .then(response => {
+          if (response.success && response.staff) {
+            // Transform staff data to match the format expected by the form
+            const formattedStaff = response.staff.map(member => ({
+              id: member.id,
+              name: member.user?.name || 'Unknown',
+              position: member.bio ? member.bio.split('.')[0] : 'Staff Member',
+              image: member.image || member.user?.image || '',
+            }));
+            setStaffMembers(formattedStaff);
+          } else {
+            toast({
+              title: 'Error',
+              description: 'Failed to load staff members',
+              variant: 'destructive',
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching staff:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load staff members',
+            variant: 'destructive',
+          });
+        })
+        .finally(() => {
+          setIsLoadingStaff(false);
+        });
+      
+      // Fetch services
+      setIsLoadingServices(true);
+      fetchServices(1, 100, 'name_asc')
+        .then(response => {
+          if (response.success && response.services) {
+            setServiceItems(response.services);
+          } else {
+            toast({
+              title: 'Error',
+              description: 'Failed to load services',
+              variant: 'destructive',
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching services:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load services',
+            variant: 'destructive',
+          });
+        })
+        .finally(() => {
+          setIsLoadingServices(false);
+        });
+    }
+  }, [open, fetchStaff, fetchServices, toast]);
 
   const handleSubmit = async (formData: InvoiceFormData) => {
     try {
@@ -43,32 +134,62 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         setSelectedCustomer(formData.selectedCustomer);
       }
       
-      // Calculate the services details by getting the actual data from serviceData mock
-      // In a real implementation, this calculation should be done on the server
+      // Prepare services data
+      console.log('Original services data from form:', JSON.stringify(formData.services, null, 2));
+      
+      if (!formData.services || formData.services.length === 0) {
+        console.error('WARNING: No services received from form data!');
+        toast({
+          title: 'Error',
+          description: 'No services selected. Please select at least one service.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
       const servicesWithDetails = formData.services.map(service => {
-        const serviceDetails = serviceData.find(s => s.id === service.serviceId);
-        return {
-          service_id: service.serviceId,
-          service_name: serviceDetails?.name || '',
-          price: serviceDetails?.price || 0,
-          quantity: 1,
-          total: serviceDetails?.price || 0
-        };
+        // First, try to find the service in our loaded service items
+        const serviceDetails = serviceItems.find(s => s.id === service.serviceId);
+        
+        if (serviceDetails) {
+          // If we have the service details, use them
+          return {
+            service_id: serviceDetails.id,
+            service_name: serviceDetails.name,
+            price: serviceDetails.price,
+            quantity: 1,
+            total: serviceDetails.price
+          };
+        } else {
+          // If we don't have the service details, use what we have in the form data
+          // This is a fallback to prevent errors when the service ID doesn't match the database
+          console.warn(`Service not found in local cache: ${service.serviceId}. Using fallback.`);
+          return {
+            service_id: service.serviceId,
+            service_name: service.id || 'Unknown Service',
+            price: 0, // We don't know the price, will need to be calculated on server
+            quantity: 1,
+            total: 0
+          };
+        }
       });
       
-      // Calculate subtotal
-      const subtotal = servicesWithDetails.reduce((sum, service) => sum + service.total, 0);
+      // Calculate subtotal - ensure values are numbers
+      const subtotal = servicesWithDetails.reduce((sum, service) => sum + (Number(service.total) || 0), 0);
       
       // Get the GST rate data
       const gstRateData = gstRatesData.find(rate => rate.id === formData.gstRates[0]);
-      const taxRate = gstRateData?.totalRate || 7.5;
+      const taxRate = Number(gstRateData?.totalRate) || 7.5;
       
       // Calculate discount amount
       let discountAmount = 0;
-      if (formData.discountType === 'percentage' && formData.discountValue > 0) {
-        discountAmount = (subtotal * formData.discountValue) / 100;
-      } else if (formData.discountType === 'fixed' && formData.discountValue > 0) {
-        discountAmount = formData.discountValue;
+      const discountValue = Number(formData.discountValue) || 0;
+      
+      if (formData.discountType === 'percentage' && discountValue > 0) {
+        discountAmount = (subtotal * discountValue) / 100;
+      } else if (formData.discountType === 'fixed' && discountValue > 0) {
+        discountAmount = discountValue;
       }
       
       // Calculate tax amount
@@ -76,23 +197,26 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const taxAmount = (taxableAmount * taxRate) / 100;
       
       // Calculate total
-      const tipAmount = formData.tipAmount || 0;
+      const tipAmount = Number(formData.tipAmount) || 0;
       const total = taxableAmount + taxAmount + tipAmount;
       
-      // Get staff name
-      const selectedStaff = staffData.find(staff => staff.id === formData.staffId);
-      const staffName = selectedStaff ? selectedStaff.name : '';
+      // Get staff details (if available)
+      const selectedStaff = staffMembers.find(staff => staff.id === formData.staffId);
+      const staffId = formData.staffId; // Use the ID from the form regardless
+      const staffName = selectedStaff?.name || 'Staff Member'; // Use name if available, otherwise generic name
       
-      // IMPORTANT: Use a real customer ID from your database
-      // The error shows that mock IDs like 'cust-1' do not exist in your database
-      // Use the admin user ID which we know exists
+      // If we don't have staff details and this is not a mock ID starting with "staff-", show a warning
+      if (!selectedStaff && !formData.staffId.startsWith('staff-')) {
+        console.warn(`Staff member not found in local cache: ${formData.staffId}. Using original ID.`);
+      }
       
+      // IMPORTANT: Use real customer and staff IDs
       let customerId;
       let customerName;
 
       if (formData.isGuestUser || !selectedCustomer) {
-        // For guest or when no customer is selected, use the admin ID
-        customerId = '9197ef59-839a-4564-9168-110cb86db65e'; // Admin ID from the token
+        // For guest or when no customer is selected, use the guest-user ID
+        customerId = 'guest-user'; // Guest customer ID that exists in the database
         customerName = 'Guest Customer';
       } else {
         // Use selected customer
@@ -104,77 +228,151 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const invoiceData = {
         customer_id: customerId,
         customer_name: customerName,
-        staff_id: formData.staffId,
-        staff_name: staffName,
+        staff_id: staffId, // Use the ID from the form
+        staff_name: staffName, // Use the name we determined above
         date: new Date().toISOString().split('T')[0],
-        services: servicesWithDetails,
+        services: servicesWithDetails, // Keep for backward compatibility
+        invoiceServices: servicesWithDetails, // Use the correct property name to match backend alias
         subtotal: subtotal,
         tax: taxRate,
         tax_amount: taxAmount,
         total: total,
         payment_method: formData.paymentMethod,
         status: 'paid', // Invoice is created as paid
-        notes: formData.notes || ''
+        notes: formData.notes || '',
+        tip_amount: tipAmount || 0 // Always include tip_amount even if 0
       } as const; // Use const assertion instead of individual property assertion
       
-      // Only add discount fields if a discount is applied
-      if (formData.discountType !== 'none') {
-        Object.assign(invoiceData, {
-          discount_type: formData.discountType,
-          discount_value: formData.discountValue,
-          discount_amount: discountAmount
-        });
-      }
+      // Always include discount fields even if no discount
+      Object.assign(invoiceData, {
+        discount_type: formData.discountType,
+        discount_value: formData.discountValue || 0,
+        discount_amount: discountAmount
+      });
       
-      // Only add tip if one is provided
-      if (formData.tipAmount > 0) {
-        Object.assign(invoiceData, {
-          tip_amount: formData.tipAmount
-        });
-      }
+      // Tip amount is already included in the invoiceData object
       
       // Add tax components if we have GST rate details
       if (gstRateData && gstRateData.components && gstRateData.components.length > 0) {
         const taxComponents = gstRateData.components.map(comp => ({
           name: comp.name,
-          rate: comp.rate,
-          amount: (taxableAmount * comp.rate) / 100
+          rate: Number(comp.rate) || 0,
+          amount: (taxableAmount * Number(comp.rate) || 0) / 100
         }));
         
         Object.assign(invoiceData, {
           tax_components: taxComponents
         });
+      } else {
+        // Add default tax component if none exists
+        Object.assign(invoiceData, {
+          tax_components: [{
+            name: 'Standard GST',
+            rate: taxRate,
+            amount: taxAmount
+          }]
+        });
       }
       
-      console.log('Sending invoice data:', JSON.stringify(invoiceData));
+      console.log('Sending invoice data:', JSON.stringify(invoiceData, null, 2));
+      console.log('Services being sent:', JSON.stringify(servicesWithDetails, null, 2));
+      console.log('Services array length:', servicesWithDetails.length);
+      console.log('First service:', servicesWithDetails[0] ? JSON.stringify(servicesWithDetails[0], null, 2) : 'No services found');
+      
+      // Log any services that don't match our local cache
+      const mismatchedServices = formData.services.filter(service => 
+        !serviceItems.some(s => s.id === service.serviceId)
+      );
+      
+      if (mismatchedServices.length > 0) {
+        console.warn('Warning: Some services don\'t exist in local cache:', 
+          mismatchedServices.map(s => s.serviceId).join(', ')
+        );
+      }
       
       // Send data to the API
       const response = await executeCreateInvoice(invoiceData);
       
       if (response.success) {
-        toast({
-          title: 'Invoice created',
-          description: 'New invoice has been created successfully.',
-        });
+    toast({
+      title: 'Invoice created',
+      description: 'New invoice has been created successfully.',
+    });
         
-        onOpenChange(false);
+    onOpenChange(false);
         
         // Call the onInvoiceCreated callback if provided
         if (onInvoiceCreated) {
           onInvoiceCreated();
         }
       }
-    } catch (err) {
-      console.error('Error creating invoice:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to create invoice. Please try again.',
-        variant: 'destructive',
-      });
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      console.error('Error creating invoice:', error);
+      
+      // Check if it's a foreign key constraint error
+      if (error.message && error.message.includes('foreign key constraint fails')) {
+        if (error.message.includes('customer_id')) {
+          toast({
+            title: 'Customer Error',
+            description: 'Failed to create invoice: The customer ID does not exist in the database.',
+            variant: 'destructive',
+          });
+        } else if (error.message.includes('staff_id')) {
+          toast({
+            title: 'Staff Error',
+            description: 'Failed to create invoice: The staff ID does not exist in the database.',
+            variant: 'destructive',
+          });
+        } else if (error.message.includes('service_id')) {
+          // Handle service ID errors specifically
+          let serviceId = '';
+          try {
+            // Try to extract the service ID from the error message
+            const match = error.message.match(/parameters.*service-\d+/);
+            if (match && match[0]) {
+              serviceId = match[0].split(',').find(p => p.trim().includes('service-'))?.trim() || '';
+            }
+          } catch (e) {
+            console.error('Failed to extract service ID from error:', e);
+          }
+          
+          toast({
+            title: 'Service Error',
+            description: `Failed to create invoice: Service ID ${serviceId || ''} does not exist in the database. Please refresh the page to get the latest services.`,
+            variant: 'destructive',
+          });
+          
+          // Refresh the services list to get the latest data
+          fetchServices(1, 100, 'name_asc')
+            .then(response => {
+              if (response.success && response.services) {
+                setServiceItems(response.services);
+              }
+            })
+            .catch(e => console.error('Error refreshing services:', e));
+            
+        } else {
+          toast({
+            title: 'Database Error',
+            description: 'Failed to create invoice: A database constraint error occurred.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to create invoice: ${error.message || 'Please try again.'}`,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Global loading state while fetching initial data
+  const isInitialLoading = isLoadingStaff || isLoadingServices;
 
   return (
     <Sheet open={open} onOpenChange={isSubmitting ? undefined : onOpenChange}>
@@ -188,13 +386,41 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
           </SheetHeader>
         </div>
 
+        {isInitialLoading ? (
+          <div className="flex items-center justify-center h-[calc(100%-80px)]">
+            <div className="text-center">
+              <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading data...</p>
+            </div>
+          </div>
+        ) : staffMembers.length === 0 || serviceItems.length === 0 ? (
+          <div className="flex items-center justify-center h-[calc(100%-80px)]">
+            <div className="text-center max-w-md p-6">
+              <h3 className="text-lg font-medium mb-2">Cannot Create Invoice</h3>
+              <p className="text-muted-foreground mb-4">
+                {staffMembers.length === 0 && serviceItems.length === 0 ? 
+                  "No staff members or services found." :
+                  staffMembers.length === 0 ? 
+                    "No staff members found." : 
+                    "No services found."
+                }
+              </p>
+              <p className="text-sm">Please ensure that the database has valid staff members and services configured.</p>
+            </div>
+          </div>
+        ) : (
         <div className="relative h-[calc(100%-80px)]">
           <StepWiseInvoiceForm 
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
-            isSubmitting={loading || isSubmitting}
+              isSubmitting={loading || isSubmitting}
+              staffData={staffMembers}
+              isLoadingStaff={false}
+              serviceData={serviceItems}
+              isLoadingServices={false}
           />
         </div>
+        )}
       </SheetContent>
     </Sheet>
   );
