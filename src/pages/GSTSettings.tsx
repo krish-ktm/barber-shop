@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash, Pencil, Loader2 } from 'lucide-react';
+import { Plus, Trash, Pencil, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,36 +41,9 @@ import { useApi } from '@/hooks/useApi';
 import { 
   getGSTRates, 
   updateGSTRates,
+  deleteGSTRate,
   GSTRate as ApiGSTRate
 } from '@/api/services/settingsService';
-
-// Helper to map between API and UI types
-const mapApiToUiGSTRate = (apiRate: ApiGSTRate): GSTRate => {
-  return {
-    id: apiRate.id || '',
-    name: apiRate.name,
-    isActive: apiRate.is_active,
-    totalRate: apiRate.total_rate,
-    components: apiRate.components.map(comp => ({
-      id: comp.id || `comp-${Date.now()}-${Math.random()}`,
-      name: comp.name,
-      rate: comp.rate
-    }))
-  };
-};
-
-const mapUiToApiGSTRate = (uiRate: GSTRate): ApiGSTRate => {
-  return {
-    id: uiRate.id,
-    name: uiRate.name,
-    is_active: uiRate.isActive,
-    components: uiRate.components.map(comp => ({
-      id: comp.id,
-      name: comp.name,
-      rate: comp.rate
-    }))
-  };
-};
 
 // Using UI types from the app
 interface GSTComponent {
@@ -88,6 +60,46 @@ interface GSTRate {
   totalRate?: number;
 }
 
+// Helper to map between API and UI types
+const mapApiToUiGSTRate = (apiRate: ApiGSTRate): GSTRate => {
+  return {
+    id: apiRate.id || '',
+    name: apiRate.name,
+    isActive: apiRate.is_active,
+    totalRate: apiRate.total_rate,
+    components: apiRate.components.map(comp => ({
+      id: comp.id || `comp-${Date.now()}-${Math.random()}`,
+      name: comp.name,
+      rate: comp.rate
+    }))
+  };
+};
+
+// Helper to map UI model back to API model
+const mapUiToApiGSTRate = (uiRate: GSTRate): ApiGSTRate => {
+  // Check if it's a temporary ID (client-side generated)
+  const isTemporaryId = uiRate.id.startsWith('temp-');
+  
+  return {
+    // Only send ID if it's not a temporary one
+    id: isTemporaryId ? undefined : uiRate.id,
+    name: uiRate.name,
+    is_active: uiRate.isActive,
+    total_rate: uiRate.totalRate,
+    components: uiRate.components.map(comp => {
+      // Check if component has a temporary ID
+      const isCompTempId = comp.id.startsWith('temp-');
+      
+      return {
+        // Only send component ID if it's not temporary
+        id: isCompTempId ? undefined : comp.id,
+        name: comp.name,
+        rate: comp.rate
+      };
+    })
+  };
+};
+
 export const GSTSettings: React.FC = () => {
   const { toast } = useToast();
   
@@ -100,18 +112,26 @@ export const GSTSettings: React.FC = () => {
   } = useApi(getGSTRates);
 
   const {
+    loading: updateLoading,
     error: updateError,
     execute: saveGSTRates
   } = useApi(updateGSTRates);
+  
+  const {
+    loading: isDeleting,
+    error: deleteError,
+    execute: executeDeleteGSTRate
+  } = useApi(deleteGSTRate);
 
   // UI state
   const [gstRates, setGstRates] = useState<GSTRate[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRate, setSelectedRate] = useState<GSTRate | null>(null);
   const [newRate, setNewRate] = useState<Partial<GSTRate>>({
     name: '',
-    components: [{ id: `comp-${Date.now()}`, name: 'GST', rate: 0 }],
+    components: [{ id: `temp-${Date.now()}`, name: 'GST', rate: 0 }],
     isActive: false,
   });
 
@@ -129,22 +149,15 @@ export const GSTSettings: React.FC = () => {
 
   // Handle API errors
   useEffect(() => {
-    if (gstRatesError) {
+    const error = gstRatesError || updateError || deleteError;
+    if (error) {
       toast({
-        title: 'Error loading GST rates',
-        description: gstRatesError.message,
+        title: 'Error',
+        description: error.message,
         variant: 'destructive',
       });
     }
-    
-    if (updateError) {
-      toast({
-        title: 'Error saving GST rates',
-        description: updateError.message,
-        variant: 'destructive',
-      });
-    }
-  }, [gstRatesError, updateError, toast]);
+  }, [gstRatesError, updateError, deleteError, toast]);
 
   // Function to calculate total rate from components
   const calculateTotalRate = (components: GSTComponent[]): number => {
@@ -153,7 +166,7 @@ export const GSTSettings: React.FC = () => {
     );
   };
 
-  const handleAddRate = () => {
+  const handleAddRate = async () => {
     if (!newRate.name) {
       toast({
         title: 'Missing information',
@@ -163,59 +176,145 @@ export const GSTSettings: React.FC = () => {
       return;
     }
 
-    const rate: GSTRate = {
-      id: Date.now().toString(),
-      name: newRate.name,
-      components: newRate.components || [{ id: `comp-${Date.now()}`, name: 'GST', rate: 0 }],
-      isActive: newRate.isActive || false,
-      totalRate: calculateTotalRate(newRate.components || []),
-    };
+    try {
+      // Create new rate with proper structure
+      const rateToAdd: GSTRate = {
+        id: `temp-${Date.now()}`, // This ID will be replaced by the server
+        name: newRate.name || '',
+        components: newRate.components || [{ id: `temp-${Date.now()}`, name: 'GST', rate: 0 }],
+        isActive: newRate.isActive || false,
+        totalRate: calculateTotalRate(newRate.components || []),
+      };
 
-    setGstRates([...gstRates, rate]);
-    setNewRate({
-      name: '',
-      components: [{ id: `comp-${Date.now()}`, name: 'GST', rate: 0 }],
-      isActive: false,
-    });
-    setIsAddDialogOpen(false);
-    toast({
-      title: 'GST rate added',
-      description: 'The new GST rate has been added successfully.',
-    });
+      // Add the new rate to the existing rates
+      const updatedRates = [...gstRates, rateToAdd];
+      
+      // Convert all rates to API format
+      const apiGstRates = updatedRates.map(mapUiToApiGSTRate);
+      
+      // Log what we're sending to the API for debugging
+      console.log('Sending to API:', JSON.stringify({ gstRates: apiGstRates }));
+      
+      // Save to the backend - await the result before proceeding
+      const result = await saveGSTRates(apiGstRates);
+      
+      if (result) {
+        console.log('API response:', result);
+        
+        // Refresh the data from server to get the proper IDs
+        await fetchGSTRates();
+        
+        // Reset form
+        setNewRate({
+          name: '',
+          components: [{ id: `temp-${Date.now()}`, name: 'GST', rate: 0 }],
+          isActive: false,
+        });
+        
+        // Close the dialog
+        setIsAddDialogOpen(false);
+        
+        // Show success message
+        toast({
+          title: 'Success',
+          description: 'New GST rate has been added successfully.',
+        });
+      }
+    } catch (error) {
+      // Enhanced error logging
+      console.error('Failed to add GST rate:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      
+      toast({
+        title: 'Error adding GST rate',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleEditRate = () => {
+  const handleEditRate = async () => {
     if (!selectedRate) return;
 
-    const updatedRates = gstRates.map(rate => {
-      if (rate.id === selectedRate.id) {
-        const updatedRate = {
-          ...selectedRate,
-          totalRate: calculateTotalRate(selectedRate.components),
-        };
-        return updatedRate;
+    try {
+      // Update the selected rate in the local state
+      const updatedRates = gstRates.map(rate => {
+        if (rate.id === selectedRate.id) {
+          return {
+            ...selectedRate,
+            totalRate: calculateTotalRate(selectedRate.components),
+          };
+        }
+        return rate;
+      });
+      
+      // Convert to API format
+      const apiGstRates = updatedRates.map(mapUiToApiGSTRate);
+      
+      // Log what we're sending to the API for debugging
+      console.log('Sending to API:', JSON.stringify({ gstRates: apiGstRates }));
+      
+      // Save to the backend - await the result
+      const result = await saveGSTRates(apiGstRates);
+      
+      if (result) {
+        console.log('API response:', result);
+        
+        // Refresh the data from server
+        await fetchGSTRates();
+        
+        // Reset state and close dialog
+        setSelectedRate(null);
+        setIsEditDialogOpen(false);
+        
+        toast({
+          title: 'Success',
+          description: 'GST rate has been updated successfully.',
+        });
       }
-      return rate;
-    });
-
-    setGstRates(updatedRates);
-    setSelectedRate(null);
-    setIsEditDialogOpen(false);
-    toast({
-      title: 'GST rate updated',
-      description: 'The GST rate has been updated successfully.',
-    });
+    } catch (error) {
+      // Enhanced error logging
+      console.error('Failed to update GST rate:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      
+      toast({
+        title: 'Error updating GST rate',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleDeleteRate = (id: string) => {
-    setGstRates(gstRates.filter(rate => rate.id !== id));
-    toast({
-      title: 'GST rate deleted',
-      description: 'The GST rate has been removed successfully.',
-    });
+  const handleDeleteProduct = (rate: GSTRate) => {
+    setSelectedRate(rate);
+    setDeleteDialogOpen(true);
   };
 
-  const handleUpdateComponent = (rateId: string, componentId: string, field: keyof GSTComponent, value: string | number) => {
+  const handleDelete = async () => {
+    if (selectedRate) {
+      try {
+        await executeDeleteGSTRate(selectedRate.id);
+        setGstRates(gstRates.filter(r => r.id !== selectedRate.id));
+        setDeleteDialogOpen(false);
+        setSelectedRate(null);
+        
+        toast({
+          title: 'Success',
+          description: 'GST rate deleted successfully',
+        });
+      } catch {
+        // Error will be handled by the useEffect
+      }
+    }
+  };
+
+  const handleUpdateComponent = (componentId: string, field: keyof GSTComponent, value: string | number) => {
     if (!selectedRate) return;
 
     const updatedComponents = selectedRate.components.map(comp => 
@@ -232,7 +331,7 @@ export const GSTSettings: React.FC = () => {
     if (!selectedRate) return;
 
     const newComponent: GSTComponent = {
-      id: `comp-${Date.now()}`,
+      id: `temp-${Date.now()}`,
       name: 'New Component',
       rate: 0
     };
@@ -261,228 +360,212 @@ export const GSTSettings: React.FC = () => {
     });
   };
 
-  const handleSave = async () => {
-    try {
-      // Convert UI model to API model
-      const apiGstRates = gstRates.map(mapUiToApiGSTRate);
-      
-      // Save to API
-      await saveGSTRates(apiGstRates);
-      
-      toast({
-        title: 'Settings saved',
-        description: 'GST settings have been updated successfully.',
-      });
-    } catch {
-      // Error already handled in useEffect
-    }
-  };
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="GST Settings"
         description="Configure GST rates for your services"
-        action={{
-          label: "Save Changes",
-          onClick: handleSave,
-          icon: <Save className="h-4 w-4 mr-2" />,
-        }}
+        action={undefined}
       />
 
-      {/* Loading indicator */}
-      {gstRatesLoading && !gstRatesData && (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <span className="ml-3">Loading GST rates...</span>
-        </div>
-      )}
-
       {/* Main content */}
-      {(!gstRatesLoading || gstRatesData) && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>GST Rates</CardTitle>
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>GST Rates</CardTitle>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Rate
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New GST Rate</DialogTitle>
+                  <DialogDescription>
+                    Create a new GST rate with its components.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Rate Name</Label>
+                    <Input
+                      value={newRate.name}
+                      onChange={(e) => setNewRate({ ...newRate, name: e.target.value })}
+                      placeholder="Enter rate name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Components</Label>
+                    {newRate.components?.map((component, index) => (
+                      <div key={component.id} className="flex gap-2">
+                        <Input
+                          value={component.name}
+                          onChange={(e) => {
+                            const updatedComponents = [...(newRate.components || [])];
+                            updatedComponents[index] = {
+                              ...component,
+                              name: e.target.value,
+                            };
+                            setNewRate({ ...newRate, components: updatedComponents });
+                          }}
+                          placeholder="Component name"
+                        />
+                        <Input
+                          type="number"
+                          value={component.rate}
+                          onChange={(e) => {
+                            const updatedComponents = [...(newRate.components || [])];
+                            updatedComponents[index] = {
+                              ...component,
+                              rate: parseFloat(e.target.value) || 0,
+                            };
+                            setNewRate({ ...newRate, components: updatedComponents });
+                          }}
+                          placeholder="Rate %"
+                          className="w-24"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (newRate.components && newRate.components.length > 1) {
+                              const updatedComponents = newRate.components.filter((_, i) => i !== index);
+                              setNewRate({ ...newRate, components: updatedComponents });
+                            } else {
+                              toast({
+                                title: 'Cannot delete component',
+                                description: 'A GST rate must have at least one component.',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                          disabled={newRate.components && newRate.components.length <= 1}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newComponent: GSTComponent = {
+                          id: `temp-${Date.now()}`,
+                          name: 'New Component',
+                          rate: 0,
+                        };
+                        setNewRate({
+                          ...newRate,
+                          components: [...(newRate.components || []), newComponent],
+                        });
+                      }}
+                    >
+                      Add Component
+                    </Button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={newRate.isActive}
+                      onCheckedChange={(checked) => {
+                        setNewRate({ ...newRate, isActive: checked });
+                      }}
+                    />
+                    <Label>Active</Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAddRate} disabled={updateLoading}>
+                    {updateLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                     Add Rate
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New GST Rate</DialogTitle>
-                    <DialogDescription>
-                      Create a new GST rate with its components.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Rate Name</Label>
-                      <Input
-                        value={newRate.name}
-                        onChange={(e) => setNewRate({ ...newRate, name: e.target.value })}
-                        placeholder="Enter rate name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Components</Label>
-                      {newRate.components?.map((component, index) => (
-                        <div key={component.id} className="flex gap-2">
-                          <Input
-                            value={component.name}
-                            onChange={(e) => {
-                              const updatedComponents = [...(newRate.components || [])];
-                              updatedComponents[index] = {
-                                ...component,
-                                name: e.target.value,
-                              };
-                              setNewRate({ ...newRate, components: updatedComponents });
-                            }}
-                            placeholder="Component name"
-                          />
-                          <Input
-                            type="number"
-                            value={component.rate}
-                            onChange={(e) => {
-                              const updatedComponents = [...(newRate.components || [])];
-                              updatedComponents[index] = {
-                                ...component,
-                                rate: parseFloat(e.target.value) || 0,
-                              };
-                              setNewRate({ ...newRate, components: updatedComponents });
-                            }}
-                            placeholder="Rate %"
-                            className="w-24"
-                          />
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newComponent: GSTComponent = {
-                            id: `comp-${Date.now()}`,
-                            name: 'New Component',
-                            rate: 0,
-                          };
-                          setNewRate({
-                            ...newRate,
-                            components: [...(newRate.components || []), newComponent],
-                          });
-                        }}
-                      >
-                        Add Component
-                      </Button>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={newRate.isActive}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setGstRates(gstRates.map(rate => ({
-                              ...rate,
-                              isActive: false
-                            })));
-                          }
-                          setNewRate({ ...newRate, isActive: checked });
-                        }}
-                      />
-                      <Label>Active</Label>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddRate}>Add Rate</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Card loading state */}
+          {gstRatesLoading && (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-3 text-muted-foreground">Loading GST rates...</span>
             </div>
-          </CardHeader>
-          <CardContent>
-            {gstRates.length === 0 ? (
+          )}
+          
+          {/* Content when not initially loading */}
+          {!gstRatesLoading && (
+            gstRates.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground">
                 No GST rates configured. Click "Add Rate" to create one.
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Components</TableHead>
-                    <TableHead>Total Rate</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {gstRates.map((rate) => (
-                    <TableRow key={rate.id}>
-                      <TableCell className="font-medium">{rate.name}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {rate.components.map((component) => (
-                            <div key={component.id} className="text-sm">
-                              {component.name}: {component.rate}%
-                            </div>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>{rate.totalRate || calculateTotalRate(rate.components)}%</TableCell>
-                      <TableCell>
-                        <Badge variant={rate.isActive ? "default" : "secondary"}>
-                          {rate.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedRate(rate);
-                              setIsEditDialogOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete GST Rate</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete the "{rate.name}" rate? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteRate(rate.id)}
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
+              <div className="relative">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Components</TableHead>
+                      <TableHead>Total Rate</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                  </TableHeader>
+                  <TableBody>
+                    {gstRates.map((rate) => (
+                      <TableRow key={rate.id}>
+                        <TableCell className="font-medium">{rate.name}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {rate.components.map((component) => (
+                              <div key={component.id} className="text-sm">
+                                {component.name}: {component.rate}%
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>{rate.totalRate || calculateTotalRate(rate.components)}%</TableCell>
+                        <TableCell>
+                          <Badge variant={rate.isActive ? "default" : "secondary"}>
+                            {rate.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedRate(rate);
+                                setIsEditDialogOpen(true);
+                              }}
+                              disabled={updateLoading || isDeleting}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleDeleteProduct(rate)}
+                              disabled={updateLoading || isDeleting}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
+          )}
+        </CardContent>
+      </Card>
 
       {/* Edit dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -512,7 +595,6 @@ export const GSTSettings: React.FC = () => {
                   <Input
                     value={component.name}
                     onChange={(e) => handleUpdateComponent(
-                      selectedRate?.id || '',
                       component.id,
                       'name',
                       e.target.value
@@ -523,7 +605,6 @@ export const GSTSettings: React.FC = () => {
                     type="number"
                     value={component.rate}
                     onChange={(e) => handleUpdateComponent(
-                      selectedRate?.id || '',
                       component.id,
                       'rate',
                       parseFloat(e.target.value) || 0
@@ -553,12 +634,6 @@ export const GSTSettings: React.FC = () => {
               <Switch
                 checked={selectedRate?.isActive}
                 onCheckedChange={(checked) => {
-                  if (checked && selectedRate) {
-                    setGstRates(gstRates.map(r => ({
-                      ...r,
-                      isActive: r.id === selectedRate.id
-                    })));
-                  }
                   setSelectedRate(selectedRate ? {
                     ...selectedRate,
                     isActive: checked,
@@ -572,10 +647,43 @@ export const GSTSettings: React.FC = () => {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditRate}>Save Changes</Button>
+            <Button onClick={handleEditRate} disabled={updateLoading}>
+              {updateLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              {selectedRate ? ` "${selectedRate.name}"` : ''} GST rate.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedRate(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
