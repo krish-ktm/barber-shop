@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { StepWiseInvoiceForm, InvoiceFormData } from './StepWiseInvoiceForm';
 import { useApi } from '@/hooks/useApi';
-import { createInvoice, createInvoiceWithNewCustomer } from '@/api/services/invoiceService';
+import { createInvoice } from '@/api/services/invoiceService';
 import { getAllStaff } from '@/api/services/staffService';
 import { getAllServices } from '@/api/services/serviceService';
 import { getGSTRates } from '@/api/services/settingsService';
@@ -59,15 +59,9 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   
   // Use the API hook for creating invoices and fetching data
   const {
-    loading: createInvoiceLoading,
+    loading,
     execute: executeCreateInvoice
   } = useApi(createInvoice);
-  
-  // Add API hook for creating invoice with new customer
-  const {
-    loading: createWithNewCustomerLoading,
-    execute: executeCreateInvoiceWithNewCustomer
-  } = useApi(createInvoiceWithNewCustomer);
   
   const {
     execute: fetchStaff
@@ -273,25 +267,56 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         console.warn(`Staff member not found in local cache: ${formData.staffId}. Using original ID.`);
       }
       
-      // Prepare invoice data
-      const baseInvoiceData = {
-        staff_id: staffId,
-        staff_name: staffName,
+      // IMPORTANT: Use real customer and staff IDs
+      let customerId;
+      let customerName;
+
+      if (formData.isGuestUser) {
+        // For guest user, use the guest-user ID
+        customerId = 'guest-user'; // Guest customer ID that exists in the database
+        customerName = 'Guest Customer';
+      } else if (formData.selectedCustomer) {
+        // Use the customer passed from the form
+        customerId = formData.selectedCustomer.id;
+        customerName = formData.selectedCustomer.name;
+      } else if (selectedCustomer) {
+        // Use our local state if available
+        customerId = selectedCustomer.id;
+        customerName = selectedCustomer.name;
+      } else {
+        // Fallback to guest if we somehow don't have customer information
+        customerId = 'guest-user';
+        customerName = 'Guest Customer';
+        console.warn('No customer selected, using guest user as fallback');
+      }
+      
+      // Transform form data to match API structure exactly as required
+      const invoiceData = {
+        customer_id: customerId,
+        customer_name: customerName,
+        staff_id: staffId, // Use the ID from the form
+        staff_name: staffName, // Use the name we determined above
         date: new Date().toISOString().split('T')[0],
-        services: servicesWithDetails,
-        invoiceServices: servicesWithDetails,
+        services: servicesWithDetails, // Keep for backward compatibility
+        invoiceServices: servicesWithDetails, // Use the correct property name to match backend alias
         subtotal: subtotal,
         tax: taxRate,
         tax_amount: taxAmount,
         total: total,
         payment_method: formData.paymentMethod,
-        status: 'paid',
+        status: 'paid', // Invoice is created as paid
         notes: formData.notes || '',
-        tip_amount: tipAmount || 0,
+        tip_amount: tipAmount || 0 // Always include tip_amount even if 0
+      } as const; // Use const assertion instead of individual property assertion
+      
+      // Always include discount fields even if no discount
+      Object.assign(invoiceData, {
         discount_type: formData.discountType,
         discount_value: formData.discountValue || 0,
         discount_amount: discountAmount
-      };
+      });
+      
+      // Tip amount is already included in the invoiceData object
       
       // Add tax components if we have GST rate details
       if (gstRateData && gstRateData.components && gstRateData.components.length > 0) {
@@ -301,12 +326,12 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
           amount: (taxableAmount * Number(comp.rate) || 0) / 100
         }));
         
-        Object.assign(baseInvoiceData, {
+        Object.assign(invoiceData, {
           tax_components: taxComponents
         });
       } else {
         // Add default tax component if none exists
-        Object.assign(baseInvoiceData, {
+        Object.assign(invoiceData, {
           tax_components: [{
             name: 'Standard GST',
             rate: taxRate,
@@ -315,86 +340,32 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         });
       }
       
-      let response;
+      console.log('Sending invoice data:', JSON.stringify(invoiceData, null, 2));
+      console.log('Services being sent:', JSON.stringify(servicesWithDetails, null, 2));
+      console.log('Services array length:', servicesWithDetails.length);
+      console.log('First service:', servicesWithDetails[0] ? JSON.stringify(servicesWithDetails[0], null, 2) : 'No services found');
       
-      // Handle different customer scenarios
-      if (formData.isNewCustomer && formData.customerDetails) {
-        // For new customers, use the combined API endpoint
-        const customerData = {
-          name: formData.customerDetails.name,
-          phone: formData.customerDetails.phone,
-          email: formData.customerDetails.email
-        };
-        
-        // Prepare invoice data without customer_id (will be generated on server)
-        const newCustomerInvoiceData = {
-          ...baseInvoiceData,
-          customer_name: customerData.name
-        };
-        
-        console.log('Creating invoice with new customer:', 
-          JSON.stringify({ invoice: newCustomerInvoiceData, customer: customerData }, null, 2)
+      // Log any services that don't match our local cache
+      const mismatchedServices = formData.services.filter(service => 
+        !serviceItems.some(s => s.id === service.serviceId)
+      );
+      
+      if (mismatchedServices.length > 0) {
+        console.warn('Warning: Some services don\'t exist in local cache:', 
+          mismatchedServices.map(s => s.serviceId).join(', ')
         );
-        
-        // Call the combined API endpoint
-        response = await executeCreateInvoiceWithNewCustomer(
-          newCustomerInvoiceData, 
-          customerData
-        );
-        
-        if (response.success) {
-          toast({
-            title: 'Success',
-            description: 'Created new customer and invoice',
-          });
-        }
-      } else {
-        // Handle existing customer or guest user
-        let customerId, customerName;
-        
-        if (formData.isGuestUser) {
-          // For guest user, use the guest-user ID
-          customerId = 'guest-user';
-          customerName = 'Guest Customer';
-        } else if (formData.selectedCustomer) {
-          // Use the customer passed from the form
-          customerId = formData.selectedCustomer.id;
-          customerName = formData.selectedCustomer.name;
-        } else if (selectedCustomer) {
-          // Use our local state if available
-          customerId = selectedCustomer.id;
-          customerName = selectedCustomer.name;
-        } else {
-          // Fallback to guest if we somehow don't have customer information
-          customerId = 'guest-user';
-          customerName = 'Guest Customer';
-          console.warn('No customer selected, using guest user as fallback');
-        }
-        
-        // Complete the invoice data with customer information
-        const completeInvoiceData = {
-          ...baseInvoiceData,
-          customer_id: customerId,
-          customer_name: customerName
-        };
-        
-        console.log('Creating invoice with existing customer:', 
-          JSON.stringify(completeInvoiceData, null, 2)
-        );
-        
-        // Call the regular invoice creation API
-        response = await executeCreateInvoice(completeInvoiceData);
-        
-        if (response.success) {
-          toast({
-            title: 'Invoice created',
-            description: 'New invoice has been created successfully.',
-          });
-        }
       }
       
-      if (response && response.success) {
-        onOpenChange(false);
+      // Send data to the API
+      const response = await executeCreateInvoice(invoiceData);
+      
+      if (response.success) {
+    toast({
+      title: 'Invoice created',
+      description: 'New invoice has been created successfully.',
+    });
+        
+    onOpenChange(false);
         
         // Call the onInvoiceCreated callback if provided
         if (onInvoiceCreated) {
@@ -405,12 +376,62 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const error = err as { message?: string };
       console.error('Error creating invoice:', error);
       
-      // Handle errors appropriately
-      toast({
-        title: 'Error',
-        description: `Failed to create invoice: ${error.message || 'Please try again.'}`,
-        variant: 'destructive',
-      });
+      // Check if it's a foreign key constraint error
+      if (error.message && error.message.includes('foreign key constraint fails')) {
+        if (error.message.includes('customer_id')) {
+          toast({
+            title: 'Customer Error',
+            description: 'Failed to create invoice: The customer ID does not exist in the database.',
+            variant: 'destructive',
+          });
+        } else if (error.message.includes('staff_id')) {
+          toast({
+            title: 'Staff Error',
+            description: 'Failed to create invoice: The staff ID does not exist in the database.',
+            variant: 'destructive',
+          });
+        } else if (error.message.includes('service_id')) {
+          // Handle service ID errors specifically
+          let serviceId = '';
+          try {
+            // Try to extract the service ID from the error message
+            const match = error.message.match(/parameters.*service-\d+/);
+            if (match && match[0]) {
+              serviceId = match[0].split(',').find(p => p.trim().includes('service-'))?.trim() || '';
+            }
+          } catch (e) {
+            console.error('Failed to extract service ID from error:', e);
+          }
+          
+          toast({
+            title: 'Service Error',
+            description: `Failed to create invoice: Service ID ${serviceId || ''} does not exist in the database. Please refresh the page to get the latest services.`,
+            variant: 'destructive',
+          });
+          
+          // Refresh the services list to get the latest data
+          fetchServices(1, 100, 'name_asc')
+            .then(response => {
+              if (response.success && response.services) {
+                setServiceItems(response.services);
+              }
+            })
+            .catch(e => console.error('Error refreshing services:', e));
+            
+        } else {
+          toast({
+            title: 'Database Error',
+            description: 'Failed to create invoice: A database constraint error occurred.',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to create invoice: ${error.message || 'Please try again.'}`,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -418,10 +439,9 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
 
   // Global loading state while fetching initial data
   const isInitialLoading = isLoadingStaff || isLoadingServices || isLoadingGSTRates;
-  const isProcessing = isSubmitting || createInvoiceLoading || createWithNewCustomerLoading;
 
   return (
-    <Sheet open={open} onOpenChange={isProcessing ? undefined : onOpenChange}>
+    <Sheet open={open} onOpenChange={isSubmitting ? undefined : onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 overflow-hidden">
         <div className="p-6 pb-0">
           <SheetHeader>
@@ -458,7 +478,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
           <StepWiseInvoiceForm 
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
-            isSubmitting={isProcessing}
+            isSubmitting={loading || isSubmitting}
             staffData={staffMembers}
             isLoadingStaff={isLoadingStaff}
             serviceData={serviceItems}

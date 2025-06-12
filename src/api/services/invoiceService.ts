@@ -41,13 +41,6 @@ export interface Invoice {
   updated_at?: string;
 }
 
-// New interface for customer data
-export interface NewCustomerData {
-  name: string;
-  phone: string;
-  email?: string;
-}
-
 // Response interfaces
 interface InvoiceListResponse {
   success: boolean;
@@ -102,27 +95,6 @@ export const createInvoice = async (invoiceData: Partial<Invoice>): Promise<Invo
     return response;
   } catch (error) {
     console.error('API error creating invoice:', error);
-    throw error;
-  }
-};
-
-/**
- * Create new invoice with a new customer
- * This sends both customer and invoice data to the backend in one request
- */
-export const createInvoiceWithNewCustomer = async (
-  invoiceData: Partial<Invoice>,
-  customerData: NewCustomerData
-): Promise<InvoiceResponse> => {
-  console.log('Creating invoice with new customer:', JSON.stringify({ invoice: invoiceData, customer: customerData }));
-  try {
-    const response = await post<InvoiceResponse>('/invoices/with-new-customer', {
-      invoice: invoiceData,
-      customer: customerData
-    });
-    return response;
-  } catch (error) {
-    console.error('API error creating invoice with new customer:', error);
     throw error;
   }
 };
