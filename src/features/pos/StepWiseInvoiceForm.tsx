@@ -39,7 +39,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { customerData, gstRatesData } from '@/mocks';
+import { customerData } from '@/mocks';
 import { formatCurrency, formatPhoneNumber } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Customer } from '@/types';
@@ -122,6 +122,14 @@ interface StepWiseInvoiceFormProps {
     description?: string;
   }>;
   isLoadingServices?: boolean;
+  gstRatesData?: Array<{
+    id: string;
+    name: string;
+    components: Array<{ id: string; name: string; rate: number }>;
+    isActive: boolean;
+    totalRate: number;
+  }>;
+  isLoadingGSTRates?: boolean;
 }
 
 export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
@@ -131,7 +139,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   staffData = [],
   isLoadingStaff = false,
   serviceData = [],
-  isLoadingServices = false
+  isLoadingServices = false,
+  gstRatesData = [],
+  isLoadingGSTRates = false
 }) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('customer');
@@ -147,7 +157,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const [customGstValue, setCustomGstValue] = useState<number>(0);
 
   // Get default active GST rate
-  const defaultGstRate = gstRatesData.find(rate => rate.isActive);
+  const defaultGstRate = gstRatesData.length > 0 ? gstRatesData.find(rate => rate.isActive) || gstRatesData[0] : null;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -158,19 +168,23 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       discountValue: 0,
       tipAmount: 0,
       paymentMethod: 'cash',
-      gstRates: [defaultGstRate?.id || ''],
+      gstRates: defaultGstRate ? [defaultGstRate.id] : [],
       notes: '',
     },
   });
 
-  // Set default GST rate automatically when form loads
+  // Set default GST rate automatically when form loads or when gstRatesData changes
   React.useEffect(() => {
     // Find the active/default GST rate
     if (defaultGstRate) {
       form.setValue('gstRates', [defaultGstRate.id]);
       setCustomGstRate(`${defaultGstRate.name} - Custom`);
+    } else if (gstRatesData.length > 0) {
+      // If no active rate, use the first one
+      form.setValue('gstRates', [gstRatesData[0].id]);
+      setCustomGstRate(`${gstRatesData[0].name} - Custom`);
     }
-  }, []);
+  }, [gstRatesData]);
 
   const newCustomerForm = useForm<z.infer<typeof newCustomerSchema>>({
     resolver: zodResolver(newCustomerSchema),

@@ -6,15 +6,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { StepWiseInvoiceForm, InvoiceFormData } from './StepWiseInvoiceForm';
 import { useApi } from '@/hooks/useApi';
 import { createInvoice } from '@/api/services/invoiceService';
 import { getAllStaff } from '@/api/services/staffService';
 import { getAllServices } from '@/api/services/serviceService';
-import { gstRatesData } from '@/mocks';
+import { getGSTRates } from '@/api/services/settingsService';
 import { Customer } from '@/types';
 import { Loader2 } from 'lucide-react';
+
+// Type for a GST rate
+interface GSTRate {
+  id: string;
+  name: string;
+  components: { id: string; name: string; rate: number }[];
+  isActive: boolean;
+  totalRate: number;
+}
 
 interface StepInvoiceDialogProps {
   open: boolean;
@@ -60,6 +70,17 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   const {
     execute: fetchServices
   } = useApi(getAllServices);
+  
+  // Add API hook for fetching GST rates
+  const {
+    data: gstRatesResponse,
+    loading: isLoadingGSTRates,
+    error: gstRatesError,
+    execute: fetchGSTRates
+  } = useApi(getGSTRates);
+  
+  // State to hold the fetched GST rates
+  const [gstRates, setGSTRates] = useState<GSTRate[]>([]);
   
   // Fetch staff members and services when dialog opens
   useEffect(() => {
@@ -125,6 +146,42 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
     }
   }, [open, fetchStaff, fetchServices, toast]);
 
+  // Add a useEffect to fetch GST rates on component mount
+  useEffect(() => {
+    fetchGSTRates();
+  }, [fetchGSTRates]);
+  
+  // Update GST rates state when API data is loaded
+  useEffect(() => {
+    if (gstRatesResponse?.gstRates) {
+      // Map API GST rates to the format our component expects
+      const mappedRates: GSTRate[] = gstRatesResponse.gstRates.map(rate => ({
+        id: rate.id || '',
+        name: rate.name,
+        isActive: rate.is_active,
+        totalRate: rate.total_rate || 0,
+        components: rate.components.map(comp => ({
+          id: comp.id || '',
+          name: comp.name,
+          rate: comp.rate
+        }))
+      }));
+      
+      setGSTRates(mappedRates);
+    }
+  }, [gstRatesResponse]);
+  
+  // Handle GST rates error
+  useEffect(() => {
+    if (gstRatesError) {
+      toast({
+        title: 'Error loading GST rates',
+        description: gstRatesError.message,
+        variant: 'destructive',
+      });
+    }
+  }, [gstRatesError, toast]);
+
   const handleSubmit = async (formData: InvoiceFormData) => {
     try {
       setIsSubmitting(true);
@@ -179,7 +236,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const subtotal = servicesWithDetails.reduce((sum, service) => sum + (Number(service.total) || 0), 0);
       
       // Get the GST rate data
-      const gstRateData = gstRatesData.find(rate => rate.id === formData.gstRates[0]);
+      const gstRateData = gstRates.find(rate => rate.id === formData.gstRates[0]);
       const taxRate = Number(gstRateData?.totalRate) || 7.5;
       
       // Calculate discount amount
@@ -372,7 +429,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   };
 
   // Global loading state while fetching initial data
-  const isInitialLoading = isLoadingStaff || isLoadingServices;
+  const isInitialLoading = isLoadingStaff || isLoadingServices || isLoadingGSTRates;
 
   return (
     <Sheet open={open} onOpenChange={isSubmitting ? undefined : onOpenChange}>
@@ -393,19 +450,18 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
               <p className="text-muted-foreground">Loading data...</p>
             </div>
           </div>
-        ) : staffMembers.length === 0 || serviceItems.length === 0 ? (
+        ) : staffMembers.length === 0 || serviceItems.length === 0 || gstRates.length === 0 ? (
           <div className="flex items-center justify-center h-[calc(100%-80px)]">
             <div className="text-center max-w-md p-6">
               <h3 className="text-lg font-medium mb-2">Cannot Create Invoice</h3>
               <p className="text-muted-foreground mb-4">
-                {staffMembers.length === 0 && serviceItems.length === 0 ? 
-                  "No staff members or services found." :
-                  staffMembers.length === 0 ? 
-                    "No staff members found." : 
-                    "No services found."
-                }
+                {staffMembers.length === 0 
+                  ? 'There are no staff members available. Please add staff members first.'
+                  : serviceItems.length === 0
+                  ? 'There are no services available. Please add services first.'
+                  : 'There are no GST rates configured. Please configure GST rates first.'}
               </p>
-              <p className="text-sm">Please ensure that the database has valid staff members and services configured.</p>
+              <Button onClick={() => onOpenChange(false)}>Close</Button>
             </div>
           </div>
         ) : (
@@ -413,11 +469,13 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
           <StepWiseInvoiceForm 
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
-              isSubmitting={loading || isSubmitting}
-              staffData={staffMembers}
-              isLoadingStaff={false}
-              serviceData={serviceItems}
-              isLoadingServices={false}
+            isSubmitting={loading || isSubmitting}
+            staffData={staffMembers}
+            isLoadingStaff={isLoadingStaff}
+            serviceData={serviceItems}
+            isLoadingServices={isLoadingServices}
+            gstRatesData={gstRates}
+            isLoadingGSTRates={isLoadingGSTRates}
           />
         </div>
         )}
