@@ -39,7 +39,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { customerData } from '@/mocks';
+
 import { formatCurrency, formatPhoneNumber } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Customer } from '@/types';
@@ -57,6 +57,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useApi } from '@/hooks/useApi';
+import { getCustomerByPhone } from '@/api/services/customerService';
 
 // Guest user handled directly in component, no need for a constant
 
@@ -129,7 +131,6 @@ interface StepWiseInvoiceFormProps {
     isActive: boolean;
     totalRate: number;
   }>;
-  isLoadingGSTRates?: boolean;
 }
 
 export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
@@ -140,13 +141,13 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   isLoadingStaff = false,
   serviceData = [],
   isLoadingServices = false,
-  gstRatesData = [],
-  isLoadingGSTRates = false
+  gstRatesData = []
 }) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('customer');
   const [services, setServices] = useState<Array<{ id: string; serviceId: string }>>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
+  // We'll manage our own search state for UI, but use the API state for actual loading
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'new'>('search');
   const [isNewCustomer, setIsNewCustomer] = useState(false);
@@ -155,6 +156,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const [showGstOptions, setShowGstOptions] = useState(false);
   const [customGstRate, setCustomGstRate] = useState<string>('');
   const [customGstValue, setCustomGstValue] = useState<number>(0);
+  
+  // API hook for customer search
+  const {
+    execute: executeCustomerSearch
+  } = useApi(getCustomerByPhone);
 
   // Get default active GST rate
   const defaultGstRate = gstRatesData.length > 0 ? gstRatesData.find(rate => rate.isActive) || gstRatesData[0] : null;
@@ -195,33 +201,56 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   });
 
   const handleSearchCustomer = (phone: string) => {
-    setIsSearching(true);
+    if (!phone || phone.length < 10) {
+      toast({
+        title: 'Invalid phone number',
+        description: 'Please enter a valid phone number with at least 10 digits.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Use both local and API loading states for UI feedback
+  setIsSearching(true);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      const formattedPhone = phone.replace(/\D/g, '');
-      const customer = customerData.find(c => c.phone.replace(/\D/g, '') === formattedPhone);
-      
-      if (customer) {
-        setSelectedCustomer(customer);
-        setIsNewCustomer(false);
+    // Format the phone for API query (remove non-digits)
+    const formattedPhone = phone.replace(/\D/g, '');
+    
+    // Use the API to search for customer
+    executeCustomerSearch(formattedPhone)
+      .then(response => {
+        if (response.success && response.customer) {
+          setSelectedCustomer(response.customer);
+          setIsNewCustomer(false);
+          toast({
+            title: 'Customer found',
+            description: `Found customer: ${response.customer.name}`,
+          });
+        } else {
+          setSelectedCustomer(undefined);
+          setIsNewCustomer(true);
+          setActiveTab('new');
+          // Pre-fill the phone number in the form
+          form.setValue('customerPhone', phone);
+          toast({
+            description: 'No customer found. Please provide customer details.',
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error searching for customer:', error);
         toast({
-          title: 'Customer found',
-          description: `Found customer: ${customer.name}`,
+          title: 'Error',
+          description: 'Failed to search for customer. Please try again.',
+          variant: 'destructive',
         });
-      } else {
         setSelectedCustomer(undefined);
         setIsNewCustomer(true);
         setActiveTab('new');
-        // Pre-fill the phone number in the form
-        form.setValue('customerPhone', phone);
-        toast({
-          description: 'No customer found. Please provide customer details.',
-        });
-      }
-      
-      setIsSearching(false);
-    }, 500);
+      })
+      .finally(() => {
+        setIsSearching(false);
+      });
   };
 
   const handleServiceSelection = (serviceId: string) => {
@@ -566,8 +595,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   {selectedCustomer.email && (
                     <p><span className="font-medium">Email:</span> {selectedCustomer.email}</p>
                   )}
-                  <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visitCount}</p>
-                  <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.totalSpent)}</p>
+                  {selectedCustomer.visit_count !== undefined && (
+                    <p><span className="font-medium">Total Visits:</span> {selectedCustomer.visit_count}</p>
+                  )}
+                  {selectedCustomer.total_spent !== undefined && (
+                    <p><span className="font-medium">Total Spent:</span> {formatCurrency(selectedCustomer.total_spent)}</p>
+                  )}
                 </div>
               </div>
             )}

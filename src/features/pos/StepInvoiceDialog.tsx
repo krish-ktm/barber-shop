@@ -271,14 +271,23 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       let customerId;
       let customerName;
 
-      if (formData.isGuestUser || !selectedCustomer) {
-        // For guest or when no customer is selected, use the guest-user ID
+      if (formData.isGuestUser) {
+        // For guest user, use the guest-user ID
         customerId = 'guest-user'; // Guest customer ID that exists in the database
         customerName = 'Guest Customer';
-      } else {
-        // Use selected customer
+      } else if (formData.selectedCustomer) {
+        // Use the customer passed from the form
+        customerId = formData.selectedCustomer.id;
+        customerName = formData.selectedCustomer.name;
+      } else if (selectedCustomer) {
+        // Use our local state if available
         customerId = selectedCustomer.id;
         customerName = selectedCustomer.name;
+      } else {
+        // Fallback to guest if we somehow don't have customer information
+        customerId = 'guest-user';
+        customerName = 'Guest Customer';
+        console.warn('No customer selected, using guest user as fallback');
       }
       
       // Transform form data to match API structure exactly as required
@@ -475,7 +484,6 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
             serviceData={serviceItems}
             isLoadingServices={isLoadingServices}
             gstRatesData={gstRates}
-            isLoadingGSTRates={isLoadingGSTRates}
           />
         </div>
         )}
