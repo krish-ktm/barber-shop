@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, User, Scissors, MessageSquare, Phone } from 'lucide-react';
+import { Calendar, Clock, User, Scissors, MessageSquare, Phone, CheckCircle, XCircle, AlertTriangle, CheckCheck } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ interface AppointmentDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isStaffView?: boolean;
+  onStatusChange?: (appointmentId: string, status: Appointment['status']) => void;
 }
 
 export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> = ({
@@ -25,6 +26,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
   open,
   onOpenChange,
   isStaffView = false,
+  onStatusChange,
 }) => {
   // Status badge colors
   const getStatusBadgeVariant = (status: string) => {
@@ -44,10 +46,88 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
     }
   };
 
-  const handleUpdateStatus = (newStatus: string) => {
-    // In a real app, this would update the appointment status
-    console.log(`Update appointment ${appointment.id} status to: ${newStatus}`);
-    onOpenChange(false);
+  const handleUpdateStatus = (newStatus: Appointment['status']) => {
+    if (onStatusChange) {
+      onStatusChange(appointment.id, newStatus);
+      onOpenChange(false);
+    } else {
+      // Fallback for components that don't provide onStatusChange
+      console.log(`Update appointment ${appointment.id} status to: ${newStatus}`);
+      onOpenChange(false);
+    }
+  };
+
+  const renderStatusActions = () => {
+    switch (appointment.status) {
+      case 'scheduled':
+        return (
+          <div className="flex gap-2 flex-wrap">
+            <Button 
+              variant="default" 
+              onClick={() => handleUpdateStatus('confirmed')}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Confirm
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleUpdateStatus('completed')}
+            >
+              <CheckCheck className="mr-2 h-4 w-4" />
+              Complete
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleUpdateStatus('no-show')}
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              No Show
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleUpdateStatus('cancelled')}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
+          </div>
+        );
+      
+      case 'confirmed':
+        return (
+          <div className="flex gap-2 flex-wrap">
+            <Button 
+              variant="default" 
+              onClick={() => handleUpdateStatus('completed')}
+            >
+              <CheckCheck className="mr-2 h-4 w-4" />
+              Complete
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleUpdateStatus('no-show')}
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              No Show
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleUpdateStatus('cancelled')}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
+          </div>
+        );
+        
+      case 'completed':
+      case 'cancelled':
+      case 'no-show':
+        return null;
+        
+      default:
+        return null;
+    }
   };
 
   return (
@@ -143,25 +223,10 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
         </div>
 
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0">
-          {isStaffView ? (
+          {onStatusChange && (appointment.status === 'scheduled' || appointment.status === 'confirmed') ? (
             <>
-              <div className="flex gap-2">
-                {appointment.status !== 'completed' && (
-                  <Button 
-                    variant="default" 
-                    onClick={() => handleUpdateStatus('completed')}
-                  >
-                    Mark Completed
-                  </Button>
-                )}
-                {appointment.status !== 'no-show' && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => handleUpdateStatus('no-show')}
-                  >
-                    No Show
-                  </Button>
-                )}
+              <div className="flex gap-2 flex-wrap">
+                {renderStatusActions()}
               </div>
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
                 Close
@@ -172,7 +237,9 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
-              <Button>Edit Appointment</Button>
+              {!isStaffView && (
+                <Button>Edit Appointment</Button>
+              )}
             </>
           )}
         </DialogFooter>

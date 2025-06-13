@@ -216,6 +216,16 @@ export const rescheduleAppointment = async (
 };
 
 /**
+ * Update appointment status
+ */
+export const updateAppointmentStatus = async (
+  id: string,
+  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show'
+): Promise<AppointmentResponse> => {
+  return put<AppointmentResponse>(`/appointments/${id}`, { status });
+};
+
+/**
  * Get available time slots
  */
 export const getAvailableSlots = async (

@@ -12,6 +12,7 @@ import {
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
 import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
+import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -61,6 +62,7 @@ import { Sliders } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { 
   getAdminAppointments,
+  updateAppointmentStatus,
   Appointment as ApiAppointment 
 } from '@/api/services/appointmentService';
 import { useToast } from '@/hooks/use-toast';
@@ -76,6 +78,13 @@ export const AdminAppointment: React.FC = () => {
     error: apiError,
     execute: fetchAdminData
   } = useApi(getAdminAppointments);
+
+  // API hook for updating appointment status
+  const {
+    loading: isUpdatingStatus,
+    error: updateStatusError,
+    execute: executeUpdateStatus
+  } = useApi(updateAppointmentStatus);
 
   // Basic filters
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -98,6 +107,10 @@ export const AdminAppointment: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Appointment details state
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
 
   // Fetch data only when necessary
   useEffect(() => {
@@ -117,6 +130,40 @@ export const AdminAppointment: React.FC = () => {
       });
     }
   }, [apiError, toast]);
+
+  useEffect(() => {
+    if (updateStatusError) {
+      toast({
+        title: 'Error',
+        description: `Failed to update appointment status: ${updateStatusError.message}`,
+        variant: 'destructive',
+      });
+    }
+  }, [updateStatusError, toast]);
+
+  // Handle appointment status change
+  const handleStatusChange = async (appointmentId: string, newStatus: UIAppointment['status']) => {
+    try {
+      await executeUpdateStatus(appointmentId, newStatus);
+      
+      toast({
+        title: 'Status Updated',
+        description: `Appointment status changed to ${newStatus}`,
+      });
+      
+      // Refresh the appointments data
+      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+    }
+  };
+  
+  // Handle viewing appointment details
+  const handleViewAppointment = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setShowAppointmentDetails(true);
+  };
 
   // Get the actual data from API or use empty arrays if not loaded
   const appointments = adminData?.appointments || [];
@@ -304,6 +351,11 @@ export const AdminAppointment: React.FC = () => {
     
     return count;
   };
+
+  // Get the selected appointment for the details dialog
+  const selectedAppointment = selectedAppointmentId 
+    ? uiAppointments.find(app => app.id === selectedAppointmentId) 
+    : null;
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -579,10 +631,12 @@ export const AdminAppointment: React.FC = () => {
         </div>
         
         <div className="p-4">
-          {isLoading ? (
+          {isLoading || isUpdatingStatus ? (
             <div className="text-center py-10">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-              <p className="text-muted-foreground">Loading appointments...</p>
+              <p className="text-muted-foreground">
+                {isLoading ? 'Loading appointments...' : 'Updating appointment...'}
+              </p>
             </div>
           ) : filteredAppointments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -594,6 +648,8 @@ export const AdminAppointment: React.FC = () => {
               showActions={true}
               isStaffView={false}
               staffList={staff}
+              onStatusChange={handleStatusChange}
+              onViewAppointment={handleViewAppointment}
             />
           )}
         </div>
@@ -860,6 +916,16 @@ export const AdminAppointment: React.FC = () => {
           fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
         }}
       />
+      
+      {/* Appointment Details Dialog */}
+      {selectedAppointment && (
+        <AppointmentDetailsDialog 
+          appointment={selectedAppointment}
+          open={showAppointmentDetails}
+          onOpenChange={setShowAppointmentDetails}
+          onStatusChange={handleStatusChange}
+        />
+      )}
     </div>
   );
 };

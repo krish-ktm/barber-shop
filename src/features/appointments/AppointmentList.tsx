@@ -7,7 +7,9 @@ import {
   Mail,
   CheckCircle,
   XCircle,
-  Scissors
+  Scissors,
+  CheckCheck,
+  AlertTriangle
 } from 'lucide-react';
 import { Appointment } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -24,6 +26,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { formatTime, formatCurrency } from '@/utils';
 import { Staff } from '@/api/services/appointmentService';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
 
 interface AppointmentListProps {
   appointments: Appointment[];
@@ -31,6 +39,7 @@ interface AppointmentListProps {
   isStaffView?: boolean;
   onViewAppointment?: (appointmentId: string) => void;
   staffList?: Staff[];
+  onStatusChange?: (appointmentId: string, status: Appointment['status']) => void;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
@@ -39,6 +48,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   isStaffView = false,
   onViewAppointment,
   staffList = [],
+  onStatusChange,
 }) => {
   const getStaffImage = (staffId: string) => {
     const staff = staffList.find(s => s.id === staffId);
@@ -66,11 +76,126 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     return `XXX-XXX-${phone.slice(-4)}`;
   };
 
-  const maskEmail = (email: string = '') => {
+  const maskEmail = (email: string | undefined | null = ''): string => {
     if (!email) return '';
     const [username, domain] = email.split('@');
     if (!username || !domain) return 'xxxx@xxxx.xxx';
     return `${username.charAt(0)}***@${domain}`;
+  };
+
+  // Render action buttons based on appointment status
+  const renderStatusButtons = (appointment: Appointment) => {
+    if (!showActions || !onStatusChange) return null;
+    
+    switch (appointment.status) {
+      case 'scheduled':
+        return (
+          <div className="flex gap-1 mt-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-7 w-7" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(appointment.id, 'confirmed');
+                    }}
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Confirm</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-7 w-7" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(appointment.id, 'cancelled');
+                    }}
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Cancel</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        );
+      
+      case 'confirmed':
+        return (
+          <div className="flex gap-1 mt-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-7 w-7" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(appointment.id, 'completed');
+                    }}
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Complete</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-7 w-7" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(appointment.id, 'no-show');
+                    }}
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>No Show</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-7 w-7" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(appointment.id, 'cancelled');
+                    }}
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Cancel</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        );
+        
+      default:
+        return null;
+    }
   };
 
   if (appointments.length === 0) {
@@ -143,8 +268,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                 </div>
               </div>
               
-              {showActions && appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+              {showActions && (
                 <div className="flex items-center sm:self-start">
+                  {renderStatusButtons(appointment)}
+                  
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
@@ -154,19 +281,57 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Mark as Completed
-                      </DropdownMenuItem>
+                      
+                      {appointment.status === 'scheduled' && (
+                        <DropdownMenuItem onSelect={(e) => {
+                          e.preventDefault();
+                          if (onStatusChange) onStatusChange(appointment.id, 'confirmed');
+                        }}>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Confirm Appointment
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {(appointment.status === 'scheduled' || appointment.status === 'confirmed') && (
+                        <DropdownMenuItem onSelect={(e) => {
+                          e.preventDefault();
+                          if (onStatusChange) onStatusChange(appointment.id, 'completed');
+                        }}>
+                          <CheckCheck className="mr-2 h-4 w-4" />
+                          Mark as Completed
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {(appointment.status === 'scheduled' || appointment.status === 'confirmed') && (
+                        <DropdownMenuItem onSelect={(e) => {
+                          e.preventDefault();
+                          if (onStatusChange) onStatusChange(appointment.id, 'no-show');
+                        }}>
+                          <AlertTriangle className="mr-2 h-4 w-4" />
+                          Mark as No-Show
+                        </DropdownMenuItem>
+                      )}
+                      
                       <DropdownMenuItem>
                         <Calendar className="mr-2 h-4 w-4" />
                         Reschedule
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Cancel Appointment
-                      </DropdownMenuItem>
+                      
+                      {(appointment.status !== 'cancelled' && appointment.status !== 'completed') && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              if (onStatusChange) onStatusChange(appointment.id, 'cancelled');
+                            }}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Cancel Appointment
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
