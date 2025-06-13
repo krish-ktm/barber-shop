@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,6 +12,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -28,16 +29,15 @@ import {
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { get } from '@/api/apiClient';
 import { CreateReviewRequest } from '@/api/services/reviewService';
 
 // Schema for the review form
 const reviewFormSchema = z.object({
-  customer_id: z.string({
-    required_error: 'Customer is required',
+  customer_name: z.string({
+    required_error: 'Customer name is required',
   }),
-  staff_id: z.string({
-    required_error: 'Staff member is required',
+  staff_name: z.string({
+    required_error: 'Staff name is required',
   }),
   rating: z.coerce.number({
     required_error: 'Rating is required',
@@ -51,21 +51,6 @@ const reviewFormSchema = z.object({
 
 type ReviewFormValues = z.infer<typeof reviewFormSchema>;
 
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface Staff {
-  id: string;
-  user: {
-    id: string;
-    name: string;
-    role: string;
-  };
-}
-
 interface CreateReviewFormProps {
   onSubmit: (data: CreateReviewRequest) => Promise<boolean>;
   onCancel: () => void;
@@ -75,48 +60,19 @@ export const CreateReviewForm: React.FC<CreateReviewFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [staff, setStaff] = useState<Staff[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ReviewFormValues>({
     resolver: zodResolver(reviewFormSchema),
     defaultValues: {
-      customer_id: '',
-      staff_id: '',
+      customer_name: '',
+      staff_name: '',
       rating: 5,
       text: '',
       date: new Date(),
       is_approved: false,
     },
   });
-
-  // Fetch customers and staff for dropdowns
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const [customersResponse, staffResponse] = await Promise.all([
-          get<{ success: boolean; customers: Customer[] }>('/customers'),
-          get<{ success: boolean; staff: Staff[] }>('/staff'),
-        ]);
-        
-        if (customersResponse.success) {
-          setCustomers(customersResponse.customers);
-        }
-        
-        if (staffResponse.success) {
-          setStaff(staffResponse.staff);
-        }
-      } catch (error) {
-        console.error('Error fetching form data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, []);
 
   const handleSubmit = async (values: ReviewFormValues) => {
     try {
@@ -143,61 +99,39 @@ export const CreateReviewForm: React.FC<CreateReviewFormProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        {/* Customer field */}
+        {/* Customer name field */}
         <FormField
           control={form.control}
-          name="customer_id"
+          name="customer_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Customer</FormLabel>
-              <Select
-                disabled={isLoading}
-                onValueChange={field.onChange}
-                value={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a customer" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name} ({customer.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormLabel>Customer Name</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter customer name" 
+                  {...field} 
+                  disabled={isLoading}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {/* Staff field */}
+        {/* Staff name field */}
         <FormField
           control={form.control}
-          name="staff_id"
+          name="staff_name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Staff Member</FormLabel>
-              <Select
-                disabled={isLoading}
-                onValueChange={field.onChange}
-                value={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a staff member" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {staff.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.user.name} ({member.user.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormLabel>Staff Name</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter staff name" 
+                  {...field} 
+                  disabled={isLoading}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

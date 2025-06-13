@@ -24,6 +24,8 @@ export interface Review {
   id: string;
   customer_id: string;
   staff_id: string;
+  customer_name?: string;
+  staff_name?: string;
   rating: number;
   text: string | null;
   date: string;
@@ -57,8 +59,10 @@ export interface ReviewActionResponse {
 
 // Request interface for creating a review
 export interface CreateReviewRequest {
-  customer_id: string;
-  staff_id: string;
+  customer_id?: string;
+  staff_id?: string;
+  customer_name?: string;
+  staff_name?: string;
   rating: number;
   text?: string;
   date: string;

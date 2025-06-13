@@ -49,9 +49,9 @@ interface UIReview {
 const transformReview = (review: Review): UIReview => {
   return {
     id: review.id,
-    customerName: review.customer?.name || 'Unknown Customer',
+    customerName: review.customer_name || review.customer?.name || 'Unknown Customer',
     customerEmail: review.customer?.email || 'No email provided',
-    staffName: review.staff?.user?.name || 'Unknown Staff',
+    staffName: review.staff_name || review.staff?.user?.name || 'Unknown Staff',
     staffPosition: review.staff?.user?.role || 'Staff',
     rating: review.rating,
     reviewText: review.text,
