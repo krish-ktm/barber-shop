@@ -94,6 +94,8 @@ const AdminReviews: React.FC = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedReview, setSelectedReview] = useState<UIReview | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [isDeletingReview, setIsDeletingReview] = useState(false);
+  const [isApprovingReview, setIsApprovingReview] = useState<string | null>(null);
 
   // Transform API reviews to UI-friendly format
   const uiReviews = reviews.map(transformReview);
@@ -106,7 +108,9 @@ const AdminReviews: React.FC = () => {
 
   const confirmDelete = async () => {
     if (selectedReviewId) {
+      setIsDeletingReview(true);
       await deleteReview(selectedReviewId);
+      setIsDeletingReview(false);
       setDeleteDialogOpen(false);
       setSelectedReviewId(null);
     }
@@ -120,7 +124,9 @@ const AdminReviews: React.FC = () => {
 
   // Handle approve review
   const handleApproveClick = async (id: string) => {
+    setIsApprovingReview(id);
     await approveReview(id);
+    setIsApprovingReview(null);
   };
 
   // Handle create review
@@ -186,7 +192,7 @@ const AdminReviews: React.FC = () => {
           <CardTitle>Reviews ({totalCount})</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loading && !isDeletingReview && !isApprovingReview ? (
             <div className="flex justify-center p-4">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
@@ -248,8 +254,13 @@ const AdminReviews: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleApproveClick(review.id)}
+                                disabled={isApprovingReview === review.id}
                               >
-                                <Check className="h-4 w-4 mr-1" />
+                                {isApprovingReview === review.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                ) : (
+                                  <Check className="h-4 w-4 mr-1" />
+                                )}
                                 Approve
                               </Button>
                             )}
@@ -292,11 +303,18 @@ const AdminReviews: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeletingReview}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button variant="destructive" onClick={confirmDelete} disabled={isDeletingReview}>
+              {isDeletingReview ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -357,12 +375,27 @@ const AdminReviews: React.FC = () => {
               Close
             </Button>
             {selectedReview && !selectedReview.isApproved && (
-              <Button onClick={() => {
-                approveReview(selectedReview.id);
-                setViewDialogOpen(false);
-              }}>
-                <Check className="h-4 w-4 mr-1" />
-                Approve
+              <Button 
+                onClick={() => {
+                  setIsApprovingReview(selectedReview.id);
+                  approveReview(selectedReview.id).then(() => {
+                    setIsApprovingReview(null);
+                    setViewDialogOpen(false);
+                  });
+                }}
+                disabled={isApprovingReview === selectedReview.id}
+              >
+                {isApprovingReview === selectedReview.id ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Approving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-1" />
+                    Approve
+                  </>
+                )}
               </Button>
             )}
           </DialogFooter>
