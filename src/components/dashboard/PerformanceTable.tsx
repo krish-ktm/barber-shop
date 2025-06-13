@@ -45,7 +45,7 @@ export const PerformanceTable: React.FC<PerformanceTableProps> = ({
           </TableHeader>
           <TableBody>
             {data.map((item) => (
-              <TableRow key={item.name}>
+              <TableRow key={item.id || item.name}>
                 <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell className="text-right">
                   {type === 'service' 

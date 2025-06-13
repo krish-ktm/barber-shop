@@ -178,12 +178,14 @@ export interface RevenueData {
 }
 
 export interface ServicePerformance {
+  id: string;
   name: string;
   bookings: number;
   revenue: number;
 }
 
 export interface StaffPerformance {
+  id: string;
   name: string;
   appointments: number;
   revenue: number;
