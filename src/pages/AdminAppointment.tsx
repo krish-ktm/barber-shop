@@ -13,6 +13,8 @@ import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
 import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
+import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
+import { CancelAppointmentDialog } from '@/features/appointments/CancelAppointmentDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -111,6 +113,14 @@ export const AdminAppointment: React.FC = () => {
   // Appointment details state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
+  
+  // Reschedule appointment state
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [appointmentToReschedule, setAppointmentToReschedule] = useState<UIAppointment | null>(null);
+
+  // Add state for cancel dialog
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<UIAppointment | null>(null);
 
   // Fetch data only when necessary
   useEffect(() => {
@@ -144,6 +154,16 @@ export const AdminAppointment: React.FC = () => {
   // Handle appointment status change
   const handleStatusChange = async (appointmentId: string, newStatus: UIAppointment['status']) => {
     try {
+      // If status is cancelled, show confirmation dialog instead of immediate action
+      if (newStatus === 'cancelled') {
+        const appointmentToCancel = uiAppointments.find(app => app.id === appointmentId);
+        if (appointmentToCancel) {
+          setAppointmentToCancel(appointmentToCancel);
+          setShowCancelDialog(true);
+        }
+        return;
+      }
+      
       await executeUpdateStatus(appointmentId, newStatus);
       
       toast({
@@ -163,6 +183,42 @@ export const AdminAppointment: React.FC = () => {
   const handleViewAppointment = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
     setShowAppointmentDetails(true);
+  };
+  
+  // Handle reschedule appointment
+  const handleRescheduleAppointment = (appointment: UIAppointment) => {
+    // Prevent details dialog from opening when rescheduling
+    setSelectedAppointmentId(null);
+    setShowAppointmentDetails(false);
+    
+    // Open reschedule dialog
+    setAppointmentToReschedule(appointment);
+    setShowRescheduleDialog(true);
+  };
+  
+  // Handle cancel appointment
+  const handleCancelAppointment = (appointment: UIAppointment) => {
+    // Prevent details dialog from opening when cancelling
+    setSelectedAppointmentId(null);
+    setShowAppointmentDetails(false);
+    
+    // Open cancel dialog
+    setAppointmentToCancel(appointment);
+    setShowCancelDialog(true);
+  };
+  
+  // Handle reschedule complete
+  const handleRescheduleComplete = () => {
+    // Refresh the appointments data
+    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+    fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+  };
+  
+  // Handle cancel complete
+  const handleCancelComplete = () => {
+    // Refresh the appointments data
+    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+    fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
   };
 
   // Get the actual data from API or use empty arrays if not loaded
@@ -650,6 +706,8 @@ export const AdminAppointment: React.FC = () => {
               staffList={staff}
               onStatusChange={handleStatusChange}
               onViewAppointment={handleViewAppointment}
+              onRescheduleAppointment={handleRescheduleAppointment}
+              onCancelAppointment={handleCancelAppointment}
             />
           )}
         </div>
@@ -924,6 +982,26 @@ export const AdminAppointment: React.FC = () => {
           open={showAppointmentDetails}
           onOpenChange={setShowAppointmentDetails}
           onStatusChange={handleStatusChange}
+        />
+      )}
+      
+      {/* Reschedule Appointment Dialog */}
+      {appointmentToReschedule && (
+        <RescheduleAppointmentDialog
+          appointment={appointmentToReschedule}
+          open={showRescheduleDialog}
+          onOpenChange={setShowRescheduleDialog}
+          onRescheduleComplete={handleRescheduleComplete}
+        />
+      )}
+      
+      {/* Cancel Appointment Dialog */}
+      {appointmentToCancel && (
+        <CancelAppointmentDialog
+          appointment={appointmentToCancel}
+          open={showCancelDialog}
+          onOpenChange={setShowCancelDialog}
+          onCancelComplete={handleCancelComplete}
         />
       )}
     </div>

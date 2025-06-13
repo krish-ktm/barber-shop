@@ -46,7 +46,12 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
     }
   };
 
-  const handleUpdateStatus = (newStatus: Appointment['status']) => {
+  const handleUpdateStatus = (newStatus: Appointment['status'], e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (onStatusChange) {
       onStatusChange(appointment.id, newStatus);
       onOpenChange(false);
@@ -64,28 +69,28 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
           <div className="flex gap-2 flex-wrap">
             <Button 
               variant="default" 
-              onClick={() => handleUpdateStatus('confirmed')}
+              onClick={(e) => handleUpdateStatus('confirmed', e)}
             >
               <CheckCircle className="mr-2 h-4 w-4" />
               Confirm
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => handleUpdateStatus('completed')}
+              onClick={(e) => handleUpdateStatus('completed', e)}
             >
               <CheckCheck className="mr-2 h-4 w-4" />
               Complete
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => handleUpdateStatus('no-show')}
+              onClick={(e) => handleUpdateStatus('no-show', e)}
             >
               <AlertTriangle className="mr-2 h-4 w-4" />
               No Show
             </Button>
             <Button 
               variant="destructive" 
-              onClick={() => handleUpdateStatus('cancelled')}
+              onClick={(e) => handleUpdateStatus('cancelled', e)}
             >
               <XCircle className="mr-2 h-4 w-4" />
               Cancel
@@ -98,21 +103,21 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
           <div className="flex gap-2 flex-wrap">
             <Button 
               variant="default" 
-              onClick={() => handleUpdateStatus('completed')}
+              onClick={(e) => handleUpdateStatus('completed', e)}
             >
               <CheckCheck className="mr-2 h-4 w-4" />
               Complete
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => handleUpdateStatus('no-show')}
+              onClick={(e) => handleUpdateStatus('no-show', e)}
             >
               <AlertTriangle className="mr-2 h-4 w-4" />
               No Show
             </Button>
             <Button 
               variant="destructive" 
-              onClick={() => handleUpdateStatus('cancelled')}
+              onClick={(e) => handleUpdateStatus('cancelled', e)}
             >
               <XCircle className="mr-2 h-4 w-4" />
               Cancel
@@ -198,13 +203,13 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
                     <div key={service.serviceId} className="flex justify-between text-sm">
                       <span>{service.serviceName}</span>
                       <span className="text-muted-foreground">
-                        ${service.price.toFixed(2)} · {service.duration} min
+                        ${Number(service.price).toFixed(2)} · {service.duration} min
                       </span>
                     </div>
                   ))}
                   <div className="flex justify-between font-medium mt-2">
                     <span>Total</span>
-                    <span>${appointment.totalAmount.toFixed(2)}</span>
+                    <span>${Number(appointment.totalAmount).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -228,19 +233,22 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
               <div className="flex gap-2 flex-wrap">
                 {renderStatusActions()}
               </div>
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              <Button variant="ghost" onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenChange(false);
+              }}>
                 Close
               </Button>
             </>
           ) : (
-            <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              {!isStaffView && (
-                <Button>Edit Appointment</Button>
-              )}
-            </>
+            <Button variant="outline" onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenChange(false);
+            }}>
+              Close
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
