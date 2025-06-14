@@ -14,15 +14,27 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 import { useApi } from '@/hooks/useApi';
-import { rescheduleAppointment } from '@/api/services/appointmentService';
+import { rescheduleAppointment, Appointment as ApiAppointment } from '@/api/services/appointmentService';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+// Add direct function for reschedule
+import { post } from '@/api/apiClient';
+
+// Direct function for rescheduling without loading state
+const rescheduleAppointmentDirect = async (
+  id: string,
+  date: string,
+  time: string
+) => {
+  return post(`/appointments/${id}/reschedule`, { date, time });
+};
 
 interface RescheduleAppointmentDialogProps {
   appointment: Appointment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRescheduleComplete?: () => void;
+  onRescheduleComplete?: (updatedAppointment: ApiAppointment) => void;
 }
 
 export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogProps> = ({
@@ -44,27 +56,48 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
   
   // API hook for rescheduling
   const {
-    loading: isRescheduling,
-    execute: executeReschedule
+    loading: isRescheduling
   } = useApi(rescheduleAppointment);
   
   const handleReschedule = async () => {
     try {
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       
-      await executeReschedule(appointment.id, formattedDate, selectedTime);
+      // Create an optimistic update of the appointment
+      const optimisticAppointment: ApiAppointment = {
+        ...appointment,
+        date: formattedDate,
+        time: selectedTime,
+        // Add missing properties required by ApiAppointment
+        customer_id: appointment.customerId,
+        staff_id: appointment.staffId,
+        end_time: appointment.endTime,
+        total_amount: appointment.totalAmount,
+        customer_name: appointment.customerName,
+        customer_phone: appointment.customerPhone,
+        customer_email: appointment.customerEmail,
+        staff_name: appointment.staffName,
+        status: appointment.status
+      };
+      
+      // Call the parent's callback with the optimistic update
+      if (onRescheduleComplete) {
+        onRescheduleComplete(optimisticAppointment);
+      }
+      
+      // Close the dialog immediately for better UX
+      onOpenChange(false);
+      
+      // Then make the actual API call using the direct function
+      await rescheduleAppointmentDirect(appointment.id, formattedDate, selectedTime);
       
       toast({
         title: 'Appointment Rescheduled',
         description: `Appointment rescheduled to ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedTime}`,
       });
       
-      onOpenChange(false);
-      
-      // Refresh parent component if callback provided
-      if (onRescheduleComplete) {
-        onRescheduleComplete();
-      }
+      // If the API call was successful and the result is different from our optimistic update,
+      // we could update again with the real data, but this is usually not necessary
     } catch (error) {
       console.error('Error rescheduling appointment:', error);
       toast({

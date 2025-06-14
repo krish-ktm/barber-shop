@@ -52,13 +52,18 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
       e.stopPropagation();
     }
     
+    // Close the dialog immediately for better UX
+    onOpenChange(false);
+    
+    // Then update the status
     if (onStatusChange) {
-      onStatusChange(appointment.id, newStatus);
-      onOpenChange(false);
+      // Small delay to ensure the dialog is closed first
+      setTimeout(() => {
+        onStatusChange(appointment.id, newStatus);
+      }, 10);
     } else {
       // Fallback for components that don't provide onStatusChange
       console.log(`Update appointment ${appointment.id} status to: ${newStatus}`);
-      onOpenChange(false);
     }
   };
 

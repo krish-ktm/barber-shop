@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Appointment } from '@/types';
 import { useApi } from '@/hooks/useApi';
-import { updateAppointmentStatus } from '@/api/services/appointmentService';
+import { updateAppointmentStatus, updateAppointmentStatusDirect } from '@/api/services/appointmentService';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -19,7 +19,7 @@ interface CancelAppointmentDialogProps {
   appointment: Appointment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCancelComplete?: () => void;
+  onCancelComplete?: (appointmentId: string) => void;
 }
 
 export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = ({
@@ -32,25 +32,26 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
   
   // API hook for cancelling
   const {
-    loading: isCancelling,
-    execute: executeCancellation
+    loading: isCancelling
   } = useApi(updateAppointmentStatus);
   
   const handleCancel = async () => {
     try {
-      await executeCancellation(appointment.id, 'cancelled');
+      // Call the parent's callback with the appointment ID immediately
+      if (onCancelComplete && appointment && appointment.id) {
+        onCancelComplete(appointment.id);
+      }
+      
+      // Close the dialog immediately for better UX
+      onOpenChange(false);
+      
+      // Then make the actual API call using the direct function
+      await updateAppointmentStatusDirect(appointment.id, 'cancelled');
       
       toast({
         title: 'Appointment Cancelled',
         description: 'The appointment has been successfully cancelled.',
       });
-      
-      onOpenChange(false);
-      
-      // Refresh parent component if callback provided
-      if (onCancelComplete) {
-        onCancelComplete();
-      }
     } catch (error) {
       console.error('Error cancelling appointment:', error);
       toast({

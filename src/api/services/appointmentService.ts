@@ -226,6 +226,17 @@ export const updateAppointmentStatus = async (
 };
 
 /**
+ * Update appointment status directly (for optimistic updates)
+ * This bypasses the loading state in the useApi hook
+ */
+export const updateAppointmentStatusDirect = async (
+  id: string,
+  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show'
+): Promise<AppointmentResponse> => {
+  return put<AppointmentResponse>(`/appointments/${id}`, { status });
+};
+
+/**
  * Get available time slots
  */
 export const getAvailableSlots = async (

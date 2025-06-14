@@ -40,7 +40,7 @@ import { cn } from '@/lib/utils';
 import { createTimeSlots } from '@/utils/dates';
 import { useToast } from '@/hooks/use-toast';
 import { ServicePicker } from './ServicePicker';
-import { Staff, Service, createAppointment } from '@/api/services/appointmentService';
+import { Staff, Service, createAppointment, Appointment } from '@/api/services/appointmentService';
 import { createCustomer, getAllCustomers } from '@/api/services/customerService';
 import { useApi } from '@/hooks/useApi';
 
@@ -61,7 +61,7 @@ interface NewAppointmentDialogProps {
   selectedDate?: Date;
   staffList: Staff[];
   serviceList: Service[];
-  onAppointmentCreated?: () => void;
+  onAppointmentCreated?: (newAppointment?: Appointment) => void;
 }
 
 export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
@@ -239,7 +239,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
         
         // Callback to refresh appointments
         if (onAppointmentCreated) {
-          onAppointmentCreated();
+          onAppointmentCreated(result.appointment);
         }
       } else {
         throw new Error('Failed to create appointment');

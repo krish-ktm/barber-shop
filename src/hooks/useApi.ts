@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 /**
  * Custom hook for handling API calls with loading and error states
  */
-export function useApi<T, P extends any[]>(
+export function useApi<T, P extends unknown[]>(
   apiFunction: (...args: P) => Promise<T>
 ) {
   const [data, setData] = useState<T | null>(null);
@@ -33,7 +33,8 @@ export function useApi<T, P extends any[]>(
     data,
     loading,
     error,
-    execute
+    execute,
+    setData
   };
 }
 

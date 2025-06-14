@@ -65,6 +65,7 @@ import { useApi } from '@/hooks/useApi';
 import { 
   getAdminAppointments,
   updateAppointmentStatus,
+  updateAppointmentStatusDirect,
   Appointment as ApiAppointment 
 } from '@/api/services/appointmentService';
 import { useToast } from '@/hooks/use-toast';
@@ -78,14 +79,14 @@ export const AdminAppointment: React.FC = () => {
     data: adminData,
     loading: isLoading,
     error: apiError,
-    execute: fetchAdminData
+    execute: fetchAdminData,
+    setData: setAdminData
   } = useApi(getAdminAppointments);
 
   // API hook for updating appointment status
   const {
     loading: isUpdatingStatus,
-    error: updateStatusError,
-    execute: executeUpdateStatus
+    error: updateStatusError
   } = useApi(updateAppointmentStatus);
 
   // Basic filters
@@ -122,7 +123,7 @@ export const AdminAppointment: React.FC = () => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<UIAppointment | null>(null);
 
-  // Fetch data only when necessary
+  // Fetch data only when necessary - this one is needed for initial data loading
   useEffect(() => {
     if (!useAdvancedFilters) {
       const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -164,18 +165,45 @@ export const AdminAppointment: React.FC = () => {
         return;
       }
       
-      await executeUpdateStatus(appointmentId, newStatus);
+      // Optimistically update the UI first
+      const updatedAppointments = appointments.map(app => {
+        if (app.id === appointmentId) {
+          return { ...app, status: newStatus };
+        }
+        return app;
+      });
+      
+      // Update the UI immediately
+      if (adminData) {
+        const updatedAdminData = {
+          ...adminData,
+          appointments: updatedAppointments
+        };
+        setAdminData(updatedAdminData);
+      }
+      
+      // Then make the API call without showing the loading state
+      // We'll handle errors separately
+      await updateAppointmentStatusDirect(appointmentId, newStatus);
       
       toast({
         title: 'Status Updated',
         description: `Appointment status changed to ${newStatus}`,
       });
       
-      // Refresh the appointments data
-      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-      fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+      // No need to refresh the entire list - we've already updated the UI
     } catch (error) {
       console.error('Error updating appointment status:', error);
+      
+      // If there was an error, refresh the data to get back to a consistent state
+      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to update appointment status. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
   
@@ -208,17 +236,55 @@ export const AdminAppointment: React.FC = () => {
   };
   
   // Handle reschedule complete
-  const handleRescheduleComplete = () => {
-    // Refresh the appointments data
-    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-    fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+  const handleRescheduleComplete = (updatedAppointment: ApiAppointment) => {
+    if (!adminData) return;
+    
+    // Update the appointment in the local state
+    const updatedAppointments = adminData.appointments.map(app => {
+      if (app.id === updatedAppointment.id) {
+        return updatedAppointment;
+      }
+      return app;
+    });
+    
+    // Update the UI immediately
+    const updatedAdminData = {
+      ...adminData,
+      appointments: updatedAppointments
+    };
+    
+    setAdminData(updatedAdminData);
+    
+    toast({
+      title: 'Appointment Rescheduled',
+      description: `Appointment successfully rescheduled to ${updatedAppointment.date} at ${updatedAppointment.time}`,
+    });
   };
   
   // Handle cancel complete
-  const handleCancelComplete = () => {
-    // Refresh the appointments data
-    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-    fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+  const handleCancelComplete = (appointmentId: string) => {
+    if (!adminData) return;
+    
+    // Update the appointment status in the local state
+    const updatedAppointments = adminData.appointments.map(app => {
+      if (app.id === appointmentId) {
+        return { ...app, status: 'cancelled' as const };
+      }
+      return app;
+    });
+    
+    // Update the UI immediately
+    const updatedAdminData = {
+      ...adminData,
+      appointments: updatedAppointments
+    };
+    
+    setAdminData(updatedAdminData);
+    
+    toast({
+      title: 'Appointment Cancelled',
+      description: 'Appointment has been cancelled successfully',
+    });
   };
 
   // Get the actual data from API or use empty arrays if not loaded
@@ -361,6 +427,11 @@ export const AdminAppointment: React.FC = () => {
 
   // Get UI appointments
   const uiAppointments = filteredAppointments.map(convertApiToUIAppointment);
+  
+  // Find the selected appointment using the most up-to-date appointments list
+  const selectedAppointment = selectedAppointmentId
+    ? uiAppointments.find(app => app.id === selectedAppointmentId)
+    : null;
 
   // Navigation helpers
   const goToPreviousDay = () => setSelectedDate(prev => {
@@ -407,11 +478,6 @@ export const AdminAppointment: React.FC = () => {
     
     return count;
   };
-
-  // Get the selected appointment for the details dialog
-  const selectedAppointment = selectedAppointmentId 
-    ? uiAppointments.find(app => app.id === selectedAppointmentId) 
-    : null;
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -508,9 +574,7 @@ export const AdminAppointment: React.FC = () => {
                       if (!checked) {
                         // Reset advanced filters when switching to basic mode
                         setDateRange({ from: undefined, to: undefined });
-                        // Trigger a new fetch when switching back to basic filters
-                        const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-                        fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+                        // We'll fetch data via the useEffect hook
                       }
                     }}
                   />
@@ -687,11 +751,11 @@ export const AdminAppointment: React.FC = () => {
         </div>
         
         <div className="p-4">
-          {isLoading || isUpdatingStatus ? (
+          {isLoading ? (
             <div className="text-center py-10">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
               <p className="text-muted-foreground">
-                {isLoading ? 'Loading appointments...' : 'Updating appointment...'}
+                Loading appointments...
               </p>
             </div>
           ) : filteredAppointments.length === 0 ? (
@@ -699,16 +763,26 @@ export const AdminAppointment: React.FC = () => {
               No appointments found for the selected criteria.
             </div>
           ) : (
-            <AppointmentList 
-              appointments={uiAppointments}
-              showActions={true}
-              isStaffView={false}
-              staffList={staff}
-              onStatusChange={handleStatusChange}
-              onViewAppointment={handleViewAppointment}
-              onRescheduleAppointment={handleRescheduleAppointment}
-              onCancelAppointment={handleCancelAppointment}
-            />
+            <div className="relative">
+              {isUpdatingStatus && (
+                <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
+                  <div className="bg-background p-4 rounded-lg shadow-lg flex items-center space-x-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <p>Updating status...</p>
+                  </div>
+                </div>
+              )}
+              <AppointmentList 
+                appointments={uiAppointments}
+                showActions={true}
+                isStaffView={false}
+                staffList={staff}
+                onStatusChange={handleStatusChange}
+                onViewAppointment={handleViewAppointment}
+                onRescheduleAppointment={handleRescheduleAppointment}
+                onCancelAppointment={handleCancelAppointment}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -739,9 +813,7 @@ export const AdminAppointment: React.FC = () => {
                 value="basic" 
                 onClick={() => {
                   setUseAdvancedFilters(false);
-                  // Trigger a new fetch when switching back to basic filters
-                  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-                  fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+                  // We'll fetch data via the useEffect hook
                 }}
               >
                 Basic
@@ -968,10 +1040,24 @@ export const AdminAppointment: React.FC = () => {
         selectedDate={selectedDate}
         staffList={staff}
         serviceList={services}
-        onAppointmentCreated={() => {
-          // Refresh appointments data
-          const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-          fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+        onAppointmentCreated={(newAppointment) => {
+          // Add the new appointment to the list without refreshing
+          if (adminData && newAppointment) {
+            const updatedAppointments = [...adminData.appointments, newAppointment];
+            
+            // Update the UI immediately
+            const updatedAdminData = {
+              ...adminData,
+              appointments: updatedAppointments
+            };
+            
+            setAdminData(updatedAdminData);
+            
+            toast({
+              title: 'Appointment Created',
+              description: `New appointment created for ${newAppointment.customer_name}`,
+            });
+          }
         }}
       />
       
