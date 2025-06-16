@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Calendar as CalendarIcon,
   Clock,
   Plus,
   Trash,
   Edit,
-  Save
+  Save,
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
-import { staffData } from '@/mocks';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,21 +42,40 @@ import {
 } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+
+// API imports
+import { useAuth } from '@/lib/auth';
+import { getStaffById, updateStaffAvailability, WorkingHour } from '@/api/services/staffService';
+import { useApi } from '@/hooks/useApi';
 
 export const StaffWorkingHours: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
-  // Mock staff ID - in real app would come from auth context
-  const staffId = 'staff-1';
-  const staff = staffData.find(s => s.id === staffId);
+  // Get staff ID from auth context
+  const staffId = user?.staff?.id;
+  
+  // API hooks
+  const {
+    data: staffData,
+    loading: staffLoading,
+    error: staffError,
+    execute: fetchStaff
+  } = useApi(getStaffById);
+
+  const {
+    loading: updateLoading,
+    error: updateError,
+    execute: saveWorkingHours
+  } = useApi(updateStaffAvailability);
   
   // Initialize working hours state
-  const [workingHours, setWorkingHours] = useState<WorkingHours>(
-    staff?.workingHours || {
-      monday: [], tuesday: [], wednesday: [], thursday: [],
-      friday: [], saturday: [], sunday: []
-    }
-  );
+  const [workingHours, setWorkingHours] = useState<WorkingHours>({
+    monday: [], tuesday: [], wednesday: [], thursday: [],
+    friday: [], saturday: [], sunday: []
+  });
   
   // Time slot management dialog states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -83,20 +101,97 @@ export const StaffWorkingHours: React.FC = () => {
     'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
   ];
 
-  // Group days for the tab interface
-  const dayGroups = [
-    { name: 'weekdays', days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] },
-    { name: 'weekend', days: ['saturday', 'sunday'] }
-  ];
+  // Fetch staff data on component mount
+  useEffect(() => {
+    if (staffId) {
+      fetchStaff(staffId);
+    }
+  }, [staffId, fetchStaff]);
 
-  if (!staff) return null;
+  // Update state when API data is loaded
+  useEffect(() => {
+    if (staffData?.staff?.workingHours) {
+      // Convert API format to our frontend format
+      const apiWorkingHours = staffData.staff.workingHours;
+      const formattedHours: WorkingHours = {
+        monday: [], tuesday: [], wednesday: [], thursday: [],
+        friday: [], saturday: [], sunday: []
+      };
 
-  const handleSave = () => {
-    // In a real app, you would save all changes to the backend
-    toast({
-      title: 'Working hours updated',
-      description: 'Your working hours have been updated successfully.',
-    });
+      apiWorkingHours.forEach((hour: WorkingHour) => {
+        const day = hour.day_of_week as keyof WorkingHours;
+        // Format time from "HH:MM:SS" to "HH:MM"
+        const start = hour.start_time.slice(0, 5);
+        const end = hour.end_time.slice(0, 5);
+        
+        formattedHours[day].push({
+          start,
+          end,
+          isBreak: hour.is_break
+        });
+      });
+
+      setWorkingHours(formattedHours);
+    }
+  }, [staffData]);
+
+  // Handle API errors
+  useEffect(() => {
+    if (staffError) {
+      toast({
+        title: 'Error loading working hours',
+        description: staffError.message,
+        variant: 'destructive',
+      });
+    }
+
+    if (updateError) {
+      toast({
+        title: 'Error saving working hours',
+        description: updateError.message,
+        variant: 'destructive',
+      });
+    }
+  }, [staffError, updateError, toast]);
+
+  const handleSave = async () => {
+    if (!staffId) {
+      toast({
+        title: 'Error',
+        description: 'Staff ID not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Convert our frontend format to API format
+      const apiWorkingHours: WorkingHour[] = [];
+      
+      Object.entries(workingHours).forEach(([day, slots]) => {
+        slots.forEach((slot: TimeSlot) => {
+          apiWorkingHours.push({
+            day_of_week: day,
+            start_time: `${slot.start}:00`,
+            end_time: `${slot.end}:00`,
+            is_break: !!slot.isBreak
+          });
+        });
+      });
+
+      // Save to API
+      await saveWorkingHours(staffId, apiWorkingHours);
+      
+      toast({
+        title: 'Working hours updated',
+        description: 'Your working hours have been updated successfully.',
+      });
+      
+      // Refresh data
+      fetchStaff(staffId);
+    } catch (error) {
+      console.error('Error saving working hours:', error);
+    }
   };
 
   const handleAddTimeSlot = () => {
@@ -110,7 +205,7 @@ export const StaffWorkingHours: React.FC = () => {
     }
 
     // Check for overlapping slots
-    const hasOverlap = workingHours[selectedDay].some(slot => {
+    const hasOverlap = workingHours[selectedDay].some((slot: TimeSlot) => {
       return (timeSlotForm.start < slot.end && timeSlotForm.end > slot.start);
     });
 
@@ -127,7 +222,7 @@ export const StaffWorkingHours: React.FC = () => {
     
     if (isEditMode && selectedSlot) {
       // Update existing slot
-      updatedHours[selectedDay] = workingHours[selectedDay].map(slot => 
+      updatedHours[selectedDay] = workingHours[selectedDay].map((slot: TimeSlot) => 
         slot === selectedSlot ? timeSlotForm : slot
       );
     } else {
@@ -198,7 +293,7 @@ export const StaffWorkingHours: React.FC = () => {
   const calculateDayTotalHours = (day: keyof WorkingHours) => {
     let totalMinutes = 0;
     
-    workingHours[day].forEach(slot => {
+    workingHours[day].forEach((slot: TimeSlot) => {
       if (!slot.isBreak) {
         const [startHours, startMinutes] = slot.start.split(':').map(Number);
         const [endHours, endMinutes] = slot.end.split(':').map(Number);
@@ -216,17 +311,53 @@ export const StaffWorkingHours: React.FC = () => {
     return hours + (minutes > 0 ? ` hours ${minutes} min` : ` hours`);
   };
 
+  // Show loading state
+  if (staffLoading && !staffData) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading working hours...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if no staff ID
+  if (!staffId) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Could not load staff information. Please try refreshing the page.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Working Hours"
         description="Manage your availability for appointments"
         action={{
-          label: "Save Changes",
+          label: updateLoading ? "Saving..." : "Save Changes",
           onClick: handleSave,
-          icon: <Save className="h-4 w-4 mr-2" />,
+          icon: updateLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />,
+          disabled: updateLoading,
         }}
       />
+
+      {(staffError || updateError) && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {staffError?.message || updateError?.message || "There was an error with your request."}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="mb-6">
         <Card>
