@@ -9,6 +9,7 @@ interface PageHeaderProps {
     label: string;
     onClick: () => void;
     icon?: React.ReactNode;
+    disabled?: boolean;
   };
   children?: React.ReactNode;
   className?: string;
@@ -32,7 +33,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         </div>
         
         {action && (
-          <Button onClick={action.onClick} className="shrink-0">
+          <Button onClick={action.onClick} className="shrink-0" disabled={action.disabled}>
             {action.icon}
             {action.label}
           </Button>
