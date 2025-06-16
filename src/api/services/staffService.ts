@@ -45,6 +45,14 @@ export interface CreateStaffRequest extends Omit<Partial<Staff>, 'id' | 'user_id
   image?: string;
 }
 
+// Interface for updating staff profile
+export interface UpdateProfileRequest {
+  email?: string;
+  phone?: string;
+  bio?: string;
+  image?: string;
+}
+
 // Response interfaces
 interface StaffListResponse {
   success: boolean;
@@ -137,10 +145,17 @@ export const createStaff = async (staffData: CreateStaffRequest): Promise<StaffR
 };
 
 /**
- * Update staff member
+ * Update staff member (admin only)
  */
 export const updateStaff = async (id: string, staffData: Partial<Staff>): Promise<StaffResponse> => {
   return put<StaffResponse>(`/staff/${id}`, staffData);
+};
+
+/**
+ * Update staff member's own profile (staff can update their own profile)
+ */
+export const updateStaffProfile = async (id: string, profileData: UpdateProfileRequest): Promise<StaffResponse> => {
+  return put<StaffResponse>(`/staff/${id}/profile`, profileData);
 };
 
 /**

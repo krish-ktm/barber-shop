@@ -1,19 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Calendar as CalendarIcon,
   Clock,
-  DollarSign,
   Save,
-  Scissors,
-  User,
-  Plus,
-  Trash,
-  Edit,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/layout';
-import { staffData } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,206 +16,189 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/utils';
-import { TimeSlot, WorkingHours } from '@/types';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Switch } from '@/components/ui/switch';
+import { WorkingHours } from '@/types';
+import { getUser, getCurrentUser } from '@/api/auth';
+import { updateStaffProfile, getStaffById } from '@/api/services/staffService';
+
+// Define interfaces for API response types
+interface StaffUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  image?: string;
+}
+
+interface StaffService {
+  id: string;
+  name: string;
+}
+
+interface StaffData {
+  id: string;
+  user_id: string;
+  position?: string;
+  bio?: string;
+  commission_percentage: string | number;
+  is_available: boolean;
+  user?: StaffUser;
+  services?: StaffService[];
+  workingHours?: Array<{
+    day_of_week: string;
+    start_time: string;
+    end_time: string;
+    is_break: boolean;
+  }>;
+  totalAppointments?: number;
+  totalEarnings?: number;
+}
 
 export const StaffProfile: React.FC = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Mock staff ID - in real app would come from auth context
-  const staffId = 'staff-1';
-  const staff = staffData.find(s => s.id === staffId);
+  // Get user from auth context
+  const user = getUser();
+  const staffId = user?.staff?.id;
   
-  // Initialize form data with defaults in case staff is not found
+  // State for staff data
+  const [staff, setStaff] = useState<StaffData | null>(null);
+  
+  // Initialize form data
   const [formData, setFormData] = useState({
-    email: staff?.email || '',
-    phone: staff?.phone || '',
-    bio: staff?.bio || '',
+    email: '',
+    phone: '',
+    bio: '',
   });
   
   // Initialize working hours state
-  const [workingHours, setWorkingHours] = useState<WorkingHours>(
-    staff?.workingHours || {
-      monday: [], tuesday: [], wednesday: [], thursday: [],
-      friday: [], saturday: [], sunday: []
-    }
-  );
-  
-  // Time slot management dialog states
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<keyof WorkingHours>('monday');
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [timeSlotForm, setTimeSlotForm] = useState<TimeSlot>({
-    start: '09:00',
-    end: '17:00',
+  const [workingHours, setWorkingHours] = useState<WorkingHours>({
+    monday: [], tuesday: [], wednesday: [], thursday: [],
+    friday: [], saturday: [], sunday: []
   });
 
-  // Common time slots for quick selection
-  const quickTimeSlots = [
-    { label: 'Morning (9:00 AM - 1:00 PM)', start: '09:00', end: '13:00' },
-    { label: 'Afternoon (1:00 PM - 5:00 PM)', start: '13:00', end: '17:00' },
-    { label: 'Evening (5:00 PM - 9:00 PM)', start: '17:00', end: '21:00' },
-    { label: 'Full Day (9:00 AM - 5:00 PM)', start: '09:00', end: '17:00' },
-    { label: 'Lunch Break (12:00 PM - 1:00 PM)', start: '12:00', end: '13:00', isBreak: true },
-  ];
-
-  // Day names for iteration
-  const dayNames: Array<keyof WorkingHours> = [
-    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
-  ];
-
-  if (!staff) return null;
-
-  const handleSave = () => {
-    // In a real app, you would save all changes to the backend
-    toast({
-      title: 'Profile updated',
-      description: 'Your profile has been updated successfully.',
-    });
-  };
-
-  const handleAddTimeSlot = () => {
-    if (timeSlotForm.start >= timeSlotForm.end) {
-      toast({
-        title: 'Invalid time range',
-        description: 'End time must be after start time.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Check for overlapping slots
-    const hasOverlap = workingHours[selectedDay].some(slot => {
-      return (timeSlotForm.start < slot.end && timeSlotForm.end > slot.start);
-    });
-
-    if (hasOverlap && !isEditMode) {
-      toast({
-        title: 'Time slot overlap',
-        description: 'This time slot overlaps with existing slots.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const updatedHours = { ...workingHours };
-    
-    if (isEditMode && selectedSlot) {
-      // Update existing slot
-      updatedHours[selectedDay] = workingHours[selectedDay].map(slot => 
-        slot === selectedSlot ? timeSlotForm : slot
-      );
-    } else {
-      // Add new slot
-      updatedHours[selectedDay] = [...workingHours[selectedDay], timeSlotForm];
-    }
-
-    setWorkingHours(updatedHours);
-    setIsDialogOpen(false);
-    setIsEditMode(false);
-    setSelectedSlot(null);
-    
-    toast({
-      title: isEditMode ? 'Time slot updated' : 'Time slot added',
-      description: `Your availability on ${selectedDay} has been ${isEditMode ? 'updated' : 'added'}.`,
-    });
-  };
-
-  const handleDeleteTimeSlot = (day: keyof WorkingHours, slotToDelete: TimeSlot) => {
-    const updatedHours = { ...workingHours };
-    updatedHours[day] = workingHours[day].filter(slot => slot !== slotToDelete);
-    setWorkingHours(updatedHours);
-    
-    toast({
-      title: 'Time slot removed',
-      description: `Your availability on ${day} has been updated.`,
-    });
-  };
-
-  const openAddDialog = (day: keyof WorkingHours) => {
-    setSelectedDay(day);
-    setIsEditMode(false);
-    setSelectedSlot(null);
-    setTimeSlotForm({
-      start: '09:00',
-      end: '17:00',
-    });
-    setIsDialogOpen(true);
-  };
-
-  const openEditDialog = (day: keyof WorkingHours, slot: TimeSlot) => {
-    setSelectedDay(day);
-    setIsEditMode(true);
-    setSelectedSlot(slot);
-    setTimeSlotForm({
-      start: slot.start,
-      end: slot.end,
-      isBreak: slot.isBreak,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleQuickTimeSlotSelect = (preset: TimeSlot) => {
-    setTimeSlotForm(preset);
-  };
-
-  const formatTimeSlotDisplay = (slot: TimeSlot) => {
-    // Convert 24h time to AM/PM format
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(':');
-      const h = parseInt(hours, 10);
-      return `${h % 12 || 12}:${minutes} ${h < 12 ? 'AM' : 'PM'}`;
-    };
-    
-    return `${formatTime(slot.start)} - ${formatTime(slot.end)}`;
-  };
-
-  const calculateDayTotalHours = (day: keyof WorkingHours) => {
-    let totalMinutes = 0;
-    
-    workingHours[day].forEach(slot => {
-      if (!slot.isBreak) {
-        const [startHours, startMinutes] = slot.start.split(':').map(Number);
-        const [endHours, endMinutes] = slot.end.split(':').map(Number);
-        
-        const startTotalMinutes = startHours * 60 + startMinutes;
-        const endTotalMinutes = endHours * 60 + endMinutes;
-        
-        totalMinutes += (endTotalMinutes - startTotalMinutes);
+  // Fetch staff data
+  useEffect(() => {
+    async function fetchStaffData() {
+      if (!staffId) {
+        setError("Staff ID not found. Please log in again.");
+        setLoading(false);
+        return;
       }
-    });
+      
+      try {
+        setLoading(true);
+        
+        // Get latest user data to ensure we have the most up-to-date staff ID
+        const updatedUser = await getCurrentUser();
+        const staffResponse = await getStaffById(updatedUser.staff?.id || staffId);
+        
+        if (staffResponse.success) {
+          setStaff(staffResponse.staff as StaffData);
+          
+          // Initialize form data
+          setFormData({
+            email: staffResponse.staff.user?.email || '',
+            phone: staffResponse.staff.user?.phone || '',
+            bio: staffResponse.staff.bio || '',
+          });
+          
+          // Initialize working hours if available
+          if (staffResponse.staff.workingHours && staffResponse.staff.workingHours.length > 0) {
+            const hoursMap: WorkingHours = {
+              monday: [], tuesday: [], wednesday: [], thursday: [],
+              friday: [], saturday: [], sunday: []
+            };
+            
+            staffResponse.staff.workingHours.forEach(hour => {
+              const day = hour.day_of_week.toLowerCase() as keyof WorkingHours;
+              hoursMap[day].push({
+                start: hour.start_time,
+                end: hour.end_time,
+                isBreak: hour.is_break
+              });
+            });
+            
+            setWorkingHours(hoursMap);
+          }
+        } else {
+          setError("Failed to load staff profile");
+        }
+      } catch (err) {
+        console.error("Error fetching staff data:", err);
+        setError("Failed to load staff profile. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
     
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
+    fetchStaffData();
+  }, [staffId]);
+
+  const handleSave = async () => {
+    if (!staffId || !staff) return;
     
-    return hours + (minutes > 0 ? ` hours ${minutes} min` : ` hours`);
+    try {
+      setSaving(true);
+      
+      // Prepare data for update
+      const updateData = {
+        bio: formData.bio,
+        email: formData.email,
+        phone: formData.phone
+      };
+      
+      const response = await updateStaffProfile(staffId, updateData);
+      
+      if (response.success) {
+        // Update local state with response data
+        setStaff(response.staff as StaffData);
+        
+        toast({
+          title: 'Profile updated',
+          description: 'Your profile has been updated successfully.',
+        });
+      } else {
+        toast({
+          title: 'Update failed',
+          description: 'Failed to update profile. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Update failed',
+        description: 'An error occurred while updating your profile.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading profile...</span>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error || !staff) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh]">
+        <h2 className="text-xl font-semibold text-destructive mb-2">Error Loading Profile</h2>
+        <p className="text-muted-foreground mb-4">{error || "Failed to load staff profile"}</p>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -230,9 +206,10 @@ export const StaffProfile: React.FC = () => {
         title="My Profile"
         description="View and update your profile information"
         action={{
-          label: "Save Changes",
+          label: saving ? "Saving..." : "Save Changes",
           onClick: handleSave,
-          icon: <Save className="h-4 w-4 mr-2" />,
+          icon: saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />,
+          disabled: saving
         }}
       />
 
@@ -242,33 +219,33 @@ export const StaffProfile: React.FC = () => {
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center">
               <Avatar className="h-24 w-24 mb-4">
-                <AvatarImage src={staff.image} alt={staff.name} />
+                <AvatarImage src={staff.user?.image} alt={staff.user?.name} />
                 <AvatarFallback>
-                  {staff.name
+                  {staff.user?.name
                     .split(' ')
-                    .map(n => n[0])
+                    .map((n: string) => n[0])
                     .join('')}
                 </AvatarFallback>
               </Avatar>
               
-              <h2 className="text-xl font-semibold">{staff.name}</h2>
-              <p className="text-sm text-muted-foreground mb-2">{staff.position}</p>
+              <h2 className="text-xl font-semibold">{staff.user?.name}</h2>
+              <p className="text-sm text-muted-foreground mb-2">{staff.position || 'Staff Member'}</p>
               
               <div className="flex gap-2 mb-4">
-                <Badge variant={staff.isAvailable ? "default" : "outline"}>
-                  {staff.isAvailable ? 'Available' : 'Unavailable'}
+                <Badge variant={staff.is_available ? "default" : "outline"}>
+                  {staff.is_available ? 'Available' : 'Unavailable'}
                 </Badge>
-                <Badge variant="outline">{staff.commissionPercentage}% Commission</Badge>
+                <Badge variant="outline">{staff.commission_percentage}% Commission</Badge>
               </div>
               
               <div className="grid grid-cols-2 gap-4 w-full mb-4">
                 <div className="text-center">
-                  <p className="text-2xl font-semibold">{staff.totalAppointments}</p>
+                  <p className="text-2xl font-semibold">{staff.totalAppointments || 0}</p>
                   <p className="text-xs text-muted-foreground">Appointments</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-semibold">
-                    {formatCurrency(staff.totalEarnings).replace('$', '')}
+                    {formatCurrency(staff.totalEarnings || 0).replace('$', '')}
                   </p>
                   <p className="text-xs text-muted-foreground">Earnings</p>
                 </div>
@@ -277,11 +254,15 @@ export const StaffProfile: React.FC = () => {
               <div className="text-sm text-left w-full space-y-2">
                 <p className="font-medium">Services:</p>
                 <div className="flex flex-wrap gap-1">
-                  {staff.services.map((service, i) => (
-                    <Badge variant="secondary" key={i}>
-                      {service}
-                    </Badge>
-                  ))}
+                  {staff.services && staff.services.length > 0 ? (
+                    staff.services.map((service: StaffService, i: number) => (
+                      <Badge variant="secondary" key={i}>
+                        {service.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No services assigned</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -340,8 +321,8 @@ export const StaffProfile: React.FC = () => {
               <div className="space-y-2">
                 <p className="text-sm">Configure your working schedule and breaks for each day of the week.</p>
                 <p className="text-sm text-muted-foreground">
-                  Your current schedule has {Object.values(staff.workingHours).flat().filter(slot => !slot.isBreak).length} time slots 
-                  across {Object.values(staff.workingHours).filter(day => day.length > 0).length} days.
+                  Your current schedule has {Object.values(workingHours).flat().filter(slot => !slot.isBreak).length} time slots 
+                  across {Object.values(workingHours).filter(day => day.length > 0).length} days.
                 </p>
               </div>
               <Button asChild>
