@@ -46,25 +46,59 @@ export const Login: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       const from = location.state?.from?.pathname;
+      console.log('User authenticated, role:', userRole, 'redirecting from:', from);
+      
       if (userRole === 'admin') {
         navigate(from || '/admin/dashboard', { replace: true });
       } else if (userRole === 'staff') {
+        // For staff users, first ensure we have their complete profile
+        console.log('Staff user authenticated, navigating to staff dashboard');
         navigate(from || '/staff/dashboard', { replace: true });
       } else if (userRole === 'billing') {
         navigate(from || '/billing/pos', { replace: true });
+      } else {
+        console.warn('Unknown user role:', userRole);
+        // Default to login page if role is unknown
+        navigate('/login', { replace: true });
       }
     }
   }, [isAuthenticated, userRole, navigate, location]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  useEffect(() => {
+    // If user was redirected to login page after logout,
+    // show a message to indicate successful logout
+    if (location.state?.from?.pathname && location.state?.logout) {
+      toast({
+        title: 'Logged Out',
+        description: 'You have been successfully logged out.',
+      });
+    }
+  }, [location, toast]);
+
+  const onSubmit = async (values: z.infer<typeof formSchema>, event?: React.BaseSyntheticEvent) => {
+    // Prevent default form submission behavior which would cause page refresh
+    if (event) {
+      event.preventDefault();
+    }
+    
     try {
       setIsLoading(true);
+      console.log('Attempting login with email:', values.email);
+      
       await login(values.email, values.password);
+      
+      // Get the current user role after login
+      const currentRole = userRole;
+      
+      // Log additional information for debugging
+      console.log('Login successful, user role:', currentRole);
       
       toast({
         title: 'Success',
         description: 'Welcome back!',
       });
+      
+      // Navigation will be handled by the useEffect
     } catch (error) {
       let errorMessage = 'Invalid email or password';
       
@@ -72,18 +106,28 @@ export const Login: React.FC = () => {
         errorMessage = error.message;
       }
       
+      console.error('Login error details:', error);
+      
       toast({
         title: 'Error',
         description: errorMessage,
         variant: 'destructive',
       });
+      
+      // Don't redirect on error
+      setIsLoading(false);
     } finally {
       setIsLoading(false);
     }
   };
 
   // For demo purposes, we'll keep the mock users option
-  const loginWithMockUser = (role: 'admin' | 'staff' | 'billing') => {
+  const loginWithMockUser = (role: 'admin' | 'staff' | 'billing', event?: React.MouseEvent) => {
+    // Prevent any default behavior
+    if (event) {
+      event.preventDefault();
+    }
+    
     let email = '';
     let password = '';
     
@@ -100,7 +144,9 @@ export const Login: React.FC = () => {
     
     form.setValue('email', email);
     form.setValue('password', password);
-    form.handleSubmit(onSubmit)();
+    
+    // Call onSubmit directly instead of using form.handleSubmit
+    onSubmit({ email, password });
   };
 
   return (
@@ -116,7 +162,13 @@ export const Login: React.FC = () => {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                form.handleSubmit((values) => onSubmit(values, e))();
+              }} 
+              className="space-y-4"
+            >
               <FormField
                 control={form.control}
                 name="email"
@@ -166,7 +218,7 @@ export const Login: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => loginWithMockUser('admin')}
+                onClick={(e) => loginWithMockUser('admin', e)}
                 disabled={isLoading}
               >
                 Login as Admin
@@ -174,7 +226,7 @@ export const Login: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => loginWithMockUser('staff')}
+                onClick={(e) => loginWithMockUser('staff', e)}
                 disabled={isLoading}
               >
                 Login as Staff
@@ -182,7 +234,7 @@ export const Login: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => loginWithMockUser('billing')}
+                onClick={(e) => loginWithMockUser('billing', e)}
                 disabled={isLoading}
               >
                 Login as Billing

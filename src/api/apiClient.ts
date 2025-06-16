@@ -33,24 +33,60 @@ export const apiClient = async <T>(
   console.log(`API Request: ${method} ${url}`, body);
   
   try {
-    const response = await fetch(url, options);
-    const data = await response.json();
+    // Add timeout to fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    
+    // Clear the timeout
+    clearTimeout(timeoutId);
+    
+    // Log detailed response information for debugging
+    console.log(`API Response Status: ${response.status} ${response.statusText}`);
+    console.log(`API Response Headers:`, Object.fromEntries([...response.headers.entries()]));
+    
+    let data;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error('Error parsing JSON response:', jsonError);
+      throw new Error('Invalid response format from server');
+    }
     
     if (!response.ok) {
       // Handle unauthorized error (expired token)
       if (response.status === 401) {
+        console.error('Authentication error: Token expired or invalid');
         removeToken();
-        window.location.href = '/login';
+        // Instead of redirecting immediately, throw an error that can be handled by the calling code
+        throw new Error('Authentication failed. Please log in again.');
       }
       
       console.error(`API Error: ${response.status}`, data);
       throw new Error(data.message || 'Something went wrong');
     }
     
-    console.log(`API Response: ${method} ${url}`, data);
+    console.log(`API Response Data: ${method} ${url}`, data);
     return data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`Error fetching ${endpoint}:`, error);
+    
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      
+      // Handle network errors
+      if (error instanceof TypeError && error.message.includes('NetworkError')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+    }
+    
     throw error;
   }
 };

@@ -69,9 +69,26 @@ export const login = async (email: string, password: string): Promise<User> => {
     const data = await post<AuthResponse>('/auth/login', { email, password });
     
     if (data.success && data.token) {
+      // Make sure we're saving the complete user object including staff details
+      const userWithDetails = data.user;
       saveToken(data.token);
-      saveUser(data.user);
-      return data.user;
+      saveUser(userWithDetails);
+      
+      // If staff user but no staff details, try to fetch them
+      if (userWithDetails.role === 'staff' && !userWithDetails.staff) {
+        try {
+          const userResponse = await get<UserResponse>('/auth/me');
+          if (userResponse.success && userResponse.user.staff) {
+            saveUser(userResponse.user);
+            return userResponse.user;
+          }
+        } catch (profileError) {
+          console.error('Error fetching staff details:', profileError);
+          // Continue with login even if we can't get staff details
+        }
+      }
+      
+      return userWithDetails;
     }
     
     throw new Error('Login failed');
@@ -86,7 +103,7 @@ export const login = async (email: string, password: string): Promise<User> => {
  */
 export const logout = (): void => {
   removeToken();
-  window.location.href = '/login';
+  // Don't redirect here, let the calling code handle navigation
 };
 
 /**

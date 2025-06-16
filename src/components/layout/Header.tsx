@@ -22,7 +22,12 @@ export const Header: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/login', { 
+      state: { 
+        logout: true 
+      },
+      replace: true
+    });
   };
 
   return (
