@@ -4,8 +4,8 @@ import {
   Plus,
   Trash,
   Edit,
-  Save,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -43,7 +43,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
 
 // API imports
 import { useAuth } from '@/lib/auth';
@@ -66,7 +65,6 @@ export const StaffWorkingHours: React.FC = () => {
   } = useApi(getStaffById);
 
   const {
-    loading: updateLoading,
     error: updateError,
     execute: saveWorkingHours
   } = useApi(updateStaffAvailability);
@@ -86,6 +84,10 @@ export const StaffWorkingHours: React.FC = () => {
     start: '09:00',
     end: '17:00',
   });
+  
+  // Loading states
+  const [addingSlot, setAddingSlot] = useState(false);
+  const [deletingSlot, setDeletingSlot] = useState<string | null>(null);
 
   // Common time slots for quick selection
   const quickTimeSlots = [
@@ -154,47 +156,7 @@ export const StaffWorkingHours: React.FC = () => {
     }
   }, [staffError, updateError, toast]);
 
-  const handleSave = async () => {
-    if (!staffId) {
-      toast({
-        title: 'Error',
-        description: 'Staff ID not found',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      // Convert our frontend format to API format
-      const apiWorkingHours: WorkingHour[] = [];
-      
-      Object.entries(workingHours).forEach(([day, slots]) => {
-        slots.forEach((slot: TimeSlot) => {
-          apiWorkingHours.push({
-            day_of_week: day,
-            start_time: `${slot.start}:00`,
-            end_time: `${slot.end}:00`,
-            is_break: !!slot.isBreak
-          });
-        });
-      });
-
-      // Save to API
-      await saveWorkingHours(staffId, apiWorkingHours);
-      
-      toast({
-        title: 'Working hours updated',
-        description: 'Your working hours have been updated successfully.',
-      });
-      
-      // Refresh data
-      fetchStaff(staffId);
-    } catch (error) {
-      console.error('Error saving working hours:', error);
-    }
-  };
-
-  const handleAddTimeSlot = () => {
+  const handleAddTimeSlot = async () => {
     if (timeSlotForm.start >= timeSlotForm.end) {
       toast({
         title: 'Invalid time range',
@@ -235,21 +197,102 @@ export const StaffWorkingHours: React.FC = () => {
     setIsEditMode(false);
     setSelectedSlot(null);
     
-    toast({
-      title: isEditMode ? 'Time slot updated' : 'Time slot added',
-      description: `Your availability on ${selectedDay} has been ${isEditMode ? 'updated' : 'added'}.`,
-    });
+    // Save changes to backend
+    if (staffId) {
+      try {
+        setAddingSlot(true);
+        // Convert our frontend format to API format
+        const apiWorkingHours: WorkingHour[] = [];
+        
+        Object.entries(updatedHours).forEach(([day, slots]) => {
+          slots.forEach((slot: TimeSlot) => {
+            apiWorkingHours.push({
+              day_of_week: day,
+              start_time: `${slot.start}:00`,
+              end_time: `${slot.end}:00`,
+              is_break: !!slot.isBreak
+            });
+          });
+        });
+
+        // Save to API
+        await saveWorkingHours(staffId, apiWorkingHours);
+        
+        toast({
+          title: isEditMode ? 'Time slot updated' : 'Time slot added',
+          description: `Your availability on ${selectedDay} has been ${isEditMode ? 'updated' : 'added'}.`,
+        });
+        
+        // Refresh data
+        fetchStaff(staffId);
+      } catch (error) {
+        console.error('Error saving working hours:', error);
+        toast({
+          title: 'Error saving changes',
+          description: 'There was a problem saving your changes. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setAddingSlot(false);
+      }
+    } else {
+      toast({
+        title: isEditMode ? 'Time slot updated' : 'Time slot added',
+        description: `Your availability on ${selectedDay} has been ${isEditMode ? 'updated' : 'added'}.`,
+      });
+    }
   };
 
-  const handleDeleteTimeSlot = (day: keyof WorkingHours, slotToDelete: TimeSlot) => {
+  const handleDeleteTimeSlot = async (day: keyof WorkingHours, slotToDelete: TimeSlot) => {
+    const slotId = `${day}-${slotToDelete.start}-${slotToDelete.end}`;
     const updatedHours = { ...workingHours };
     updatedHours[day] = workingHours[day].filter(slot => slot !== slotToDelete);
     setWorkingHours(updatedHours);
     
-    toast({
-      title: 'Time slot removed',
-      description: `Your availability on ${day} has been updated.`,
-    });
+    // Save changes to backend
+    if (staffId) {
+      try {
+        setDeletingSlot(slotId);
+        // Convert our frontend format to API format
+        const apiWorkingHours: WorkingHour[] = [];
+        
+        Object.entries(updatedHours).forEach(([day, slots]) => {
+          slots.forEach((slot: TimeSlot) => {
+            apiWorkingHours.push({
+              day_of_week: day,
+              start_time: `${slot.start}:00`,
+              end_time: `${slot.end}:00`,
+              is_break: !!slot.isBreak
+            });
+          });
+        });
+
+        // Save to API
+        await saveWorkingHours(staffId, apiWorkingHours);
+        
+        toast({
+          title: 'Time slot removed',
+          description: `Your availability on ${day} has been updated.`,
+        });
+        
+        // Refresh data
+        fetchStaff(staffId);
+      } catch (error) {
+        console.error('Error saving working hours:', error);
+        toast({
+          title: 'Error saving changes',
+          description: 'There was a problem saving your changes. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setDeletingSlot(null);
+      }
+    } else {
+      toast({
+        title: 'Time slot removed',
+        description: `Your availability on ${day} has been updated.`,
+      });
+    }
   };
 
   const openAddDialog = (day: keyof WorkingHours) => {
@@ -340,13 +383,7 @@ export const StaffWorkingHours: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Working Hours"
-        description="Manage your availability for appointments"
-        action={{
-          label: updateLoading ? "Saving..." : "Save Changes",
-          onClick: handleSave,
-          icon: updateLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />,
-          disabled: updateLoading,
-        }}
+        description="Manage your availability for appointments. Changes are saved automatically."
       />
 
       {(staffError || updateError) && (
@@ -468,6 +505,7 @@ export const StaffWorkingHours: React.FC = () => {
                               size="icon" 
                               onClick={() => openEditDialog(day as keyof WorkingHours, slot)}
                               className="h-7 w-7"
+                              disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
                             >
                               <Edit className="h-3.5 w-3.5" />
                             </Button>
@@ -477,8 +515,13 @@ export const StaffWorkingHours: React.FC = () => {
                                   variant="ghost" 
                                   size="icon"
                                   className="h-7 w-7"
+                                  disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
                                 >
-                                  <Trash className="h-3.5 w-3.5 text-destructive" />
+                                  {deletingSlot === `${day}-${slot.start}-${slot.end}` ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
+                                  ) : (
+                                    <Trash className="h-3.5 w-3.5 text-destructive" />
+                                  )}
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
@@ -490,7 +533,10 @@ export const StaffWorkingHours: React.FC = () => {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteTimeSlot(day as keyof WorkingHours, slot)}>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteTimeSlot(day as keyof WorkingHours, slot)}
+                                    disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
+                                  >
                                     Delete
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
@@ -565,6 +611,7 @@ export const StaffWorkingHours: React.FC = () => {
                               size="icon" 
                               onClick={() => openEditDialog(day as keyof WorkingHours, slot)}
                               className="h-7 w-7"
+                              disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
                             >
                               <Edit className="h-3.5 w-3.5" />
                             </Button>
@@ -574,8 +621,13 @@ export const StaffWorkingHours: React.FC = () => {
                                   variant="ghost" 
                                   size="icon"
                                   className="h-7 w-7"
+                                  disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
                                 >
-                                  <Trash className="h-3.5 w-3.5 text-destructive" />
+                                  {deletingSlot === `${day}-${slot.start}-${slot.end}` ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
+                                  ) : (
+                                    <Trash className="h-3.5 w-3.5 text-destructive" />
+                                  )}
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
@@ -587,7 +639,10 @@ export const StaffWorkingHours: React.FC = () => {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteTimeSlot(day as keyof WorkingHours, slot)}>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteTimeSlot(day as keyof WorkingHours, slot)}
+                                    disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
+                                  >
                                     Delete
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
@@ -684,11 +739,18 @@ export const StaffWorkingHours: React.FC = () => {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={addingSlot}>
               Cancel
             </Button>
-            <Button onClick={handleAddTimeSlot}>
-              {isEditMode ? 'Update' : 'Add'}
+            <Button onClick={handleAddTimeSlot} disabled={addingSlot}>
+              {addingSlot ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isEditMode ? 'Updating...' : 'Adding...'}
+                </>
+              ) : (
+                isEditMode ? 'Update' : 'Add'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
