@@ -129,6 +129,15 @@ export interface AdminAppointmentsResponse {
   pages: number;
 }
 
+// Staff dashboard response interface
+export interface StaffAppointmentsResponse {
+  success: boolean;
+  appointments: Appointment[];
+  services: Service[];
+  totalCount: number;
+  pages: number;
+}
+
 /**
  * Get all appointments
  */
@@ -171,6 +180,26 @@ export const getAdminAppointments = async (
   if (status) url += `&status=${status}`;
   
   return get<AdminAppointmentsResponse>(url);
+};
+
+/**
+ * Get all data needed for staff appointments page in a single request
+ */
+export const getStaffAppointments = async (
+  page = 1,
+  limit = 100,
+  sort = 'date_asc',
+  date?: string,
+  customerId?: string,
+  status?: string
+): Promise<StaffAppointmentsResponse> => {
+  let url = `/appointments/staff-dashboard?page=${page}&limit=${limit}&sort=${sort}`;
+  
+  if (date) url += `&date=${date}`;
+  if (customerId) url += `&customerId=${customerId}`;
+  if (status) url += `&status=${status}`;
+  
+  return get<StaffAppointmentsResponse>(url);
 };
 
 /**
