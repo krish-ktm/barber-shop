@@ -4,7 +4,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Calendar, CheckCheck } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  XCircle, 
+  Calendar, 
+  CheckCheck, 
+  AlertTriangle,
+  Loader2
+} from 'lucide-react';
 import { 
   Tooltip,
   TooltipContent,
@@ -12,6 +19,7 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { updateAppointmentStatus } from '@/api/services/appointmentService';
 
 // Define a simplified appointment type that works with both the API and mock data
 export interface SimpleAppointment {
@@ -30,15 +38,18 @@ interface AppointmentListProps {
   title: string;
   className?: string;
   showActions?: boolean;
+  onRefresh?: () => void;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
   appointments,
   title,
   className,
-  showActions = true
+  showActions = true,
+  onRefresh
 }) => {
   const { toast } = useToast();
+  const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
 
   // Status badge styles
   const getStatusStyle = (status: SimpleAppointment['status']) => {
@@ -58,32 +69,62 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     }
   };
 
-  // Quick actions handlers
+  // Quick actions handlers with API integration
+  const handleStatusChange = async (appointmentId: string, newStatus: SimpleAppointment['status']) => {
+    try {
+      setLoadingStates(prev => ({ ...prev, [appointmentId]: true }));
+      
+      const response = await updateAppointmentStatus(appointmentId, newStatus);
+      
+      if (response.success) {
+        toast({
+          title: "Status Updated",
+          description: `Appointment status changed to ${newStatus}`
+        });
+        
+        // Refresh the data if a callback is provided
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update appointment status",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while updating the appointment status",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [appointmentId]: false }));
+    }
+  };
+
   const handleConfirm = (appointment: SimpleAppointment) => {
-    toast({
-      title: "Appointment Confirmed",
-      description: `Confirmed appointment for ${appointment.customerName}`
-    });
+    handleStatusChange(appointment.id, 'confirmed');
   };
 
   const handleComplete = (appointment: SimpleAppointment) => {
-    toast({
-      title: "Appointment Completed",
-      description: `Marked appointment for ${appointment.customerName} as completed`
-    });
+    handleStatusChange(appointment.id, 'completed');
   };
 
   const handleCancel = (appointment: SimpleAppointment) => {
-    toast({
-      title: "Appointment Cancelled",
-      description: `Cancelled appointment for ${appointment.customerName}`
-    });
+    handleStatusChange(appointment.id, 'cancelled');
+  };
+
+  const handleNoShow = (appointment: SimpleAppointment) => {
+    handleStatusChange(appointment.id, 'no-show');
   };
 
   const handleReschedule = (appointment: SimpleAppointment) => {
     toast({
       title: "Reschedule Initiated",
-      description: `Initiating reschedule for ${appointment.customerName}`
+      description: `Please use the appointments page to reschedule for ${appointment.customerName}`
     });
   };
 
@@ -91,116 +132,128 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   const renderActions = (appointment: SimpleAppointment) => {
     if (!showActions) return null;
     
-    switch (appointment.status) {
-      case 'scheduled':
-        return (
-          <div className="flex gap-1 mt-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-7 w-7" 
-                    onClick={() => handleConfirm(appointment)}
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Confirm</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-7 w-7" 
-                    onClick={() => handleCancel(appointment)}
-                  >
-                    <XCircle className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Cancel</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleReschedule(appointment)}
-                  >
-                    <Calendar className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Reschedule</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        );
-      
-      case 'confirmed':
-        return (
-          <div className="flex gap-1 mt-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-7 w-7" 
-                    onClick={() => handleComplete(appointment)}
-                  >
-                    <CheckCheck className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Complete</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-7 w-7" 
-                    onClick={() => handleCancel(appointment)}
-                  >
-                    <XCircle className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Cancel</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => handleReschedule(appointment)}
-                  >
-                    <Calendar className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Reschedule</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        );
-        
-      default:
-        return null;
+    const isLoading = loadingStates[appointment.id] || false;
+    
+    if (isLoading) {
+      return (
+        <div className="flex justify-center mt-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      );
     }
+    
+    const buttons = [];
+    
+    // Confirm button for scheduled appointments
+    if (appointment.status === 'scheduled') {
+      buttons.push(
+        <TooltipProvider key="confirm">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-7 w-7" 
+                onClick={() => handleConfirm(appointment)}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Confirm</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
+    // Complete button for scheduled/confirmed appointments
+    if (appointment.status === 'scheduled' || appointment.status === 'confirmed') {
+      buttons.push(
+        <TooltipProvider key="complete">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-7 w-7" 
+                onClick={() => handleComplete(appointment)}
+              >
+                <CheckCheck className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Complete</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
+    // No-show button for scheduled/confirmed appointments
+    if (appointment.status === 'scheduled' || appointment.status === 'confirmed') {
+      buttons.push(
+        <TooltipProvider key="no-show">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-7 w-7" 
+                onClick={() => handleNoShow(appointment)}
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>No Show</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
+    // Cancel button for appointments that aren't already cancelled or completed
+    if (appointment.status !== 'cancelled' && appointment.status !== 'completed' && appointment.status !== 'no-show') {
+      buttons.push(
+        <TooltipProvider key="cancel">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-7 w-7" 
+                onClick={() => handleCancel(appointment)}
+              >
+                <XCircle className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Cancel</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
+    // Reschedule button for scheduled/confirmed appointments
+    if (appointment.status === 'scheduled' || appointment.status === 'confirmed') {
+      buttons.push(
+        <TooltipProvider key="reschedule">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => handleReschedule(appointment)}
+              >
+                <Calendar className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Reschedule</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
+    return buttons.length > 0 ? (
+      <div className="flex gap-1 mt-2">
+        {buttons}
+      </div>
+    ) : null;
   };
 
   // Helper function to get service names regardless of format

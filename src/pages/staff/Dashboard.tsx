@@ -20,38 +20,38 @@ export const StaffDashboard: React.FC = () => {
   const [period, setPeriod] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await getStaffDashboardData(period);
-        if (response.success) {
-          setDashboardData(response.data);
-        } else {
-          setError(response.message || 'Failed to load dashboard data');
-          toast({
-            title: "Error",
-            description: response.message || "Failed to load dashboard data",
-            variant: "destructive",
-          });
-        }
-      } catch (error: unknown) {
-        console.error('Error fetching dashboard data:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard data. Please try again later.';
-        setError(errorMessage);
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getStaffDashboardData(period);
+      if (response.success && response.data) {
+        setDashboardData(response.data);
+      } else {
+        setError(response.message || 'Failed to load dashboard data');
         toast({
           title: "Error",
-          description: errorMessage,
+          description: response.message || "Failed to load dashboard data",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error: unknown) {
+      console.error('Error fetching dashboard data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard data. Please try again later.';
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchDashboardData();
-  }, [period, toast]);
+  }, [period]);
 
   // Filter today's appointments from upcoming appointments
   const todayAppointments = dashboardData?.upcomingAppointments.filter(
@@ -220,6 +220,7 @@ export const StaffDashboard: React.FC = () => {
                   staffId: staffInfo.id,
                   staffName: staffInfo.name,
                 }))}
+                onRefresh={fetchDashboardData}
               />
             ) : (
               <p className="text-muted-foreground text-center py-4">
@@ -247,6 +248,7 @@ export const StaffDashboard: React.FC = () => {
                   staffId: staffInfo.id,
                   staffName: staffInfo.name,
                 }))}
+                onRefresh={fetchDashboardData}
               />
             ) : (
               <p className="text-muted-foreground text-center py-4">
