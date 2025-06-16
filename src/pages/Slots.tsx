@@ -518,11 +518,11 @@ export const Slots: React.FC = () => {
                                       {getBreaksForDay(businessHour.id).map((breakItem) => (
                                         <div 
                                           key={breakItem.id} 
-                                          className="flex items-center justify-between bg-muted/50 p-2 rounded text-sm"
+                                          className="flex flex-col sm:flex-row sm:items-center justify-between bg-muted/50 p-2 rounded text-sm gap-2"
                                         >
                                           <span className="font-medium">{breakItem.name}</span>
-                                          <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-1">
+                                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                                            <div className="grid grid-cols-2 gap-1 flex-1">
                                               <Input
                                                 type="time"
                                                 value={breakItem.start_time?.slice(0, 5) || ''}
@@ -532,9 +532,8 @@ export const Slots: React.FC = () => {
                                                   'start_time',
                                                   e.target.value
                                                 )}
-                                                className="w-24 h-7 text-xs"
+                                                className="min-w-0 h-7 text-xs"
                                               />
-                                              <span className="text-muted-foreground">-</span>
                                               <Input
                                                 type="time"
                                                 value={breakItem.end_time?.slice(0, 5) || ''}
@@ -544,13 +543,13 @@ export const Slots: React.FC = () => {
                                                   'end_time',
                                                   e.target.value
                                                 )}
-                                                className="w-24 h-7 text-xs"
+                                                className="min-w-0 h-7 text-xs"
                                               />
                                             </div>
                                             <Button
                                               variant="ghost"
                                               size="icon"
-                                              className="h-6 w-6"
+                                              className="h-6 w-6 flex-shrink-0"
                                               onClick={() => businessHour.id && handleRemoveBreak(businessHour.id, breakItem.id as number)}
                                             >
                                               <Trash2 className="h-3 w-3 text-destructive" />
