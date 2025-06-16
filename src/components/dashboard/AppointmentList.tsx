@@ -19,7 +19,7 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { updateAppointmentStatus } from '@/api/services/appointmentService';
+import { updateAppointmentStatusDirect } from '@/api/services/appointmentService';
 
 // Define a simplified appointment type that works with both the API and mock data
 export interface SimpleAppointment {
@@ -50,6 +50,12 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
 }) => {
   const { toast } = useToast();
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
+  const [localAppointments, setLocalAppointments] = React.useState<SimpleAppointment[]>(appointments);
+
+  // Update local appointments when props change
+  React.useEffect(() => {
+    setLocalAppointments(appointments);
+  }, [appointments]);
 
   // Status badge styles
   const getStatusStyle = (status: SimpleAppointment['status']) => {
@@ -74,32 +80,39 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     try {
       setLoadingStates(prev => ({ ...prev, [appointmentId]: true }));
       
-      const response = await updateAppointmentStatus(appointmentId, newStatus);
+      // Optimistically update the UI first
+      setLocalAppointments(prev => 
+        prev.map(app => 
+          app.id === appointmentId 
+            ? { ...app, status: newStatus } 
+            : app
+        )
+      );
       
-      if (response.success) {
-        toast({
-          title: "Status Updated",
-          description: `Appointment status changed to ${newStatus}`
-        });
-        
-        // Refresh the data if a callback is provided
-        if (onRefresh) {
-          onRefresh();
-        }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to update appointment status",
-          variant: "destructive"
-        });
-      }
+      // Then make the API call without showing the loading state
+      await updateAppointmentStatusDirect(appointmentId, newStatus);
+      
+      toast({
+        title: "Status Updated",
+        description: `Appointment status changed to ${newStatus}`
+      });
+      
     } catch (error) {
       console.error('Error updating appointment status:', error);
+      
+      // Revert the optimistic update
+      setLocalAppointments(appointments);
+      
       toast({
         title: "Error",
         description: "An error occurred while updating the appointment status",
         variant: "destructive"
       });
+      
+      // Refresh the data if a callback is provided
+      if (onRefresh) {
+        onRefresh();
+      }
     } finally {
       setLoadingStates(prev => ({ ...prev, [appointmentId]: false }));
     }
@@ -273,13 +286,13 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     <Card className={cn('p-4', className)}>
       <h3 className="font-semibold mb-4">{title}</h3>
       
-      {appointments.length === 0 ? (
+      {localAppointments.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center p-4">
           No appointments to display
         </p>
       ) : (
         <div className="space-y-4">
-          {appointments.map((appointment) => (
+          {localAppointments.map((appointment) => (
             <div
               key={appointment.id}
               className="border-b pb-3 last:border-0 last:pb-0"
