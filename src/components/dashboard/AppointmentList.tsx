@@ -1,9 +1,7 @@
 import React from 'react';
 import { formatTime } from '@/utils';
-import { Appointment } from '@/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { staffData } from '@/mocks';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle, Calendar, CheckCheck } from 'lucide-react';
@@ -15,8 +13,20 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 
+// Define a simplified appointment type that works with both the API and mock data
+export interface SimpleAppointment {
+  id: string;
+  customerName: string;
+  staffId: string;
+  staffName: string;
+  date: string;
+  time: string;
+  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show';
+  services: string[] | { serviceId: string; serviceName: string }[];
+}
+
 interface AppointmentListProps {
-  appointments: Appointment[];
+  appointments: SimpleAppointment[];
   title: string;
   className?: string;
   showActions?: boolean;
@@ -30,14 +40,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
 }) => {
   const { toast } = useToast();
 
-  // Get staff images
-  const getStaffImage = (staffId: string) => {
-    const staff = staffData.find(s => s.id === staffId);
-    return staff?.image;
-  };
-
   // Status badge styles
-  const getStatusStyle = (status: Appointment['status']) => {
+  const getStatusStyle = (status: SimpleAppointment['status']) => {
     switch (status) {
       case 'scheduled':
         return 'bg-blue-100 text-blue-800';
@@ -55,28 +59,28 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   };
 
   // Quick actions handlers
-  const handleConfirm = (appointment: Appointment) => {
+  const handleConfirm = (appointment: SimpleAppointment) => {
     toast({
       title: "Appointment Confirmed",
       description: `Confirmed appointment for ${appointment.customerName}`
     });
   };
 
-  const handleComplete = (appointment: Appointment) => {
+  const handleComplete = (appointment: SimpleAppointment) => {
     toast({
       title: "Appointment Completed",
       description: `Marked appointment for ${appointment.customerName} as completed`
     });
   };
 
-  const handleCancel = (appointment: Appointment) => {
+  const handleCancel = (appointment: SimpleAppointment) => {
     toast({
       title: "Appointment Cancelled",
       description: `Cancelled appointment for ${appointment.customerName}`
     });
   };
 
-  const handleReschedule = (appointment: Appointment) => {
+  const handleReschedule = (appointment: SimpleAppointment) => {
     toast({
       title: "Reschedule Initiated",
       description: `Initiating reschedule for ${appointment.customerName}`
@@ -84,7 +88,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   };
 
   // Render action buttons based on appointment status
-  const renderActions = (appointment: Appointment) => {
+  const renderActions = (appointment: SimpleAppointment) => {
     if (!showActions) return null;
     
     switch (appointment.status) {
@@ -199,6 +203,19 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     }
   };
 
+  // Helper function to get service names regardless of format
+  const getServiceNames = (services: SimpleAppointment['services']) => {
+    if (!services || services.length === 0) return '';
+    
+    if (typeof services[0] === 'string') {
+      return services.join(', ');
+    } else {
+      return (services as { serviceId: string; serviceName: string }[])
+        .map(service => service.serviceName)
+        .join(', ');
+    }
+  };
+
   return (
     <Card className={cn('p-4', className)}>
       <h3 className="font-semibold mb-4">{title}</h3>
@@ -217,9 +234,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
                   <Avatar>
-                    <AvatarImage src={getStaffImage(appointment.staffId)} />
                     <AvatarFallback>
-                      {appointment.staffName
+                      {appointment.customerName
                         .split(' ')
                         .map((n) => n[0])
                         .join('')}
@@ -233,11 +249,9 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                       <span>•</span>
                       <span>{appointment.staffName}</span>
                     </div>
-                    {appointment.services && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {appointment.services.map(service => service.serviceName).join(', ')}
-                      </div>
-                    )}
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {getServiceNames(appointment.services)}
+                    </div>
                   </div>
                 </div>
                 
