@@ -276,4 +276,26 @@ export const getAvailableSlots = async (
   return get<AvailableSlotsResponse>(
     `/appointments/available-slots?date=${date}&staffId=${staffId}&serviceId=${serviceId}`
   );
+};
+
+/**
+ * Get available time slots for public booking
+ */
+export const getPublicAvailableTimeSlots = async (
+  date: string,
+  staffId: string,
+  serviceId: string
+): Promise<{ success: boolean; slots: { time: string; available: boolean }[] }> => {
+  try {
+    const response = await get<{ success: boolean; slots: { time: string; available: boolean }[] }>(
+      `/public/available-slots?date=${date}&staffId=${staffId}&serviceId=${serviceId}`
+    );
+    return response;
+  } catch (error) {
+    console.error('Error fetching available slots:', error);
+    return { 
+      success: false, 
+      slots: [] 
+    };
+  }
 }; 

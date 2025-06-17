@@ -1,0 +1,109 @@
+import { get, post } from '../apiClient';
+import { Service } from '@/types';
+
+// Type definitions
+export type BookingService = Service;
+
+export interface BookingStaff {
+  id: string;
+  name: string;
+  position: string;
+  bio?: string;
+  image?: string;
+  services: string[];
+}
+
+export interface BookingSlot {
+  time: string;
+  end_time: string;
+  available: boolean;
+}
+
+export interface BookingRequest {
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  service_id: string;
+  staff_id: string;
+  date: string;
+  time: string;
+  notes?: string;
+}
+
+// Response interfaces
+interface ServicesResponse {
+  success: boolean;
+  services: Record<string, BookingService[]>;
+}
+
+interface StaffResponse {
+  success: boolean;
+  staff: BookingStaff[];
+}
+
+interface SlotsResponse {
+  success: boolean;
+  slots: BookingSlot[];
+  message?: string;
+}
+
+interface BookingResponse {
+  success: boolean;
+  appointment: {
+    id: string;
+    date: string;
+    time: string;
+    staff_name: string;
+    service_name: string;
+  };
+}
+
+/**
+ * Get all services for booking
+ */
+export const getBookingServices = async (): Promise<ServicesResponse> => {
+  return get<ServicesResponse>('/booking/services');
+};
+
+/**
+ * Get all staff available for booking
+ */
+export const getBookingStaff = async (serviceId?: string): Promise<StaffResponse> => {
+  let url = '/booking/staff';
+  if (serviceId) {
+    url += `?serviceId=${serviceId}`;
+  }
+  return get<StaffResponse>(url);
+};
+
+/**
+ * Get available time slots for booking
+ */
+export const getBookingSlots = async (
+  date: string,
+  staffId: string,
+  serviceId: string
+): Promise<SlotsResponse> => {
+  return get<SlotsResponse>(`/booking/slots?date=${date}&staffId=${staffId}&serviceId=${serviceId}`);
+};
+
+/**
+ * Create a new booking
+ */
+export const createBooking = async (bookingData: BookingRequest): Promise<BookingResponse> => {
+  return post<BookingResponse>('/booking/create', bookingData);
+};
+
+/**
+ * Get services offered by a specific staff member
+ */
+export const getStaffServices = async (staffId: string): Promise<ServicesResponse> => {
+  return get<ServicesResponse>(`/booking/staff/${staffId}/services`);
+};
+
+/**
+ * Get staff who can perform a specific service
+ */
+export const getServiceStaff = async (serviceId: string): Promise<StaffResponse> => {
+  return get<StaffResponse>(`/booking/service/${serviceId}/staff`);
+}; 

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { staffData } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useBooking } from '../BookingContext';
-import { Scissors, User } from 'lucide-react';
+import { Loader2, Scissors, User } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getBookingStaff, BookingStaff } from '@/api/services/bookingService';
 
 interface StaffSelectionProps {
   hideHeading?: boolean;
@@ -13,13 +15,61 @@ interface StaffSelectionProps {
 
 export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = false }) => {
   const { selectedStaffId, setSelectedStaffId, selectedServices, bookingFlow } = useBooking();
+  const [staffList, setStaffList] = useState<BookingStaff[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // If we're in service-first flow and have selected services, pass the first service ID
+        const serviceId = bookingFlow === 'service-first' && selectedServices.length > 0 
+          ? selectedServices[0].id 
+          : undefined;
+          
+        const response = await getBookingStaff(serviceId);
+        
+        if (response.success) {
+          console.log('Staff data:', response.staff);
+          setStaffList(response.staff);
+        } else {
+          setError('Failed to load staff members');
+          // Fallback to mock data
+          setStaffList(staffData as unknown as BookingStaff[]);
+        }
+      } catch (err) {
+        console.error('Error fetching staff:', err);
+        setError('Failed to load staff members');
+        // Fallback to mock data
+        setStaffList(staffData as unknown as BookingStaff[]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStaff();
+  }, [bookingFlow, selectedServices]);
 
   // Filter staff by selected services if in service-first flow
   const availableStaff = bookingFlow === 'service-first' && selectedServices.length > 0
-    ? staffData.filter(staff =>
-        selectedServices.every(service => staff.services.includes(service.id))
+    ? staffList.filter(staff =>
+        selectedServices.every(service => 
+          staff.services.includes(service.id)
+        )
       )
-    : staffData;
+    : staffList;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p>Loading staff members...</p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -35,6 +85,12 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
             Select a staff member for your appointment
           </p>
         </div>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
@@ -58,7 +114,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                   variant={selectedStaffId === staff.id ? "outline" : "secondary"} 
                   className={`shrink-0 ${selectedStaffId === staff.id ? "border-primary-foreground/30 text-primary-foreground" : ""}`}
                 >
-                  {staff.isAvailable ? 'Available' : 'Limited'}
+                  Available
                 </Badge>
               </div>
               <span className={`text-xs truncate ${selectedStaffId === staff.id 
@@ -77,7 +133,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                   }`}
                 >
                   <Scissors className="h-2.5 w-2.5" />
-                  <span>{staff.services.length}</span>
+                  <span>{Array.isArray(staff.services) ? staff.services.length : 0}</span>
                 </Badge>
                 {selectedServices.length > 0 && bookingFlow === 'service-first' && (
                   <Badge 
@@ -97,7 +153,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
         ))}
       </div>
 
-      {availableStaff.length === 0 && (
+      {availableStaff.length === 0 && !isLoading && (
         <div className="text-center py-8 border rounded-lg p-4">
           <p className="text-muted-foreground">
             No staff members available for the selected services.

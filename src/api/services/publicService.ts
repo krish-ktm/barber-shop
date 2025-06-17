@@ -75,7 +75,7 @@ interface GalleryResponse {
 
 interface ServicesResponse {
   success: boolean;
-  services: PublicService[];
+  services: Record<string, PublicService[]>;
 }
 
 interface StaffResponse {

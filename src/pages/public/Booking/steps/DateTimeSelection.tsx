@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format, addDays, startOfDay } from 'date-fns';
-import { Clock } from 'lucide-react';
+import { Clock, Loader2 } from 'lucide-react';
 import { Calendar } from './Fullcalendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,20 +13,95 @@ import {
 import { createTimeSlots, isShopClosed } from '@/utils/dates';
 import { useBooking } from '../BookingContext';
 import { businessHoursData } from '@/mocks';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getBookingSlots, BookingSlot } from '@/api/services/bookingService';
 
 export const DateTimeSelection: React.FC = () => {
-  const { selectedDate, setSelectedDate, selectedTime, setSelectedTime, totalDuration } = useBooking();
+  const { 
+    selectedDate, 
+    setSelectedDate, 
+    selectedTime, 
+    setSelectedTime, 
+    totalDuration,
+    selectedStaffId,
+    selectedServices 
+  } = useBooking();
 
-  // Get available time slots
+  const [availableSlots, setAvailableSlots] = useState<BookingSlot[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Format date for API
   const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
-  const timeSlots = createTimeSlots(
-    '09:00',
-    '20:00',
-    30, 
-    [{ start: '12:00', end: '13:00' }],
-    businessHoursData.shopClosures,
-    formattedDate
-  );
+  
+  // Fetch available time slots when date or staff changes
+  useEffect(() => {
+    const fetchAvailableSlots = async () => {
+      if (!selectedDate || !selectedStaffId || !selectedServices.length) {
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Use the first service for now
+        const serviceId = selectedServices[0].id;
+        
+        const response = await getBookingSlots(
+          formattedDate,
+          selectedStaffId,
+          serviceId
+        );
+
+        if (response.success) {
+          console.log('Available slots:', response.slots);
+          setAvailableSlots(response.slots);
+          
+          // If the currently selected time is no longer available, clear it
+          if (selectedTime && !response.slots.find(slot => slot.time === selectedTime && slot.available)) {
+            setSelectedTime(null);
+          }
+        } else {
+          setError(response.message || 'Failed to fetch available time slots');
+          // Fallback to mock data
+          setAvailableSlots(createTimeSlots(
+            '09:00',
+            '20:00',
+            30,
+            [{ start: '12:00', end: '13:00' }],
+            businessHoursData.shopClosures,
+            formattedDate
+          ).map(time => ({
+            time,
+            end_time: '', // We don't have this in mock data
+            available: getSlotAvailability(time)
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching time slots:', err);
+        setError('Failed to fetch available time slots');
+        
+        // Fallback to mock data
+        setAvailableSlots(createTimeSlots(
+          '09:00',
+          '20:00',
+          30,
+          [{ start: '12:00', end: '13:00' }],
+          businessHoursData.shopClosures,
+          formattedDate
+        ).map(time => ({
+          time,
+          end_time: '', // We don't have this in mock data
+          available: getSlotAvailability(time)
+        })));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAvailableSlots();
+  }, [selectedDate, selectedStaffId, selectedServices, formattedDate, selectedTime]);
 
   // Generate a consistent random seed based on the selected date
   const getDateSeed = (date: Date) => {
@@ -34,6 +109,7 @@ export const DateTimeSelection: React.FC = () => {
   };
 
   // Determine availability based on the time slot and selected date
+  // This is used as a fallback when API fails
   const getSlotAvailability = (time: string) => {
     if (!selectedDate) return false;
 
@@ -61,7 +137,14 @@ export const DateTimeSelection: React.FC = () => {
 
     // Use the date seed to generate consistent availability
     const seed = getDateSeed(selectedDate);
-    const slotIndex = timeSlots.indexOf(time);
+    const slotIndex = createTimeSlots(
+      '09:00',
+      '20:00',
+      30,
+      [{ start: '12:00', end: '13:00' }],
+      businessHoursData.shopClosures,
+      formattedDate
+    ).indexOf(time);
     return (seed + slotIndex) % 3 !== 0; // Makes roughly 1/3 of slots unavailable
   };
   
@@ -106,6 +189,12 @@ export const DateTimeSelection: React.FC = () => {
         </p>
       </div>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid md:grid-cols-2 gap-8">
         <motion.div
           variants={{
@@ -144,36 +233,41 @@ export const DateTimeSelection: React.FC = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Duration: {totalDuration} minutes
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              {timeSlots.map((time) => {
-                const isAvailable = getSlotAvailability(time);
-                return (
-                  <TooltipProvider key={time}>
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading available time slots...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {availableSlots.map((slot) => (
+                  <TooltipProvider key={slot.time}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <motion.div
-                          whileHover={{ scale: isAvailable ? 1.05 : 1 }}
-                          whileTap={{ scale: isAvailable ? 0.95 : 1 }}
+                          whileHover={{ scale: slot.available ? 1.05 : 1 }}
+                          whileTap={{ scale: slot.available ? 0.95 : 1 }}
                         >
                           <Button
-                            variant={selectedTime === time ? "default" : "outline"}
-                            className={`w-full ${!isAvailable && "opacity-50 cursor-not-allowed"}`}
-                            onClick={() => isAvailable && setSelectedTime(time)}
-                            disabled={!isAvailable}
+                            variant={selectedTime === slot.time ? "default" : "outline"}
+                            className={`w-full ${!slot.available && "opacity-50 cursor-not-allowed"}`}
+                            onClick={() => slot.available && setSelectedTime(slot.time)}
+                            disabled={!slot.available}
                           >
                             <Clock className="h-4 w-4 mr-2" />
-                            {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
+                            {format(new Date(`2000-01-01T${slot.time}`), 'h:mm a')}
                           </Button>
                         </motion.div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {isAvailable ? 'Available' : 'Booked'}
+                        {slot.available ? 'Available' : 'Booked'}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
