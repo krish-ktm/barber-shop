@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Calendar, CheckCircle, Clock, Scissors, User } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Scissors, User, Globe } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -33,6 +33,10 @@ export const BookingConfirmation: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [bookingTimezone, setBookingTimezone] = useState<string | null>(null);
+
+  // Get client timezone
+  const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   // Find selected staff from mock data (will be replaced with API data)
   const selectedStaff = staffData.find(staff => staff.id === selectedStaffId);
@@ -62,7 +66,8 @@ export const BookingConfirmation: React.FC = () => {
         staff_id: selectedStaffId,
         date: formattedDate,
         time: selectedTime,
-        notes: customerDetails.notes
+        notes: customerDetails.notes,
+        timezone: clientTimezone
       };
 
       // Submit booking to API
@@ -71,6 +76,9 @@ export const BookingConfirmation: React.FC = () => {
       if (response.success) {
         setIsSuccess(true);
         setBookingId(response.appointment.id);
+        if (response.appointment.timezone) {
+          setBookingTimezone(response.appointment.timezone);
+        }
         toast({
           title: "Booking confirmed!",
           description: "Your appointment has been successfully booked.",
@@ -148,6 +156,10 @@ export const BookingConfirmation: React.FC = () => {
               <span className="text-muted-foreground">Staff:</span>
               <span className="font-medium">{selectedStaff?.name}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Timezone:</span>
+              <span className="font-medium">{bookingTimezone || clientTimezone}</span>
+            </div>
           </div>
         </div>
         
@@ -189,6 +201,14 @@ export const BookingConfirmation: React.FC = () => {
             <div>
               <h3 className="font-medium">Duration</h3>
               <p className="text-sm text-muted-foreground">{totalDuration} minutes</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Globe className="h-5 w-5 text-primary" />
+            <div>
+              <h3 className="font-medium">Timezone</h3>
+              <p className="text-sm text-muted-foreground">{clientTimezone}</p>
             </div>
           </div>
         </div>

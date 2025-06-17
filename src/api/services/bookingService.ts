@@ -17,6 +17,8 @@ export interface BookingSlot {
   time: string;
   end_time: string;
   available: boolean;
+  timezone?: string;
+  timezoneOffset?: number;
 }
 
 export interface BookingRequest {
@@ -28,6 +30,7 @@ export interface BookingRequest {
   date: string;
   time: string;
   notes?: string;
+  timezone?: string;
 }
 
 // Response interfaces
@@ -45,6 +48,8 @@ interface SlotsResponse {
   success: boolean;
   slots: BookingSlot[];
   message?: string;
+  timezone?: string;
+  serverTime?: string;
 }
 
 interface BookingResponse {
@@ -55,6 +60,7 @@ interface BookingResponse {
     time: string;
     staff_name: string;
     service_name: string;
+    timezone?: string;
   };
 }
 
@@ -84,14 +90,23 @@ export const getBookingSlots = async (
   staffId: string,
   serviceId: string
 ): Promise<SlotsResponse> => {
-  return get<SlotsResponse>(`/booking/slots?date=${date}&staffId=${staffId}&serviceId=${serviceId}`);
+  // Include client timezone in the request
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return get<SlotsResponse>(
+    `/booking/slots?date=${date}&staffId=${staffId}&serviceId=${serviceId}&timezone=${encodeURIComponent(timezone)}`
+  );
 };
 
 /**
  * Create a new booking
  */
 export const createBooking = async (bookingData: BookingRequest): Promise<BookingResponse> => {
-  return post<BookingResponse>('/booking/create', bookingData);
+  // Include client timezone in the request
+  const dataWithTimezone = {
+    ...bookingData,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  };
+  return post<BookingResponse>('/booking/create', dataWithTimezone);
 };
 
 /**

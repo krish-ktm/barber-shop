@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format, addDays, startOfDay } from 'date-fns';
-import { Clock, Loader2 } from 'lucide-react';
+import { Clock, Loader2, Info } from 'lucide-react';
 import { Calendar } from './Fullcalendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,10 @@ export const DateTimeSelection: React.FC = () => {
   const [availableSlots, setAvailableSlots] = useState<BookingSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serverTimezone, setServerTimezone] = useState<string | null>(null);
+  
+  // Get client timezone
+  const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   // Format date for API
   const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
@@ -48,20 +52,25 @@ export const DateTimeSelection: React.FC = () => {
         // Use the first service for now
         const serviceId = selectedServices[0].id;
         
-        const response = await getBookingSlots(
-          formattedDate,
-          selectedStaffId,
-          serviceId
-        );
+                  const response = await getBookingSlots(
+            formattedDate,
+            selectedStaffId,
+            serviceId
+          );
 
-        if (response.success) {
-          console.log('Available slots:', response.slots);
-          setAvailableSlots(response.slots);
-          
-          // If the currently selected time is no longer available, clear it
-          if (selectedTime && !response.slots.find(slot => slot.time === selectedTime && slot.available)) {
-            setSelectedTime(null);
-          }
+          if (response.success) {
+            console.log('Available slots:', response.slots);
+            setAvailableSlots(response.slots);
+            
+            // Store the server timezone if provided
+            if (response.timezone) {
+              setServerTimezone(response.timezone);
+            }
+            
+            // If the currently selected time is no longer available, clear it
+            if (selectedTime && !response.slots.find(slot => slot.time === selectedTime && slot.available)) {
+              setSelectedTime(null);
+            }
         } else {
           setError(response.message || 'Failed to fetch available time slots');
           // Fallback to mock data
@@ -175,6 +184,19 @@ export const DateTimeSelection: React.FC = () => {
     return false;
   };
 
+  // Format time for display, considering timezone
+  const formatDisplayTime = (timeString: string) => {
+    try {
+      // Create a date object with the time string
+      const dateWithTime = new Date(`2000-01-01T${timeString}`);
+      // Format it in 12-hour format
+      return format(dateWithTime, 'h:mm a');
+    } catch (err) {
+      console.error('Error formatting time:', err);
+      return timeString.substring(0, 5); // Fallback to just showing HH:MM
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -187,6 +209,12 @@ export const DateTimeSelection: React.FC = () => {
         <p className="text-muted-foreground">
           Select your preferred appointment date and time
         </p>
+        {clientTimezone && (
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Info className="h-3 w-3 mr-1" />
+            <span>Your timezone: {clientTimezone}</span>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -256,12 +284,14 @@ export const DateTimeSelection: React.FC = () => {
                             disabled={!slot.available}
                           >
                             <Clock className="h-4 w-4 mr-2" />
-                            {format(new Date(`2000-01-01T${slot.time}`), 'h:mm a')}
+                            {formatDisplayTime(slot.time)}
                           </Button>
                         </motion.div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {slot.available ? 'Available' : 'Booked'}
+                        {slot.available 
+                          ? `Available (${slot.time.substring(0, 5)} - ${slot.end_time.substring(0, 5)})` 
+                          : 'Booked'}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
