@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart3, Calendar, CreditCard, Home, Scissors, Settings, Users, Clock, ListCheck as ListChecklist, Percent, Package, Star, LayoutDashboard } from 'lucide-react';
+import { BarChart3, Calendar, CreditCard, Home, Scissors, Settings, Users, Clock, ListCheck as ListChecklist, Percent, Package, Star, LayoutDashboard, CalendarX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -53,6 +53,11 @@ export const Sidebar: React.FC = () => {
       icon: <Calendar size={18} />,
       label: 'Calendar',
       href: '/admin/calendar',
+    },
+    {
+      icon: <CalendarX size={18} />,
+      label: 'Shop Closures',
+      href: '/admin/shop-closures',
     },
     {
       icon: <Users size={18} />,

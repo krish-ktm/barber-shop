@@ -1,6 +1,8 @@
 import { getToken, removeToken } from './auth';
 import { getApiBaseUrl } from '@/hooks/useApiConfig';
 
+const API_BASE_URL = 'https://barber-shop-api-eight.vercel.app/api';
+
 /**
  * Core API client for making authenticated requests to the backend
  */
@@ -103,4 +105,94 @@ export const put = <T>(endpoint: string, body: unknown) =>
   apiClient<T>(endpoint, 'PUT', body);
 
 export const del = <T>(endpoint: string) => 
-  apiClient<T>(endpoint, 'DELETE'); 
+  apiClient<T>(endpoint, 'DELETE');
+
+// Helper to handle API responses
+const handleResponse = async (response: Response) => {
+  const data = await response.json();
+  
+  if (!response.ok) {
+    const error = data.message || response.statusText;
+    throw new Error(error);
+  }
+  
+  return data;
+};
+
+// Generic GET request
+export const getGeneric = async <T>(endpoint: string): Promise<T> => {
+  const token = getToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'GET',
+    headers
+  });
+  
+  return handleResponse(response);
+};
+
+// Generic POST request
+export const postGeneric = async <T, D = Record<string, unknown>>(endpoint: string, data: D): Promise<T> => {
+  const token = getToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data)
+  });
+  
+  return handleResponse(response);
+};
+
+// Generic PUT request
+export const putGeneric = async <T, D = Record<string, unknown>>(endpoint: string, data: D): Promise<T> => {
+  const token = getToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(data)
+  });
+  
+  return handleResponse(response);
+};
+
+// Generic DELETE request
+export const delGeneric = async <T>(endpoint: string): Promise<T> => {
+  const token = getToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'DELETE',
+    headers
+  });
+  
+  return handleResponse(response);
+}; 

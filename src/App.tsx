@@ -7,7 +7,6 @@ import { Customers } from './pages/Customers';
 import { POS } from './pages/POS';
 import { Slots } from './pages/Slots';
 import { Reports } from './pages/Reports';
-import { Settings } from './pages/Settings';
 import { Services } from './pages/Services';
 import { GSTSettings } from './pages/GSTSettings';
 import { Login } from './pages/Login';
@@ -16,6 +15,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AdminProducts } from './pages/AdminProducts';
 import AdminReviews from './pages/AdminReviews';
+import AdminSettings from './pages/AdminSettings';
+import ShopClosures from './pages/ShopClosures';
 
 // Staff Routes
 import { StaffDashboard } from './pages/staff/Dashboard';
@@ -73,13 +74,14 @@ function App() {
           <Route path="staff-management" element={<StaffManagement />} />
           <Route path="appointments" element={<AdminAppointment />} />
           <Route path="calendar" element={<AdminCalendar />} />
+          <Route path="shop-closures" element={<ShopClosures />} />
           <Route path="customers" element={<Customers />} />
           <Route path="services" element={<Services />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="pos" element={<POS />} />
           <Route path="slots" element={<Slots />} />
           <Route path="reports" element={<Reports />} />
-          <Route path="settings" element={<Settings />} />
+          <Route path="settings" element={<AdminSettings />} />
           <Route path="gst-settings" element={<GSTSettings />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
