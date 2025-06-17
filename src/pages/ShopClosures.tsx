@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Trash, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,13 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { getGeneric as get, postGeneric as post, delGeneric as del } from '@/api/apiClient';
 import { PageHeader } from '@/components/layout';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface ShopClosure {
   id?: string;
@@ -156,107 +163,107 @@ const ShopClosures: React.FC = () => {
         title="Shop Closures"
         description="Manage days when your shop will be closed"
         action={{
-          label: showForm ? "Cancel" : "Add Closure",
-          onClick: () => setShowForm(!showForm),
-          icon: showForm ? null : <Plus className="mr-2 h-4 w-4" />,
+          label: "Add Closure",
+          onClick: () => setShowForm(true),
+          icon: <Plus className="mr-2 h-4 w-4" />,
         }}
       />
 
-      {showForm && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Add New Shop Closure</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <div className="relative">
-                    <Calendar className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="date"
-                      name="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={handleInputChange}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_full_day"
-                    checked={formData.is_full_day}
-                    onCheckedChange={handleSwitchChange}
-                  />
-                  <Label htmlFor="is_full_day">Full Day Closure</Label>
-                </div>
-
-                {!formData.is_full_day && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="start_time">Start Time</Label>
-                      <div className="relative">
-                        <Clock className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="start_time"
-                          name="start_time"
-                          type="time"
-                          value={formData.start_time}
-                          onChange={handleInputChange}
-                          className="pl-10"
-                          required={!formData.is_full_day}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="end_time">End Time</Label>
-                      <div className="relative">
-                        <Clock className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="end_time"
-                          name="end_time"
-                          type="time"
-                          value={formData.end_time}
-                          onChange={handleInputChange}
-                          className="pl-10"
-                          required={!formData.is_full_day}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="reason">Reason</Label>
-                  <Textarea
-                    id="reason"
-                    name="reason"
-                    value={formData.reason}
+      {/* Modal Dialog for Adding Shop Closure */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Shop Closure</DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="date"
+                    name="date"
+                    type="date"
+                    value={formData.date}
                     onChange={handleInputChange}
-                    rows={3}
+                    className="pl-10"
                     required
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
-                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isSubmitting ? 'Saving...' : 'Save Closure'}
-                </Button>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_full_day"
+                  checked={formData.is_full_day}
+                  onCheckedChange={handleSwitchChange}
+                />
+                <Label htmlFor="is_full_day">Full Day Closure</Label>
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+
+              {!formData.is_full_day && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="start_time">Start Time</Label>
+                    <div className="relative">
+                      <Clock className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="start_time"
+                        name="start_time"
+                        type="time"
+                        value={formData.start_time}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                        required={!formData.is_full_day}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="end_time">End Time</Label>
+                    <div className="relative">
+                      <Clock className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="end_time"
+                        name="end_time"
+                        type="time"
+                        value={formData.end_time}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                        required={!formData.is_full_day}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="reason">Reason</Label>
+                <Textarea
+                  id="reason"
+                  name="reason"
+                  value={formData.reason}
+                  onChange={handleInputChange}
+                  rows={3}
+                  required
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isSubmitting ? 'Saving...' : 'Save Closure'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {isLoading ? (
         <div className="flex justify-center py-8">
@@ -287,7 +294,7 @@ const ShopClosures: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => closure.id && deleteClosure(closure.id)}
-                    className="text-primary-foreground hover:bg-primary/90"
+                    className="text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/20"
                   >
                     <Trash className="h-4 w-4" />
                   </Button>
