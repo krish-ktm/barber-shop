@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useBooking } from '../BookingContext';
 import { Button } from '@/components/ui/button';
@@ -20,19 +20,28 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
   const [services, setServices] = useState<Record<string, BookingService[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
   
-  // Memoize the service toggle handler to prevent unnecessary re-renders
-  const handleServiceToggle = useCallback((service: Service | BookingService) => {
-    setSelectedServices(
-      selectedServices.some(s => s.id === service.id)
-        ? selectedServices.filter(s => s.id !== service.id)
-        : [...selectedServices, service as Service]
-    );
-  }, [selectedServices, setSelectedServices]);
+  // Handle service toggle without triggering re-renders
+  const handleServiceToggle = (service: Service | BookingService) => {
+    const isSelected = selectedServices.some(s => s.id === service.id);
+    
+    if (isSelected) {
+      // Remove the service if it's already selected
+      setSelectedServices(selectedServices.filter(s => s.id !== service.id));
+    } else {
+      // Add the service if it's not selected
+      setSelectedServices([...selectedServices, service as Service]);
+    }
+  };
 
-  // Fetch services from API
+  // Fetch services from API only once on initial load or when dependencies change
   useEffect(() => {
     const fetchServices = async () => {
+      if (hasFetchedRef.current && !selectedStaffId) {
+        return; // Skip fetching if we've already fetched and staff ID hasn't changed
+      }
+      
       setIsLoading(true);
       setError(null);
       
@@ -50,6 +59,14 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
         if (response.success) {
           console.log('Services data:', response.services);
           setServices(response.services);
+          
+          // Initialize open categories
+          const initialOpenState = Object.keys(response.services).reduce((acc, category) => {
+            acc[category] = true; // Set all categories to open by default
+            return acc;
+          }, {} as Record<string, boolean>);
+          
+          setOpenCategories(initialOpenState);
         } else {
           setError('Failed to load services');
           // Fallback to mock data
@@ -79,6 +96,7 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
         setServices(groupedMockServices as unknown as Record<string, BookingService[]>);
       } finally {
         setIsLoading(false);
+        hasFetchedRef.current = true;
       }
     };
 
@@ -170,7 +188,12 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
                         key={`service-${service.id}`}
                         variant={isSelected ? "default" : "outline"}
                         className={`w-full p-3 h-auto text-left flex flex-col ${isSelected ? "" : "hover:border-primary/50"}`}
-                        onClick={() => handleServiceToggle(service)}
+                        onClick={(e) => {
+                          e.preventDefault(); // Prevent default button behavior
+                          e.stopPropagation(); // Stop event propagation
+                          handleServiceToggle(service);
+                        }}
+                        type="button" // Explicitly set type to button
                       >
                         <div className="flex items-start justify-between w-full">
                           <div className="flex flex-col">
