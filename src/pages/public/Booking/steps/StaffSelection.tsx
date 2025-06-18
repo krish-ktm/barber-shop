@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { staffData } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -62,6 +62,11 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
       )
     : staffList;
 
+  // Handle staff selection with memoization
+  const handleStaffSelect = useCallback((staffId: string) => {
+    setSelectedStaffId(staffId);
+  }, [setSelectedStaffId]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -94,63 +99,80 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
-        {availableStaff.map((staff) => (
-          <Button
-            key={staff.id}
-            variant={selectedStaffId === staff.id ? "default" : "outline"}
-            className={`w-full h-auto p-3 text-left flex items-start gap-3 ${selectedStaffId === staff.id ? "" : "hover:border-primary/50"}`}
-            onClick={() => setSelectedStaffId(staff.id)}
-          >
-            <Avatar className="h-12 w-12 border shrink-0 mt-0.5">
-              <AvatarImage src={staff.image} alt={staff.name} />
-              <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col min-w-0 flex-1">
-              <div className="flex items-center justify-between w-full">
-                <span className={`font-medium truncate ${selectedStaffId === staff.id ? "text-primary-foreground" : ""}`}>
-                  {staff.name}
-                </span>
-                <Badge 
-                  variant={selectedStaffId === staff.id ? "outline" : "secondary"} 
-                  className={`shrink-0 ${selectedStaffId === staff.id ? "border-primary-foreground/30 text-primary-foreground" : ""}`}
-                >
-                  Available
-                </Badge>
-              </div>
-              <span className={`text-xs truncate ${selectedStaffId === staff.id 
-                ? "text-primary-foreground" 
-                : "text-muted-foreground"
-              }`}>
-                {staff.position}
-              </span>
-              <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                <Badge 
-                  variant="outline"
-                  className={`text-xs py-0 h-5 px-1.5 flex items-center gap-1 ${
-                    selectedStaffId === staff.id 
-                      ? "border-primary-foreground/30 text-primary-foreground" 
-                      : ""
-                  }`}
-                >
-                  <Scissors className="h-2.5 w-2.5" />
-                  <span>{Array.isArray(staff.services) ? staff.services.length : 0}</span>
-                </Badge>
-                {selectedServices.length > 0 && bookingFlow === 'service-first' && (
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-xs ${
-                      selectedStaffId === staff.id 
-                        ? "bg-primary-foreground/20 text-primary-foreground" 
-                        : ""
-                    }`}
-                  >
-                    All selected services
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </Button>
-        ))}
+        {availableStaff.map((staff) => {
+          const isSelected = selectedStaffId === staff.id;
+          return (
+            <motion.div
+              key={`staff-${staff.id}`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Button
+                variant={isSelected ? "default" : "outline"}
+                className={`w-full h-auto p-3 text-left flex items-start gap-3 transition-all duration-200 ${
+                  isSelected 
+                    ? "bg-gradient-to-r from-primary to-primary/90 shadow-md" 
+                    : "hover:border-primary/50 hover:shadow-sm"
+                }`}
+                onClick={() => handleStaffSelect(staff.id)}
+              >
+                <Avatar className={`h-12 w-12 border shrink-0 mt-0.5 ${isSelected ? "ring-2 ring-primary-foreground/30" : ""}`}>
+                  <AvatarImage src={staff.image} alt={staff.name} />
+                  <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex items-center justify-between w-full">
+                    <span className={`font-medium truncate ${isSelected ? "text-primary-foreground" : ""}`}>
+                      {staff.name}
+                    </span>
+                    <Badge 
+                      variant={isSelected ? "outline" : "secondary"} 
+                      className={`shrink-0 ${
+                        isSelected 
+                          ? "border-primary-foreground/30 text-primary-foreground bg-primary-foreground/10" 
+                          : ""
+                      }`}
+                    >
+                      Available
+                    </Badge>
+                  </div>
+                  <span className={`text-xs truncate ${
+                    isSelected 
+                      ? "text-primary-foreground/90" 
+                      : "text-muted-foreground"
+                  }`}>
+                    {staff.position}
+                  </span>
+                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                    <Badge 
+                      variant="outline"
+                      className={`text-xs py-0 h-5 px-1.5 flex items-center gap-1 ${
+                        isSelected 
+                          ? "border-primary-foreground/30 text-primary-foreground bg-primary-foreground/10" 
+                          : ""
+                      }`}
+                    >
+                      <Scissors className="h-2.5 w-2.5" />
+                      <span>{Array.isArray(staff.services) ? staff.services.length : 0}</span>
+                    </Badge>
+                    {selectedServices.length > 0 && bookingFlow === 'service-first' && (
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-xs ${
+                          isSelected 
+                            ? "bg-primary-foreground/20 text-primary-foreground" 
+                            : ""
+                        }`}
+                      >
+                        All selected services
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </Button>
+            </motion.div>
+          );
+        })}
       </div>
 
       {availableStaff.length === 0 && !isLoading && (

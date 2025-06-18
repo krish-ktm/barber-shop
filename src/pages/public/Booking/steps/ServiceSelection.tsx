@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useBooking } from '../BookingContext';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,15 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
   const [services, setServices] = useState<Record<string, BookingService[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Memoize the service toggle handler to prevent unnecessary re-renders
+  const handleServiceToggle = useCallback((service: Service | BookingService) => {
+    setSelectedServices(
+      selectedServices.some(s => s.id === service.id)
+        ? selectedServices.filter(s => s.id !== service.id)
+        : [...selectedServices, service as Service]
+    );
+  }, [selectedServices, setSelectedServices]);
 
   // Fetch services from API
   useEffect(() => {
@@ -76,24 +85,16 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
     fetchServices();
   }, [bookingFlow, selectedStaffId]);
 
-  const handleServiceToggle = (service: Service | BookingService) => {
-    setSelectedServices(
-      selectedServices.some(s => s.id === service.id)
-        ? selectedServices.filter(s => s.id !== service.id)
-        : [...selectedServices, service as Service]
-    );
-  };
-
-  const toggleCategory = (category: string) => {
+  const toggleCategory = useCallback((category: string) => {
     setOpenCategories(prev => ({
       ...prev,
       [category]: !prev[category]
     }));
-  };
+  }, []);
 
-  const getSelectedServicesCount = (category: string) => {
+  const getSelectedServicesCount = useCallback((category: string) => {
     return selectedServices.filter(service => service.category === category).length;
-  };
+  }, [selectedServices]);
 
   if (isLoading) {
     return (
@@ -166,7 +167,7 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
                     const isSelected = selectedServices.some(s => s.id === service.id);
                     return (
                       <Button
-                        key={service.id}
+                        key={`service-${service.id}`}
                         variant={isSelected ? "default" : "outline"}
                         className={`w-full p-3 h-auto text-left flex flex-col ${isSelected ? "" : "hover:border-primary/50"}`}
                         onClick={() => handleServiceToggle(service)}

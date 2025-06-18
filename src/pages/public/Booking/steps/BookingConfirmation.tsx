@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Calendar, CheckCircle, Clock, Scissors, User, Globe } from 'lucide-react';
@@ -9,7 +9,7 @@ import { staffData } from '@/mocks';
 import { formatCurrency } from '@/utils';
 import { useBooking } from '../BookingContext';
 import { useToast } from '@/hooks/use-toast';
-import { createBooking, BookingRequest, BookingResponse } from '@/api/services/bookingService';
+import { createBooking, BookingRequest, BookingResponse, getStaffDetails, BookingStaff } from '@/api/services/bookingService';
 
 export const BookingConfirmation: React.FC = () => {
   const { toast } = useToast();
@@ -35,12 +35,41 @@ export const BookingConfirmation: React.FC = () => {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [bookingTimezone, setBookingTimezone] = useState<string | null>(null);
   const [bookingResponse, setBookingResponse] = useState<BookingResponse | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<BookingStaff | null>(null);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
 
   // Get client timezone
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  // Find selected staff from mock data (will be replaced with API data)
-  const selectedStaff = staffData.find(staff => staff.id === selectedStaffId);
+  // Fetch selected staff details
+  useEffect(() => {
+    const fetchStaffDetails = async () => {
+      if (!selectedStaffId) return;
+      
+      setIsLoadingStaff(true);
+      try {
+        // Try to get staff details from API
+        const response = await getStaffDetails(selectedStaffId);
+        
+        if (response && response.success && response.staff) {
+          setSelectedStaff(response.staff);
+        } else {
+          // Fallback to mock data
+          const mockStaff = staffData.find(staff => staff.id === selectedStaffId);
+          setSelectedStaff(mockStaff as unknown as BookingStaff || null);
+        }
+      } catch (error) {
+        console.error("Error fetching staff details:", error);
+        // Fallback to mock data
+        const mockStaff = staffData.find(staff => staff.id === selectedStaffId);
+        setSelectedStaff(mockStaff as unknown as BookingStaff || null);
+      } finally {
+        setIsLoadingStaff(false);
+      }
+    };
+
+    fetchStaffDetails();
+  }, [selectedStaffId]);
 
   const handleSubmitBooking = async () => {
     if (!selectedStaffId || !selectedServices.length || !selectedDate || !selectedTime || !customerDetails) {
@@ -161,7 +190,7 @@ export const BookingConfirmation: React.FC = () => {
           )}
         </div>
         
-        <div className="w-full max-w-md p-6 border rounded-lg bg-card mt-6">
+        <div className="w-full max-w-md p-6 border rounded-lg bg-card mt-6 shadow-sm">
           <div className="space-y-4">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Date:</span>
@@ -179,7 +208,7 @@ export const BookingConfirmation: React.FC = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Staff:</span>
-              <span className="font-medium">{selectedStaff?.name}</span>
+              <span className="font-medium">{selectedStaff?.name || "Selected Staff"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Timezone:</span>
@@ -188,7 +217,7 @@ export const BookingConfirmation: React.FC = () => {
           </div>
         </div>
         
-        <Button onClick={handleStartOver} className="mt-6">
+        <Button onClick={handleStartOver} className="mt-6 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
           Book Another Appointment
         </Button>
       </motion.div>
@@ -210,7 +239,7 @@ export const BookingConfirmation: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-        <div className="border rounded-lg p-4 space-y-4">
+        <div className="border rounded-lg p-4 space-y-4 bg-card/50 shadow-sm">
           <div className="flex items-center gap-4">
             <Calendar className="h-5 w-5 text-primary" />
             <div>
@@ -243,7 +272,7 @@ export const BookingConfirmation: React.FC = () => {
           </div>
         </div>
 
-        <div className="border rounded-lg p-4 space-y-4">
+        <div className="border rounded-lg p-4 space-y-4 bg-card/50 shadow-sm">
           <div className="flex items-center gap-4">
             <Scissors className="h-5 w-5 text-primary" />
             <div>
@@ -251,73 +280,110 @@ export const BookingConfirmation: React.FC = () => {
             </div>
           </div>
           
-          {selectedServices.map(service => (
-            <div key={service.id} className="flex items-center justify-between pl-9">
-              <span className="text-sm">{service.name}</span>
-              <span className="text-sm font-medium">{formatCurrency(service.price)}</span>
+          <div className="pl-9 space-y-3">
+            {selectedServices.map((service) => (
+              <div key={service.id} className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{service.name}</p>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{service.duration} min</span>
+                  </div>
+                </div>
+                <span className="font-medium">{formatCurrency(service.price)}</span>
+              </div>
+            ))}
+            
+            <Separator />
+            
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Total</span>
+              <span className="font-bold text-lg">{formatCurrency(totalPrice)}</span>
             </div>
-          ))}
-          
-          <Separator />
-          
-          <div className="flex items-center justify-between pl-9">
-            <span className="font-medium">Total</span>
-            <span className="font-bold">{formatCurrency(totalPrice)}</span>
           </div>
         </div>
 
-        <div className="border rounded-lg p-4 space-y-4">
-          <div className="flex items-center gap-4">
+        {/* Enhanced Staff Card */}
+        <div className="border rounded-lg p-4 bg-card/50 shadow-sm">
+          <div className="flex items-center gap-4 mb-4">
             <User className="h-5 w-5 text-primary" />
             <div>
               <h3 className="font-medium">Staff</h3>
             </div>
           </div>
           
-          <div className="flex items-center gap-3 pl-9">
-            <Avatar className="h-10 w-10 border">
-              <AvatarImage src={selectedStaff?.image} alt={selectedStaff?.name} />
-              <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-sm font-medium">{selectedStaff?.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {selectedStaff ? 'Barber' : ''}
-              </p>
+          {isLoadingStaff ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-pulse flex space-x-4">
+                <div className="rounded-full bg-muted h-12 w-12"></div>
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-5/6"></div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : selectedStaff ? (
+            <div className="pl-9">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 border">
+                  <AvatarImage src={selectedStaff.image} alt={selectedStaff.name} />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {selectedStaff.name?.charAt(0) || <User className="h-5 w-5" />}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{selectedStaff.name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedStaff.position}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="pl-9 text-muted-foreground">No staff selected</div>
+          )}
         </div>
 
-        <div className="border rounded-lg p-4 space-y-4">
+        <div className="border rounded-lg p-4 space-y-4 bg-card/50 shadow-sm">
           <div className="flex items-center gap-4">
             <User className="h-5 w-5 text-primary" />
             <div>
-              <h3 className="font-medium">Customer Information</h3>
+              <h3 className="font-medium">Customer Details</h3>
             </div>
           </div>
           
-          <div className="space-y-2 pl-9">
-            <p className="text-sm"><span className="text-muted-foreground">Name:</span> {customerDetails?.name}</p>
-            <p className="text-sm"><span className="text-muted-foreground">Phone:</span> {customerDetails?.phone}</p>
-            {customerDetails?.email && (
-              <p className="text-sm"><span className="text-muted-foreground">Email:</span> {customerDetails.email}</p>
+          <div className="pl-9 space-y-2">
+            <div className="grid grid-cols-[100px_1fr]">
+              <span className="text-muted-foreground">Name:</span>
+              <span>{customerDetails.name}</span>
+            </div>
+            {customerDetails.email && (
+              <div className="grid grid-cols-[100px_1fr]">
+                <span className="text-muted-foreground">Email:</span>
+                <span>{customerDetails.email}</span>
+              </div>
             )}
-            {customerDetails?.notes && (
-              <p className="text-sm"><span className="text-muted-foreground">Notes:</span> {customerDetails.notes}</p>
+            <div className="grid grid-cols-[100px_1fr]">
+              <span className="text-muted-foreground">Phone:</span>
+              <span>{customerDetails.phone}</span>
+            </div>
+            {customerDetails.notes && (
+              <div className="grid grid-cols-[100px_1fr]">
+                <span className="text-muted-foreground">Notes:</span>
+                <span>{customerDetails.notes}</span>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="flex gap-4 pt-4">
+      <div className="pt-4">
         <Button 
           onClick={handleSubmitBooking} 
-          disabled={isSubmitting}
-          className="flex-1"
+          disabled={isSubmitting} 
+          className="w-full h-12 text-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md"
         >
           {isSubmitting ? (
             <>
-              <Clock className="mr-2 h-4 w-4 animate-spin" />
+              <span className="animate-spin mr-2">⏳</span>
               Processing...
             </>
           ) : (

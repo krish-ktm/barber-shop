@@ -47,6 +47,11 @@ interface StaffResponse {
   staff: BookingStaff[];
 }
 
+interface StaffDetailsResponse {
+  success: boolean;
+  staff: BookingStaff;
+}
+
 interface SlotsResponse {
   success: boolean;
   slots: BookingSlot[];
@@ -88,6 +93,13 @@ export const getBookingStaff = async (serviceId?: string): Promise<StaffResponse
     url += `?serviceId=${serviceId}`;
   }
   return get<StaffResponse>(url);
+};
+
+/**
+ * Get details for a specific staff member
+ */
+export const getStaffDetails = async (staffId: string): Promise<StaffDetailsResponse> => {
+  return get<StaffDetailsResponse>(`/booking/staff/${staffId}`);
 };
 
 /**

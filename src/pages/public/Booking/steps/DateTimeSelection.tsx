@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { format, addDays, startOfDay } from 'date-fns';
-import { Clock, Loader2, Info } from 'lucide-react';
+import { Clock, Loader2, Info, AlertCircle, Calendar as CalendarIcon, X } from 'lucide-react';
 import { Calendar } from './Fullcalendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +11,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useBooking } from '../BookingContext';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getBookingSlots, BookingSlot } from '@/api/services/bookingService';
 
 export const DateTimeSelection: React.FC = () => {
@@ -36,6 +35,16 @@ export const DateTimeSelection: React.FC = () => {
 
   // Format date for API
   const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+  
+  // Memoize the time selection handler
+  const handleTimeSelect = useCallback((time: string) => {
+    setSelectedTime(time);
+  }, [setSelectedTime]);
+
+  // Clear error message
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
   
   // Fetch available time slots when date or staff changes
   useEffect(() => {
@@ -100,10 +109,11 @@ export const DateTimeSelection: React.FC = () => {
     };
 
     fetchAvailableSlots();
-  }, [selectedDate, selectedStaffId, selectedServices, formattedDate, selectedTime]);
+    // Remove selectedTime from dependency array to prevent reloading when selecting a time slot
+  }, [selectedDate, selectedStaffId, selectedServices, formattedDate]);
 
   // Check if a date should be disabled in the calendar
-  const isDateDisabled = (date: Date) => {
+  const isDateDisabled = useCallback((date: Date) => {
     // Disable dates in the past
     if (date < startOfDay(new Date())) {
       return true;
@@ -115,10 +125,10 @@ export const DateTimeSelection: React.FC = () => {
     }
     
     return false;
-  };
+  }, []);
 
   // Format time for display, considering timezone
-  const formatDisplayTime = (timeString: string) => {
+  const formatDisplayTime = useCallback((timeString: string) => {
     try {
       // Create a date object with the time string
       const dateWithTime = new Date(`2000-01-01T${timeString}`);
@@ -128,10 +138,10 @@ export const DateTimeSelection: React.FC = () => {
       console.error('Error formatting time:', err);
       return timeString.substring(0, 5); // Fallback to just showing HH:MM
     }
-  };
+  }, []);
 
   // Display time in business timezone
-  const getDisplayTimeInBusinessTimezone = (slot: BookingSlot) => {
+  const getDisplayTimeInBusinessTimezone = useCallback((slot: BookingSlot) => {
     // If the API provides formatted display times, use those
     if (slot.displayTime) {
       return slot.displayTime;
@@ -139,7 +149,7 @@ export const DateTimeSelection: React.FC = () => {
     
     // Otherwise format the time ourselves
     return formatDisplayTime(slot.time);
-  };
+  }, [formatDisplayTime]);
 
   return (
     <motion.div
@@ -172,12 +182,6 @@ export const DateTimeSelection: React.FC = () => {
           )}
         </div>
       </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       <div className="grid md:grid-cols-2 gap-8">
         <motion.div
@@ -214,12 +218,50 @@ export const DateTimeSelection: React.FC = () => {
         >
           <div className="space-y-2">
             <h3 className="font-medium">Select Time</h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-2">
               Duration: {totalDuration} minutes
               {businessTimezone && (
                 <span className="ml-2">(Times shown in shop's timezone)</span>
               )}
             </p>
+            
+            {/* Enhanced error message design */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 relative"
+              >
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 pr-10 shadow-sm">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                      </div>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Availability Notice</h3>
+                      <div className="mt-1 text-sm text-red-700">
+                        {error}
+                      </div>
+                      {selectedDate && (
+                        <div className="mt-2 flex items-center text-xs text-red-600">
+                          <CalendarIcon className="h-3 w-3 mr-1" />
+                          <span>Selected date: {format(selectedDate, 'MMMM d, yyyy')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button 
+                    type="button"
+                    className="absolute top-4 right-4 text-red-400 hover:text-red-600"
+                    onClick={clearError}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
             
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
@@ -229,7 +271,7 @@ export const DateTimeSelection: React.FC = () => {
             ) : availableSlots.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
                 {availableSlots.map((slot) => (
-                  <TooltipProvider key={slot.time}>
+                  <TooltipProvider key={`slot-${slot.time}`}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <motion.div
@@ -238,8 +280,10 @@ export const DateTimeSelection: React.FC = () => {
                         >
                           <Button
                             variant={selectedTime === slot.time ? "default" : "outline"}
-                            className={`w-full ${!slot.available && "opacity-50 cursor-not-allowed"}`}
-                            onClick={() => slot.available && setSelectedTime(slot.time)}
+                            className={`w-full ${!slot.available && "opacity-50 cursor-not-allowed"} ${
+                              selectedTime === slot.time ? "bg-gradient-to-r from-primary to-primary/90 shadow-md" : ""
+                            }`}
+                            onClick={() => slot.available && handleTimeSelect(slot.time)}
                             disabled={!slot.available}
                           >
                             <Clock className="h-4 w-4 mr-2" />
@@ -248,29 +292,20 @@ export const DateTimeSelection: React.FC = () => {
                         </motion.div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {slot.available 
-                          ? `Available (${getDisplayTimeInBusinessTimezone(slot)} - ${slot.displayEndTime || formatDisplayTime(slot.end_time)})` 
-                          : slot.unavailableReason || 'This time slot is not available'}
+                        {slot.available ? 'Available' : 'Not available'}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 ))}
               </div>
-            ) : error ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <div className="rounded-full bg-muted p-3 mb-4">
-                  <Clock className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground">{error}</p>
+            ) : !error ? (
+              <div className="text-center py-8 border rounded-lg">
+                <p className="text-muted-foreground">
+                  No available time slots for the selected date.
+                  Please select a different date.
+                </p>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <div className="rounded-full bg-muted p-3 mb-4">
-                  <Clock className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground">No time slots available for the selected date</p>
-              </div>
-            )}
+            ) : null}
           </div>
         </motion.div>
       </div>
