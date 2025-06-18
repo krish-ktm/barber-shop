@@ -19,11 +19,13 @@ export interface BookingSlot {
   available: boolean;
   timezone?: string;
   timezoneOffset?: number;
+  displayTime?: string;
+  displayEndTime?: string;
 }
 
 export interface BookingRequest {
   customer_name: string;
-  customer_email: string;
+  customer_email?: string;
   customer_phone: string;
   service_id: string;
   staff_id: string;
@@ -49,18 +51,23 @@ interface SlotsResponse {
   slots: BookingSlot[];
   message?: string;
   timezone?: string;
+  clientTimezone?: string;
+  businessTimezone?: string;
+  slotDuration?: number;
   serverTime?: string;
 }
 
-interface BookingResponse {
+export interface BookingResponse {
   success: boolean;
   appointment: {
     id: string;
     date: string;
     time: string;
+    display_time?: string;
     staff_name: string;
     service_name: string;
     timezone?: string;
+    client_timezone?: string;
   };
 }
 

@@ -9,7 +9,7 @@ import { staffData } from '@/mocks';
 import { formatCurrency } from '@/utils';
 import { useBooking } from '../BookingContext';
 import { useToast } from '@/hooks/use-toast';
-import { createBooking, BookingRequest } from '@/api/services/bookingService';
+import { createBooking, BookingRequest, BookingResponse } from '@/api/services/bookingService';
 
 export const BookingConfirmation: React.FC = () => {
   const { toast } = useToast();
@@ -34,6 +34,7 @@ export const BookingConfirmation: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [bookingTimezone, setBookingTimezone] = useState<string | null>(null);
+  const [bookingResponse, setBookingResponse] = useState<BookingResponse | null>(null);
 
   // Get client timezone
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -60,15 +61,23 @@ export const BookingConfirmation: React.FC = () => {
       // Create booking request
       const bookingRequest: BookingRequest = {
         customer_name: customerDetails.name,
-        customer_email: customerDetails.email || '',
         customer_phone: customerDetails.phone,
         service_id: selectedServices[0].id, // For now, just use the first service
         staff_id: selectedStaffId,
         date: formattedDate,
         time: selectedTime,
-        notes: customerDetails.notes,
         timezone: clientTimezone
       };
+
+      // Only add email if it's provided and valid
+      if (customerDetails.email && customerDetails.email.includes('@')) {
+        bookingRequest.customer_email = customerDetails.email;
+      }
+
+      // Add notes if provided
+      if (customerDetails.notes) {
+        bookingRequest.notes = customerDetails.notes;
+      }
 
       // Submit booking to API
       const response = await createBooking(bookingRequest);
@@ -79,6 +88,7 @@ export const BookingConfirmation: React.FC = () => {
         if (response.appointment.timezone) {
           setBookingTimezone(response.appointment.timezone);
         }
+        setBookingResponse(response);
         toast({
           title: "Booking confirmed!",
           description: "Your appointment has been successfully booked.",
@@ -114,6 +124,19 @@ export const BookingConfirmation: React.FC = () => {
     });
   };
 
+  // Format time for display in 12-hour format
+  const formatDisplayTime = (timeString: string) => {
+    try {
+      // Create a date object with the time string
+      const dateWithTime = new Date(`2000-01-01T${timeString}`);
+      // Format it in 12-hour format
+      return format(dateWithTime, 'h:mm a');
+    } catch (err) {
+      console.error('Error formatting time:', err);
+      return timeString.substring(0, 5); // Fallback to just showing HH:MM
+    }
+  };
+
   if (isSuccess) {
     return (
       <motion.div
@@ -146,7 +169,9 @@ export const BookingConfirmation: React.FC = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Time:</span>
-              <span className="font-medium">{format(new Date(`2000-01-01T${selectedTime}`), 'h:mm a')}</span>
+              <span className="font-medium">
+                {bookingResponse?.appointment?.display_time || formatDisplayTime(selectedTime!)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Service:</span>
@@ -191,7 +216,7 @@ export const BookingConfirmation: React.FC = () => {
             <div>
               <h3 className="font-medium">Date & Time</h3>
               <p className="text-sm text-muted-foreground">
-                {selectedDate && format(selectedDate, 'MMMM d, yyyy')} at {selectedTime && format(new Date(`2000-01-01T${selectedTime}`), 'h:mm a')}
+                {selectedDate && format(selectedDate, 'MMMM d, yyyy')} at {selectedTime && formatDisplayTime(selectedTime)}
               </p>
             </div>
           </div>
@@ -208,7 +233,12 @@ export const BookingConfirmation: React.FC = () => {
             <Globe className="h-5 w-5 text-primary" />
             <div>
               <h3 className="font-medium">Timezone</h3>
-              <p className="text-sm text-muted-foreground">{clientTimezone}</p>
+              <p className="text-sm text-muted-foreground">
+                {bookingTimezone || clientTimezone}
+                {clientTimezone !== bookingTimezone && (
+                  <span className="block text-xs">(Your timezone: {clientTimezone})</span>
+                )}
+              </p>
             </div>
           </div>
         </div>

@@ -30,7 +30,8 @@ export const DateTimeSelection: React.FC = () => {
   const [availableSlots, setAvailableSlots] = useState<BookingSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [serverTimezone, setServerTimezone] = useState<string | null>(null);
+  const [businessTimezone, setBusinessTimezone] = useState<string | null>(null);
+  const [slotDuration, setSlotDuration] = useState<number | null>(null);
   
   // Get client timezone
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -52,25 +53,30 @@ export const DateTimeSelection: React.FC = () => {
         // Use the first service for now
         const serviceId = selectedServices[0].id;
         
-                  const response = await getBookingSlots(
-            formattedDate,
-            selectedStaffId,
-            serviceId
-          );
+        const response = await getBookingSlots(
+          formattedDate,
+          selectedStaffId,
+          serviceId
+        );
 
-          if (response.success) {
-            console.log('Available slots:', response.slots);
-            setAvailableSlots(response.slots);
-            
-            // Store the server timezone if provided
-            if (response.timezone) {
-              setServerTimezone(response.timezone);
-            }
-            
-            // If the currently selected time is no longer available, clear it
-            if (selectedTime && !response.slots.find(slot => slot.time === selectedTime && slot.available)) {
-              setSelectedTime(null);
-            }
+        if (response.success) {
+          console.log('Available slots:', response.slots);
+          setAvailableSlots(response.slots);
+          
+          // Store business timezone if provided
+          if (response.businessTimezone) {
+            setBusinessTimezone(response.businessTimezone);
+          }
+          
+          // Store slot duration if provided
+          if (response.slotDuration) {
+            setSlotDuration(response.slotDuration);
+          }
+          
+          // If the currently selected time is no longer available, clear it
+          if (selectedTime && !response.slots.find(slot => slot.time === selectedTime && slot.available)) {
+            setSelectedTime(null);
+          }
         } else {
           setError(response.message || 'Failed to fetch available time slots');
           // Fallback to mock data
@@ -197,6 +203,17 @@ export const DateTimeSelection: React.FC = () => {
     }
   };
 
+  // Display time in business timezone
+  const getDisplayTimeInBusinessTimezone = (slot: BookingSlot) => {
+    // If the API provides formatted display times, use those
+    if (slot.displayTime) {
+      return slot.displayTime;
+    }
+    
+    // Otherwise format the time ourselves
+    return formatDisplayTime(slot.time);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -209,12 +226,24 @@ export const DateTimeSelection: React.FC = () => {
         <p className="text-muted-foreground">
           Select your preferred appointment date and time
         </p>
-        {clientTimezone && (
-          <div className="flex items-center text-xs text-muted-foreground">
+        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+          {businessTimezone && (
+            <div className="flex items-center">
+              <Info className="h-3 w-3 mr-1" />
+              <span>Shop timezone: {businessTimezone}</span>
+            </div>
+          )}
+          <div className="flex items-center">
             <Info className="h-3 w-3 mr-1" />
             <span>Your timezone: {clientTimezone}</span>
           </div>
-        )}
+          {slotDuration && (
+            <div className="flex items-center">
+              <Clock className="h-3 w-3 mr-1" />
+              <span>Slot duration: {slotDuration} minutes</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -260,6 +289,9 @@ export const DateTimeSelection: React.FC = () => {
             <h3 className="font-medium">Select Time</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Duration: {totalDuration} minutes
+              {businessTimezone && (
+                <span className="ml-2">(Times shown in shop's timezone)</span>
+              )}
             </p>
             
             {isLoading ? (
@@ -284,13 +316,13 @@ export const DateTimeSelection: React.FC = () => {
                             disabled={!slot.available}
                           >
                             <Clock className="h-4 w-4 mr-2" />
-                            {formatDisplayTime(slot.time)}
+                            {getDisplayTimeInBusinessTimezone(slot)}
                           </Button>
                         </motion.div>
                       </TooltipTrigger>
                       <TooltipContent>
                         {slot.available 
-                          ? `Available (${slot.time.substring(0, 5)} - ${slot.end_time.substring(0, 5)})` 
+                          ? `Available (${getDisplayTimeInBusinessTimezone(slot)} - ${slot.displayEndTime || formatDisplayTime(slot.end_time)})` 
                           : 'Booked'}
                       </TooltipContent>
                     </Tooltip>
