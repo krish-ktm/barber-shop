@@ -37,7 +37,6 @@ type CalendarView = 'month' | 'week' | 'day' | 'list';
 interface MobileCalendarViewProps {
   appointments: Appointment[];
   onSelectDate: (date: Date) => void;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onViewAppointment: (appointmentId: string) => void;
 }
 
@@ -51,7 +50,6 @@ interface MobileCalendarViewProps {
 export const MobileCalendarView = ({
   appointments,
   onSelectDate,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onViewAppointment,
 }: MobileCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());

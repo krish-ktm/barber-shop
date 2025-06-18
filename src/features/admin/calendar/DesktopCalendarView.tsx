@@ -7,7 +7,6 @@ import {
   subWeeks,
   addDays,
   subDays,
-  getDay, 
   getDaysInMonth, 
   isSameDay, 
   startOfMonth,
@@ -22,11 +21,10 @@ import {
   Clock, 
   CalendarDays, 
   LayoutGrid, 
-  LayoutList
+  LayoutList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 import { theme } from '@/theme/theme';
@@ -46,51 +44,35 @@ export const DesktopCalendarView = ({
   onViewAppointment,
 }: DesktopCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('month');
-
+  
   // Navigation functions
   const goToPrevious = () => {
-    switch (view) {
-      case 'month':
-        setCurrentDate(subMonths(currentDate, 1));
-        break;
-      case 'week':
-        setCurrentDate(subWeeks(currentDate, 1));
-        break;
-      case 'day':
-        setCurrentDate(subDays(currentDate, 1));
-        break;
-      case 'list':
-        setCurrentDate(subWeeks(currentDate, 2));
-        break;
+    if (view === 'month') {
+      setCurrentDate(subMonths(currentDate, 1));
+    } else if (view === 'week') {
+      setCurrentDate(subWeeks(currentDate, 1));
+    } else if (view === 'day') {
+      setCurrentDate(subDays(currentDate, 1));
     }
   };
-
+  
   const goToNext = () => {
-    switch (view) {
-      case 'month':
-        setCurrentDate(addMonths(currentDate, 1));
-        break;
-      case 'week':
-        setCurrentDate(addWeeks(currentDate, 1));
-        break;
-      case 'day':
-        setCurrentDate(addDays(currentDate, 1));
-        break;
-      case 'list':
-        setCurrentDate(addWeeks(currentDate, 2));
-        break;
+    if (view === 'month') {
+      setCurrentDate(addMonths(currentDate, 1));
+    } else if (view === 'week') {
+      setCurrentDate(addWeeks(currentDate, 1));
+    } else if (view === 'day') {
+      setCurrentDate(addDays(currentDate, 1));
     }
   };
-
+  
   const goToToday = () => {
     setCurrentDate(new Date());
-    setSelectedDate(new Date());
   };
-
+  
+  // Handle date click
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
     onSelectDate(date);
   };
 
@@ -189,18 +171,14 @@ export const DesktopCalendarView = ({
 
   // Month View - Desktop optimized with larger cells
   const renderMonthView = () => {
-    const monthStart = startOfMonth(currentDate);
-    const startDate = getDay(monthStart);
-    const daysInMonth = getDaysInMonth(currentDate);
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
     const renderDays = () => (
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {days.map((day) => (
+      <div className="grid grid-cols-7 mb-2">
+        {daysOfWeek.map((day) => (
           <div
             key={day}
-            className="h-10 flex items-center justify-center text-sm font-medium text-muted-foreground"
+            className="h-10 flex items-center justify-center font-medium text-muted-foreground"
           >
             {day}
           </div>
@@ -209,104 +187,85 @@ export const DesktopCalendarView = ({
     );
 
     const renderCells = () => {
+      const monthStart = startOfMonth(currentDate);
+      const startDate = startOfWeek(monthStart);
+      const endDate = endOfWeek(addDays(monthStart, getDaysInMonth(monthStart) - 1));
+
       const rows = [];
-      const cells = [];
+      let days = [];
+      let day = startDate;
 
-      // Create blank cells for days before the first of the month
-      for (let i = 0; i < startDate; i++) {
-        cells.push(
-          <div
-            key={`empty-${i}`}
-            className="border h-32 p-2 bg-background-alt rounded-md opacity-40"
-          />
-        );
-      }
-
-      // Fill in the days of the month
-      for (let i = 1; i <= daysInMonth; i++) {
-        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), i);
-        const dateAppointments = getAppointmentsForDate(date);
-        const isToday = isSameDay(date, new Date());
-        const isSelected = isSameDay(date, selectedDate);
-
-        cells.push(
-          <div
-            key={i}
-            className={cn(
-              'border h-32 p-2 rounded-md transition-colors cursor-pointer hover:bg-background-alt relative',
-              isToday && 'border-primary',
-              isSelected && 'bg-background-alt border-primary-light',
-            )}
-            onClick={() => handleDateClick(date)}
-          >
-            <div className="flex justify-between items-center mb-2">
-              <span
-                className={cn(
-                  'text-sm font-semibold rounded-full w-7 h-7 flex items-center justify-center',
-                  isToday && 'bg-primary text-white'
-                )}
-              >
-                {i}
-              </span>
-              {dateAppointments.length > 0 && (
-                <Badge variant="outline">
-                  {dateAppointments.length} appt{dateAppointments.length !== 1 ? 's' : ''}
-                </Badge>
+      // Generate the calendar cells
+      while (day <= endDate) {
+        for (let i = 0; i < 7; i++) {
+          const cloneDay = day;
+          const formattedDate = format(cloneDay, 'yyyy-MM-dd');
+          const dayAppointments = getAppointmentsForDate(cloneDay);
+          const isCurrentMonth = format(currentDate, 'M') === format(cloneDay, 'M');
+          const isToday = isSameDay(cloneDay, new Date());
+          
+          days.push(
+            <div
+              key={formattedDate}
+              className={cn(
+                "border p-1 h-32 relative",
+                !isCurrentMonth && "bg-background-alt opacity-50",
+                isToday && "bg-primary/5 border-primary"
               )}
-            </div>
-            
-            <ScrollArea className="h-20 pr-1">
-              <div className="space-y-1">
-                {dateAppointments.slice(0, 4).map((appointment) => (
+              onClick={() => handleDateClick(cloneDay)}
+            >
+              <div className="flex justify-between">
+                <span
+                  className={cn(
+                    "text-sm font-medium",
+                    !isCurrentMonth && "text-muted-foreground",
+                    isToday && "text-primary font-bold"
+                  )}
+                >
+                  {format(cloneDay, 'd')}
+                </span>
+              </div>
+              
+              {/* Render appointments */}
+              <div className="overflow-y-auto max-h-[80%] mt-1">
+                {dayAppointments.slice(0, 3).map(appointment => (
                   <div
                     key={appointment.id}
+                    className="mb-1 p-1 text-xs rounded bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       onViewAppointment(appointment.id);
                     }}
-                    className="text-xs p-1 rounded bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors truncate flex items-center gap-1"
                   >
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getStatusColor(appointment.status) }} />
-                    <span className="truncate">{appointment.time} - {appointment.customerName}</span>
+                    <div className="flex items-center">
+                      <div 
+                        className="w-2 h-2 rounded-full mr-1 flex-shrink-0" 
+                        style={{ backgroundColor: getStatusColor(appointment.status) }} 
+                      />
+                      <span className="font-medium">{appointment.time}</span>
+                    </div>
+                    <div className="truncate">{appointment.customerName}</div>
                   </div>
                 ))}
-                {dateAppointments.length > 4 && (
+                {dayAppointments.length > 3 && (
                   <div className="text-xs text-center text-muted-foreground">
-                    +{dateAppointments.length - 4} more
+                    +{dayAppointments.length - 3} more
                   </div>
                 )}
               </div>
-            </ScrollArea>
-          </div>
-        );
-
-        // Push the row once we've added 7 cells
-        if ((i + startDate) % 7 === 0) {
-          rows.push(
-            <div key={`row-${i}`} className="grid grid-cols-7 gap-1 mb-1">
-              {cells.splice(0, 7)}
             </div>
           );
-        }
-      }
 
-      // Add any remaining cells
-      if (cells.length > 0) {
-        // Add empty cells to complete the row
-        for (let i = cells.length; i < 7; i++) {
-          cells.push(
-            <div
-              key={`empty-end-${i}`}
-              className="border h-32 p-2 bg-background-alt rounded-md opacity-40"
-            />
-          );
+          day = addDays(day, 1);
         }
 
         rows.push(
-          <div key="row-end" className="grid grid-cols-7 gap-1 mb-1">
-            {cells}
+          <div key={`row-${rows.length}`} className="grid grid-cols-7 gap-1 mb-1">
+            {days}
           </div>
         );
+
+        days = [];
       }
 
       return rows;
@@ -335,11 +294,12 @@ export const DesktopCalendarView = ({
           </div>
           {weekDays.map((day) => {
             const isToday = isSameDay(day, new Date());
+            
             return (
               <div 
                 key={format(day, 'yyyy-MM-dd')} 
                 className={cn(
-                  "h-16 flex flex-col items-center justify-center border-l p-2 cursor-pointer hover:bg-background-alt",
+                  "h-16 flex flex-col items-center justify-center border-l p-2 cursor-pointer hover:bg-background-alt relative",
                   isToday && "bg-primary/5 border-primary"
                 )}
                 onClick={() => handleDateClick(day)}
@@ -363,40 +323,41 @@ export const DesktopCalendarView = ({
               {/* Day columns */}
               {weekDays.map((day) => {
                 const dayAppointments = getAppointmentsForTimeSlot(day, hour);
+                
                 return (
                   <div 
                     key={`${format(day, 'yyyy-MM-dd')}-${hour}`}
-                    className="border-t border-l p-1 h-28 relative"
+                    className={cn(
+                      "border-t border-l p-1 h-28 relative"
+                    )}
                   >
-                    <div className="flex flex-col gap-1 h-full">
-                      {dayAppointments.length === 0 ? (
-                        <div className="h-full w-full"></div>
-                      ) : (
-                        dayAppointments.map((appointment, index) => (
-                          <div
-                            key={appointment.id}
-                            className={`p-1 rounded bg-primary/10 border border-primary/20 
-                                     text-xs cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden
-                                     ${index > 1 ? 'hidden md:block' : ''}`}
-                            style={{
-                              maxHeight: `${Math.floor(100 / Math.min(dayAppointments.length, 3))}%`
-                            }}
-                            onClick={() => onViewAppointment(appointment.id)}
-                          >
-                            <div className="flex items-center mb-0.5">
-                              <div className="w-2 h-2 rounded-full mr-1 flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
-                              <span className="font-medium truncate">{appointment.time}</span>
-                            </div>
-                            <div className="truncate">{appointment.customerName}</div>
-                            {index === 0 && dayAppointments.length > 3 && (
-                              <div className="text-[10px] text-center text-muted-foreground mt-0.5">
-                                +{dayAppointments.length - 2} more
-                              </div>
-                            )}
+                    {dayAppointments.length === 0 ? (
+                      <div className="h-full w-full"></div>
+                    ) : (
+                      dayAppointments.map((appointment, index) => (
+                        <div
+                          key={appointment.id}
+                          className={`p-1 rounded bg-primary/10 border border-primary/20 
+                                   text-xs cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden
+                                   ${index > 1 ? 'hidden md:block' : ''}`}
+                          style={{
+                            maxHeight: `${Math.floor(100 / Math.min(dayAppointments.length, 3))}%`
+                          }}
+                          onClick={() => onViewAppointment(appointment.id)}
+                        >
+                          <div className="flex items-center mb-0.5">
+                            <div className="w-2 h-2 rounded-full mr-1 flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
+                            <span className="font-medium truncate">{appointment.time}</span>
                           </div>
-                        ))
-                      )}
-                    </div>
+                          <div className="truncate">{appointment.customerName}</div>
+                          {index === 0 && dayAppointments.length > 3 && (
+                            <div className="text-[10px] text-center text-muted-foreground mt-0.5">
+                              +{dayAppointments.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 );
               })}

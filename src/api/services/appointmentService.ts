@@ -298,4 +298,30 @@ export const getPublicAvailableTimeSlots = async (
       slots: [] 
     };
   }
+};
+
+/**
+ * Get calendar appointments with date range
+ */
+export interface CalendarAppointmentsResponse {
+  success: boolean;
+  appointments: Appointment[];
+  staff: Staff[];
+  services: Service[];
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+}
+
+/**
+ * Get appointments for calendar view with date range support
+ */
+export const getCalendarAppointments = async (
+  startDate: string,
+  endDate: string
+): Promise<CalendarAppointmentsResponse> => {
+  const url = `/appointments/calendar?startDate=${startDate}&endDate=${endDate}`;
+  
+  return get<CalendarAppointmentsResponse>(url);
 }; 

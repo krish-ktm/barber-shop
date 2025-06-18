@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, User, Scissors, MessageSquare, Phone, CheckCircle, XCircle, AlertTriangle, CheckCheck } from 'lucide-react';
+import { Calendar, Clock, User, Scissors, MessageSquare, Phone, CheckCircle, XCircle, AlertTriangle, CheckCheck, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Appointment } from '@/types';
+import { updateAppointmentStatus } from '@/api/services/appointmentService';
+import { toast } from '@/hooks/use-toast';
 
 interface AppointmentDetailsDialogProps {
   appointment: Appointment;
@@ -19,6 +21,7 @@ interface AppointmentDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   isStaffView?: boolean;
   onStatusChange?: (appointmentId: string, status: Appointment['status']) => void;
+  onAppointmentUpdated?: () => void;
 }
 
 export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> = ({
@@ -27,7 +30,10 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
   onOpenChange,
   isStaffView = false,
   onStatusChange,
+  onAppointmentUpdated,
 }) => {
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // Status badge colors
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -46,28 +52,59 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
     }
   };
 
-  const handleUpdateStatus = (newStatus: Appointment['status'], e?: React.MouseEvent) => {
+  const handleUpdateStatus = async (newStatus: Appointment['status'], e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     
-    // Close the dialog immediately for better UX
-    onOpenChange(false);
+    setIsUpdating(true);
     
-    // Then update the status
-    if (onStatusChange) {
-      // Small delay to ensure the dialog is closed first
-      setTimeout(() => {
+    try {
+      // Call the API to update the appointment status
+      await updateAppointmentStatus(appointment.id, newStatus);
+      
+      // Show success toast
+      toast({
+        title: "Appointment updated",
+        description: `Status changed to ${newStatus}`,
+        variant: "default",
+      });
+      
+      // Close the dialog for better UX
+      onOpenChange(false);
+      
+      // Call the parent's onStatusChange if provided
+      if (onStatusChange) {
         onStatusChange(appointment.id, newStatus);
-      }, 10);
-    } else {
-      // Fallback for components that don't provide onStatusChange
-      console.log(`Update appointment ${appointment.id} status to: ${newStatus}`);
+      }
+      
+      // Trigger refetch of appointments if callback provided
+      if (onAppointmentUpdated) {
+        onAppointmentUpdated();
+      }
+    } catch (error) {
+      console.error('Failed to update appointment status:', error);
+      toast({
+        title: "Update failed",
+        description: "Could not update the appointment status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const renderStatusActions = () => {
+    if (isUpdating) {
+      return (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Updating...</span>
+        </div>
+      );
+    }
+    
     switch (appointment.status) {
       case 'scheduled':
         return (
@@ -75,6 +112,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
             <Button 
               variant="default" 
               onClick={(e) => handleUpdateStatus('confirmed', e)}
+              disabled={isUpdating}
             >
               <CheckCircle className="mr-2 h-4 w-4" />
               Confirm
@@ -82,6 +120,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
             <Button 
               variant="outline" 
               onClick={(e) => handleUpdateStatus('completed', e)}
+              disabled={isUpdating}
             >
               <CheckCheck className="mr-2 h-4 w-4" />
               Complete
@@ -89,6 +128,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
             <Button 
               variant="outline" 
               onClick={(e) => handleUpdateStatus('no-show', e)}
+              disabled={isUpdating}
             >
               <AlertTriangle className="mr-2 h-4 w-4" />
               No Show
@@ -96,6 +136,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
             <Button 
               variant="destructive" 
               onClick={(e) => handleUpdateStatus('cancelled', e)}
+              disabled={isUpdating}
             >
               <XCircle className="mr-2 h-4 w-4" />
               Cancel
@@ -109,6 +150,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
             <Button 
               variant="default" 
               onClick={(e) => handleUpdateStatus('completed', e)}
+              disabled={isUpdating}
             >
               <CheckCheck className="mr-2 h-4 w-4" />
               Complete
@@ -116,6 +158,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
             <Button 
               variant="outline" 
               onClick={(e) => handleUpdateStatus('no-show', e)}
+              disabled={isUpdating}
             >
               <AlertTriangle className="mr-2 h-4 w-4" />
               No Show
@@ -123,6 +166,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
             <Button 
               variant="destructive" 
               onClick={(e) => handleUpdateStatus('cancelled', e)}
+              disabled={isUpdating}
             >
               <XCircle className="mr-2 h-4 w-4" />
               Cancel
