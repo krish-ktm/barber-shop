@@ -59,6 +59,7 @@ const mapApiStaffToInternal = (apiStaff: ApiStaff): Staff => {
     image: apiStaff.user?.image || '/placeholder.jpg',
     totalEarnings: 0, // These would need to come from a separate API call
     totalAppointments: 0,
+    breaks: apiStaff.breaks || [],
     workingHours: {
       monday: [],
       tuesday: [],
@@ -274,6 +275,11 @@ export const StaffManagement: React.FC = () => {
   useEffect(() => {
     if (staffData?.services) {
       setAllServices(staffData.services);
+    }
+    
+    // Update pagination state if provided by the API
+    if (staffData?.currentPage) {
+      setCurrentPage(staffData.currentPage);
     }
   }, [staffData]);
   
@@ -664,18 +670,63 @@ export const StaffManagement: React.FC = () => {
                   </Button>
                   
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <Button
-                        key={page}
-                        variant={page === currentPage ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(page)}
-                        disabled={isLoading}
-                        className="w-8 h-8 p-0"
-                      >
-                        {page}
-                      </Button>
-                    ))}
+                    {(() => {
+                      // Show limited page buttons with ellipses for large page counts
+                      const visiblePages = [];
+                      
+                      // Always show first page
+                      if (totalPages > 0) {
+                        visiblePages.push(1);
+                      }
+                      
+                      // Calculate range of pages to show around current page
+                      const rangeStart = Math.max(2, currentPage - 1);
+                      const rangeEnd = Math.min(totalPages - 1, currentPage + 1);
+                      
+                      // Add ellipsis after first page if needed
+                      if (rangeStart > 2) {
+                        visiblePages.push(-1); // -1 represents ellipsis
+                      }
+                      
+                      // Add pages around current page
+                      for (let i = rangeStart; i <= rangeEnd; i++) {
+                        visiblePages.push(i);
+                      }
+                      
+                      // Add ellipsis before last page if needed
+                      if (rangeEnd < totalPages - 1) {
+                        visiblePages.push(-2); // -2 represents ellipsis
+                      }
+                      
+                      // Always show last page if there is more than one page
+                      if (totalPages > 1) {
+                        visiblePages.push(totalPages);
+                      }
+                      
+                      return visiblePages.map((page, index) => {
+                        if (page < 0) {
+                          // Render ellipsis
+                          return (
+                            <span key={`ellipsis-${index}`} className="px-2">
+                              ...
+                            </span>
+                          );
+                        }
+                        
+                        return (
+                          <Button
+                            key={page}
+                            variant={page === currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(page)}
+                            disabled={isLoading}
+                            className="w-8 h-8 p-0"
+                          >
+                            {page}
+                          </Button>
+                        );
+                      });
+                    })()}
                   </div>
                   
                   <Button

@@ -70,6 +70,8 @@ interface StaffListResponse {
   staff: Staff[];
   totalCount: number;
   pages: number;
+  currentPage?: number;
+  itemsPerPage?: number;
   services?: Service[];
 }
 
