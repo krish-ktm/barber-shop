@@ -196,8 +196,13 @@ export const Slots: React.FC = () => {
         breakChanges: pendingBreakChanges
       });
       
-      // Save slot duration
-      await saveSettings({ slot_duration: parseInt(slotDuration) });
+      // Save slot duration only if we have settings data
+      if (settingsData?.settings) {
+        await saveSettings({ 
+          ...settingsData.settings,
+          slot_duration: parseInt(slotDuration) 
+        });
+      }
       
       toast({
         title: 'Settings saved',
@@ -229,8 +234,8 @@ export const Slots: React.FC = () => {
     const businessHour = businessHours.find(hour => hour.id === dayId);
     if (!businessHour) return;
     
-    // Convert day_of_week string to number
-    let dayNumber: number | undefined = undefined;
+    // Convert day_of_week string to number (0 = Sunday, 1 = Monday, etc.)
+    let dayNumber: number | null = null;
     switch (businessHour.day_of_week.toLowerCase()) {
       case 'sunday': dayNumber = 0; break;
       case 'monday': dayNumber = 1; break;
@@ -241,11 +246,15 @@ export const Slots: React.FC = () => {
       case 'saturday': dayNumber = 6; break;
     }
     
+    console.log(`Creating break for ${businessHour.day_of_week} (day number: ${dayNumber})`);
+    
     const newBreak: Omit<Break, 'id'> = {
       name: `Break ${getBreaksForDay(dayId).length + 1}`,
       start_time: '12:00:00',
       end_time: '13:00:00',
+      business_hour_id: dayId,
       day_of_week: dayNumber,
+      staff_id: null
     };
     
     // Add to local state
@@ -302,16 +311,85 @@ export const Slots: React.FC = () => {
 
   const isLoading = hoursLoading || settingsLoading || updateHoursLoading || updateSettingsLoading;
 
-  // Format time for display
-  const formatTime = (time: string | null): string => {
-    if (!time) return 'Closed';
-    return time.slice(0, 5);
-  };
-
   // Count breaks for a day
   const getBreakCount = (hour: BusinessHour): number => {
     if (!hour.id) return 0;
     return (localBreaks[hour.id] || []).length;
+  };
+
+  // Fix breaks with missing day_of_week values
+  const fixBreaksWithMissingDayOfWeek = () => {
+    // Create a copy of the local breaks
+    const updatedBreaks = { ...localBreaks };
+    const updatedPendingChanges = { ...pendingBreakChanges };
+    let updatesNeeded = false;
+
+    // For each business hour
+    businessHours.forEach(hour => {
+      if (!hour.id) return;
+
+      // Get the numeric day of week
+      let dayNumber: number | null = null;
+      switch (hour.day_of_week.toLowerCase()) {
+        case 'sunday': dayNumber = 0; break;
+        case 'monday': dayNumber = 1; break;
+        case 'tuesday': dayNumber = 2; break;
+        case 'wednesday': dayNumber = 3; break;
+        case 'thursday': dayNumber = 4; break;
+        case 'friday': dayNumber = 5; break;
+        case 'saturday': dayNumber = 6; break;
+      }
+
+      // Get the breaks for this day
+      const dayBreaks = updatedBreaks[hour.id] || [];
+
+      // Update breaks with missing day_of_week
+      const updatedDayBreaks = dayBreaks.map(breakItem => {
+        if (breakItem.day_of_week === null || breakItem.day_of_week === undefined) {
+          updatesNeeded = true;
+          
+          // If it's a real break (not temporary)
+          if (breakItem.id && breakItem.id > 0) {
+            // Add to pending updates
+            const existingUpdateIndex = updatedPendingChanges.update.findIndex(item => item.id === breakItem.id);
+            
+            if (existingUpdateIndex >= 0) {
+              updatedPendingChanges.update[existingUpdateIndex].data = {
+                ...updatedPendingChanges.update[existingUpdateIndex].data,
+                day_of_week: dayNumber
+              };
+            } else {
+              updatedPendingChanges.update.push({
+                id: breakItem.id as number,
+                data: { day_of_week: dayNumber }
+              });
+            }
+          }
+          
+          // Update the break in local state
+          return { ...breakItem, day_of_week: dayNumber };
+        }
+        return breakItem;
+      });
+
+      updatedBreaks[hour.id] = updatedDayBreaks;
+    });
+
+    // Update state if changes were made
+    if (updatesNeeded) {
+      setLocalBreaks(updatedBreaks);
+      setPendingBreakChanges(updatedPendingChanges);
+      
+      toast({
+        title: 'Breaks updated',
+        description: 'Fixed breaks with missing day_of_week values. Save changes to apply.',
+      });
+    } else {
+      toast({
+        title: 'No updates needed',
+        description: 'All breaks already have proper day_of_week values.',
+      });
+    }
   };
 
   // Handle break time change
@@ -388,6 +466,30 @@ export const Slots: React.FC = () => {
           <AlertDescription>
             There was an error loading the slot configuration. Please try refreshing the page.
           </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Check for breaks with missing day_of_week */}
+      {Object.values(localBreaks).some(breaks => 
+        breaks.some(breakItem => breakItem.day_of_week === null || breakItem.day_of_week === undefined)
+      ) && (
+        <Alert variant="warning">
+          <div className="flex justify-between items-center">
+            <div>
+              <AlertTitle>Warning</AlertTitle>
+              <AlertDescription>
+                Some breaks have missing day_of_week values. This may cause issues with the booking system.
+              </AlertDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fixBreaksWithMissingDayOfWeek}
+              disabled={isLoading}
+            >
+              Fix Breaks
+            </Button>
+          </div>
         </Alert>
       )}
 
@@ -536,7 +638,17 @@ export const Slots: React.FC = () => {
                                           key={breakItem.id} 
                                           className="flex flex-col sm:flex-row sm:items-center justify-between bg-muted/50 p-2 rounded text-sm gap-2"
                                         >
-                                          <span className="font-medium">{breakItem.name}</span>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="font-medium cursor-help">{breakItem.name}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>Day of week: {breakItem.day_of_week !== null ? breakItem.day_of_week : 'Not set'}</p>
+                                                <p>Business hour ID: {breakItem.business_hour_id}</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
                                           <div className="flex items-center gap-2 w-full sm:w-auto">
                                             <div className="grid grid-cols-2 gap-1 flex-1">
                                               <Input
