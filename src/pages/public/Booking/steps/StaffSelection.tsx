@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { staffData } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,9 +18,15 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
   const [staffList, setStaffList] = useState<BookingStaff[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     const fetchStaff = async () => {
+      // Skip fetching if we've already fetched staff data and no service selection has changed
+      if (hasFetchedRef.current && !(bookingFlow === 'service-first' && selectedServices.length > 0)) {
+        return;
+      }
+      
       setIsLoading(true);
       setError(null);
       
@@ -47,6 +53,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
         setStaffList(staffData as unknown as BookingStaff[]);
       } finally {
         setIsLoading(false);
+        hasFetchedRef.current = true;
       }
     };
 
@@ -62,10 +69,10 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
       )
     : staffList;
 
-  // Handle staff selection with memoization
-  const handleStaffSelect = useCallback((staffId: string) => {
+  // Handle staff selection without memoization to prevent unnecessary re-renders
+  const handleStaffSelect = (staffId: string) => {
     setSelectedStaffId(staffId);
-  }, [setSelectedStaffId]);
+  };
 
   if (isLoading) {
     return (
@@ -114,7 +121,12 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                     ? "bg-gradient-to-r from-primary to-primary/90 shadow-md" 
                     : "hover:border-primary/50 hover:shadow-sm"
                 }`}
-                onClick={() => handleStaffSelect(staff.id)}
+                onClick={(e) => {
+                  e.preventDefault(); // Prevent default button behavior
+                  e.stopPropagation(); // Stop event propagation
+                  handleStaffSelect(staff.id);
+                }}
+                type="button" // Explicitly set type to button
               >
                 <Avatar className={`h-12 w-12 border shrink-0 mt-0.5 ${isSelected ? "ring-2 ring-primary-foreground/30" : ""}`}>
                   <AvatarImage src={staff.image} alt={staff.name} />
