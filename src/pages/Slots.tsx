@@ -226,10 +226,26 @@ export const Slots: React.FC = () => {
   const handleAddBreak = (dayId: number) => {
     if (!dayId) return;
     
+    const businessHour = businessHours.find(hour => hour.id === dayId);
+    if (!businessHour) return;
+    
+    // Convert day_of_week string to number
+    let dayNumber: number | undefined = undefined;
+    switch (businessHour.day_of_week.toLowerCase()) {
+      case 'sunday': dayNumber = 0; break;
+      case 'monday': dayNumber = 1; break;
+      case 'tuesday': dayNumber = 2; break;
+      case 'wednesday': dayNumber = 3; break;
+      case 'thursday': dayNumber = 4; break;
+      case 'friday': dayNumber = 5; break;
+      case 'saturday': dayNumber = 6; break;
+    }
+    
     const newBreak: Omit<Break, 'id'> = {
       name: `Break ${getBreaksForDay(dayId).length + 1}`,
       start_time: '12:00:00',
       end_time: '13:00:00',
+      day_of_week: dayNumber,
     };
     
     // Add to local state

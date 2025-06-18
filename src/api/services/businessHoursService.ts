@@ -12,6 +12,8 @@ export interface BusinessHour {
 export interface Break {
   id?: number;
   business_hour_id?: number;
+  staff_id?: string;
+  day_of_week?: number;
   name: string;
   start_time: string;
   end_time: string;

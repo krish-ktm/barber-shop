@@ -10,9 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { createTimeSlots, isShopClosed } from '@/utils/dates';
 import { useBooking } from '../BookingContext';
-import { businessHoursData } from '@/mocks';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getBookingSlots, BookingSlot } from '@/api/services/bookingService';
 
@@ -61,7 +59,6 @@ export const DateTimeSelection: React.FC = () => {
 
         if (response.success) {
           console.log('Available slots:', response.slots);
-          setAvailableSlots(response.slots);
           
           // Store business timezone if provided
           if (response.businessTimezone) {
@@ -73,43 +70,30 @@ export const DateTimeSelection: React.FC = () => {
             setSlotDuration(response.slotDuration);
           }
           
+          // If the API returns a message, display it
+          if (response.message) {
+            setError(response.message);
+          }
+          
+          // If the API returns no slots but has a message, we still want to display the message
+          if (response.slots.length === 0 && !response.message) {
+            setError('No available time slots for the selected date');
+          }
+          
+          setAvailableSlots(response.slots);
+          
           // If the currently selected time is no longer available, clear it
           if (selectedTime && !response.slots.find(slot => slot.time === selectedTime && slot.available)) {
             setSelectedTime(null);
           }
         } else {
           setError(response.message || 'Failed to fetch available time slots');
-          // Fallback to mock data
-          setAvailableSlots(createTimeSlots(
-            '09:00',
-            '20:00',
-            30,
-            [{ start: '12:00', end: '13:00' }],
-            businessHoursData.shopClosures,
-            formattedDate
-          ).map(time => ({
-            time,
-            end_time: '', // We don't have this in mock data
-            available: getSlotAvailability(time)
-          })));
+          setAvailableSlots([]);
         }
       } catch (err) {
         console.error('Error fetching time slots:', err);
         setError('Failed to fetch available time slots');
-        
-        // Fallback to mock data
-        setAvailableSlots(createTimeSlots(
-          '09:00',
-          '20:00',
-          30,
-          [{ start: '12:00', end: '13:00' }],
-          businessHoursData.shopClosures,
-          formattedDate
-        ).map(time => ({
-          time,
-          end_time: '', // We don't have this in mock data
-          available: getSlotAvailability(time)
-        })));
+        setAvailableSlots([]);
       } finally {
         setIsLoading(false);
       }
@@ -118,51 +102,6 @@ export const DateTimeSelection: React.FC = () => {
     fetchAvailableSlots();
   }, [selectedDate, selectedStaffId, selectedServices, formattedDate, selectedTime]);
 
-  // Generate a consistent random seed based on the selected date
-  const getDateSeed = (date: Date) => {
-    return date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
-  };
-
-  // Determine availability based on the time slot and selected date
-  // This is used as a fallback when API fails
-  const getSlotAvailability = (time: string) => {
-    if (!selectedDate) return false;
-
-    // Convert time to minutes for easier comparison
-    const [hours, minutes] = time.split(':').map(Number);
-    const timeInMinutes = hours * 60 + minutes;
-
-    // Make slots unavailable if they're too close to the current time
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-    // If the selected date is today, make past slots unavailable
-    if (selectedDate.toDateString() === now.toDateString()) {
-      if (timeInMinutes <= currentTimeInMinutes + 30) {
-        return false;
-      }
-    }
-
-    // Check if the shop is closed on this date and time
-    if (isShopClosed(formattedDate, businessHoursData.shopClosures, time)) {
-      return false;
-    }
-
-    // Use the date seed to generate consistent availability
-    const seed = getDateSeed(selectedDate);
-    const slotIndex = createTimeSlots(
-      '09:00',
-      '20:00',
-      30,
-      [{ start: '12:00', end: '13:00' }],
-      businessHoursData.shopClosures,
-      formattedDate
-    ).indexOf(time);
-    return (seed + slotIndex) % 3 !== 0; // Makes roughly 1/3 of slots unavailable
-  };
-  
   // Check if a date should be disabled in the calendar
   const isDateDisabled = (date: Date) => {
     // Disable dates in the past
@@ -172,18 +111,6 @@ export const DateTimeSelection: React.FC = () => {
     
     // Disable dates too far in the future (30 days)
     if (date > addDays(new Date(), 30)) {
-      return true;
-    }
-    
-    // Disable weekly days off (Sunday in this case)
-    const dayOfWeek = date.getDay(); // 0 is Sunday
-    if (businessHoursData.daysOff.includes(dayOfWeek)) {
-      return true;
-    }
-    
-    // Disable full-day shop closures
-    const dateStr = format(date, 'yyyy-MM-dd');
-    if (isShopClosed(dateStr, businessHoursData.shopClosures)) {
       return true;
     }
     
@@ -299,7 +226,7 @@ export const DateTimeSelection: React.FC = () => {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <span className="ml-2">Loading available time slots...</span>
               </div>
-            ) : (
+            ) : availableSlots.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
                 {availableSlots.map((slot) => (
                   <TooltipProvider key={slot.time}>
@@ -323,11 +250,25 @@ export const DateTimeSelection: React.FC = () => {
                       <TooltipContent>
                         {slot.available 
                           ? `Available (${getDisplayTimeInBusinessTimezone(slot)} - ${slot.displayEndTime || formatDisplayTime(slot.end_time)})` 
-                          : 'Booked'}
+                          : slot.unavailableReason || 'This time slot is not available'}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 ))}
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="rounded-full bg-muted p-3 mb-4">
+                  <Clock className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">{error}</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="rounded-full bg-muted p-3 mb-4">
+                  <Clock className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">No time slots available for the selected date</p>
               </div>
             )}
           </div>

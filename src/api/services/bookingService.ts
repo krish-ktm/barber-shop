@@ -17,6 +17,7 @@ export interface BookingSlot {
   time: string;
   end_time: string;
   available: boolean;
+  unavailableReason?: string;
   timezone?: string;
   timezoneOffset?: number;
   displayTime?: string;
@@ -100,7 +101,7 @@ export const getBookingSlots = async (
   // Include client timezone in the request
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return get<SlotsResponse>(
-    `/booking/slots?date=${date}&staffId=${staffId}&serviceId=${serviceId}&timezone=${encodeURIComponent(timezone)}`
+    `/booking/slots?date=${date}&staff_id=${staffId}&service_id=${serviceId}&timezone=${encodeURIComponent(timezone)}`
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServiceSelection } from './ServiceSelection';
 import { StaffSelection } from './StaffSelection';
 import { useBooking } from '../BookingContext';
@@ -18,13 +17,18 @@ export const ServiceStaffTabs: React.FC = () => {
     setSelectedStaffId
   } = useBooking();
   const [activeTab, setActiveTab] = useState<string>("services");
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Handle tab selection
   const handleTabChange = (value: string) => {
+    // Don't do anything if we're already on this tab
+    if (value === activeTab) return;
+    
     // If we have selections and are changing tabs, show confirmation
     if ((value === 'services' && selectedStaffId) || 
         (value === 'staff' && selectedServices.length > 0)) {
+      setPendingTab(value);
       setShowConfirmation(true);
     } else {
       completeTabChange(value);
@@ -42,11 +46,13 @@ export const ServiceStaffTabs: React.FC = () => {
     }
     
     setActiveTab(value);
+    setPendingTab(null);
     setShowConfirmation(false);
   };
 
   // Handle cancellation of tab change
   const handleCancelTabChange = () => {
+    setPendingTab(null);
     setShowConfirmation(false);
   };
 
@@ -90,7 +96,7 @@ export const ServiceStaffTabs: React.FC = () => {
             <Button
               size="sm"
               variant="destructive"
-              onClick={() => completeTabChange(activeTab === 'services' ? 'staff' : 'services')}
+              onClick={() => pendingTab && completeTabChange(pendingTab)}
             >
               Continue
             </Button>
@@ -98,22 +104,29 @@ export const ServiceStaffTabs: React.FC = () => {
         </Alert>
       )}
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="services">
+      <div className="w-full">
+        <div className="grid w-full grid-cols-2 rounded-lg border p-1 gap-1">
+          <Button 
+            variant={activeTab === "services" ? "default" : "ghost"} 
+            onClick={() => handleTabChange("services")}
+            className="w-full"
+          >
             By Service {selectedServices.length > 0 && `(${selectedServices.length})`}
-          </TabsTrigger>
-          <TabsTrigger value="staff">
+          </Button>
+          <Button 
+            variant={activeTab === "staff" ? "default" : "ghost"} 
+            onClick={() => handleTabChange("staff")}
+            className="w-full"
+          >
             By Staff {selectedStaffId && '(1)'}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="services" className="mt-6">
-          <ServiceSelection />
-        </TabsContent>
-        <TabsContent value="staff" className="mt-6">
-          <StaffSelection />
-        </TabsContent>
-      </Tabs>
+          </Button>
+        </div>
+        
+        <div className="mt-6">
+          {activeTab === "services" && <ServiceSelection />}
+          {activeTab === "staff" && <StaffSelection />}
+        </div>
+      </div>
     </motion.div>
   );
 }; 
