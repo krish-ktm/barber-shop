@@ -5,7 +5,8 @@ import {
   Trash,
   Edit,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Coffee
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { TimeSlot, WorkingHours } from '@/types';
+import { TimeSlot, WorkingHours, Break } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -40,13 +41,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 // API imports
 import { useAuth } from '@/lib/auth';
-import { getStaffById, updateStaffAvailability, WorkingHour } from '@/api/services/staffService';
+import { 
+  getStaffById, 
+  updateStaffAvailability, 
+  WorkingHour,
+  getStaffBreaks,
+  createStaffBreak,
+  updateStaffBreak,
+  deleteStaffBreak
+} from '@/api/services/staffService';
 import { useApi } from '@/hooks/useApi';
 
 export const StaffWorkingHours: React.FC = () => {
@@ -68,21 +76,56 @@ export const StaffWorkingHours: React.FC = () => {
     error: updateError,
     execute: saveWorkingHours
   } = useApi(updateStaffAvailability);
+
+  const {
+    data: breaksData,
+    error: breaksError,
+    execute: fetchBreaks
+  } = useApi(getStaffBreaks);
+
+  const {
+    loading: creatingBreak,
+    error: createBreakError,
+    execute: saveBreak
+  } = useApi(createStaffBreak);
+
+  const {
+    loading: updatingBreak,
+    error: updateBreakError,
+    execute: updateBreak
+  } = useApi(updateStaffBreak);
+
+  const {
+    loading: deletingBreak,
+    error: deleteBreakError,
+    execute: removeBreak
+  } = useApi(deleteStaffBreak);
   
   // Initialize working hours state
   const [workingHours, setWorkingHours] = useState<WorkingHours>({
     monday: [], tuesday: [], wednesday: [], thursday: [],
     friday: [], saturday: [], sunday: []
   });
+
+  // Initialize breaks state
+  const [breaks, setBreaks] = useState<Break[]>([]);
   
   // Time slot management dialog states
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isWorkingHoursDialogOpen, setIsWorkingHoursDialogOpen] = useState(false);
+  const [isBreakDialogOpen, setIsBreakDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<keyof WorkingHours>('monday');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [selectedBreak, setSelectedBreak] = useState<Break | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [timeSlotForm, setTimeSlotForm] = useState<TimeSlot>({
     start: '09:00',
     end: '17:00',
+  });
+  const [breakForm, setBreakForm] = useState<Omit<Break, 'id'>>({
+    name: 'Lunch Break',
+    day_of_week: 1, // Monday
+    start_time: '12:00:00',
+    end_time: '13:00:00'
   });
   
   // Loading states
@@ -95,7 +138,13 @@ export const StaffWorkingHours: React.FC = () => {
     { label: 'Afternoon (1:00 PM - 5:00 PM)', start: '13:00', end: '17:00' },
     { label: 'Evening (5:00 PM - 9:00 PM)', start: '17:00', end: '21:00' },
     { label: 'Full Day (9:00 AM - 5:00 PM)', start: '09:00', end: '17:00' },
-    { label: 'Lunch Break (12:00 PM - 1:00 PM)', start: '12:00', end: '13:00', isBreak: true },
+  ];
+
+  // Common breaks for quick selection
+  const quickBreaks = [
+    { name: 'Lunch Break', start_time: '12:00:00', end_time: '13:00:00' },
+    { name: 'Coffee Break', start_time: '15:00:00', end_time: '15:30:00' },
+    { name: 'Morning Break', start_time: '10:30:00', end_time: '11:00:00' },
   ];
 
   // Day names for iteration
@@ -103,12 +152,35 @@ export const StaffWorkingHours: React.FC = () => {
     'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
   ];
 
-  // Fetch staff data on component mount
+  // Day of week mapping (string to number)
+  const dayOfWeekMap: Record<string, number> = {
+    'sunday': 0,
+    'monday': 1,
+    'tuesday': 2,
+    'wednesday': 3,
+    'thursday': 4,
+    'friday': 5,
+    'saturday': 6
+  };
+
+  // Day of week mapping (number to string)
+  const dayOfWeekNumberToString: Record<number, string> = {
+    0: 'sunday',
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday'
+  };
+
+  // Fetch staff data and breaks on component mount
   useEffect(() => {
     if (staffId) {
       fetchStaff(staffId);
+      fetchBreaks(staffId);
     }
-  }, [staffId, fetchStaff]);
+  }, [staffId, fetchStaff, fetchBreaks]);
 
   // Update state when API data is loaded
   useEffect(() => {
@@ -135,7 +207,18 @@ export const StaffWorkingHours: React.FC = () => {
 
       setWorkingHours(formattedHours);
     }
+
+    if (staffData?.staff?.breaks) {
+      setBreaks(staffData.staff.breaks);
+    }
   }, [staffData]);
+
+  // Update breaks state when breaksData is loaded
+  useEffect(() => {
+    if (breaksData?.breaks) {
+      setBreaks(breaksData.breaks);
+    }
+  }, [breaksData]);
 
   // Handle API errors
   useEffect(() => {
@@ -154,7 +237,39 @@ export const StaffWorkingHours: React.FC = () => {
         variant: 'destructive',
       });
     }
-  }, [staffError, updateError, toast]);
+
+    if (breaksError) {
+      toast({
+        title: 'Error loading breaks',
+        description: breaksError.message,
+        variant: 'destructive',
+      });
+    }
+
+    if (createBreakError) {
+      toast({
+        title: 'Error creating break',
+        description: createBreakError.message,
+        variant: 'destructive',
+      });
+    }
+
+    if (updateBreakError) {
+      toast({
+        title: 'Error updating break',
+        description: updateBreakError.message,
+        variant: 'destructive',
+      });
+    }
+
+    if (deleteBreakError) {
+      toast({
+        title: 'Error deleting break',
+        description: deleteBreakError.message,
+        variant: 'destructive',
+      });
+    }
+  }, [staffError, updateError, breaksError, createBreakError, updateBreakError, deleteBreakError, toast]);
 
   const handleAddTimeSlot = async () => {
     if (timeSlotForm.start >= timeSlotForm.end) {
@@ -193,7 +308,7 @@ export const StaffWorkingHours: React.FC = () => {
     }
 
     setWorkingHours(updatedHours);
-    setIsDialogOpen(false);
+    setIsWorkingHoursDialogOpen(false);
     setIsEditMode(false);
     setSelectedSlot(null);
     
@@ -215,8 +330,8 @@ export const StaffWorkingHours: React.FC = () => {
           });
         });
 
-        // Save to API
-        await saveWorkingHours(staffId, apiWorkingHours);
+        // Save to API - pass current breaks to maintain them
+        await saveWorkingHours(staffId, apiWorkingHours, breaks);
         
         toast({
           title: isEditMode ? 'Time slot updated' : 'Time slot added',
@@ -267,8 +382,8 @@ export const StaffWorkingHours: React.FC = () => {
           });
         });
 
-        // Save to API
-        await saveWorkingHours(staffId, apiWorkingHours);
+        // Save to API - pass current breaks to maintain them
+        await saveWorkingHours(staffId, apiWorkingHours, breaks);
         
         toast({
           title: 'Time slot removed',
@@ -295,6 +410,121 @@ export const StaffWorkingHours: React.FC = () => {
     }
   };
 
+  // Break management functions
+  const handleAddBreak = async () => {
+    // Validate form
+    if (!breakForm.name || !breakForm.start_time || !breakForm.end_time) {
+      toast({
+        title: 'Missing information',
+        description: 'Please provide a name, start time, and end time for the break.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Ensure start time is before end time
+    if (breakForm.start_time >= breakForm.end_time) {
+      toast({
+        title: 'Invalid time range',
+        description: 'End time must be after start time.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      if (isEditMode && selectedBreak?.id) {
+        // Update existing break
+        await updateBreak(staffId!, selectedBreak.id, breakForm);
+        
+        toast({
+          title: 'Break updated',
+          description: `Your ${breakForm.name} break has been updated.`,
+        });
+      } else {
+        // Create new break
+        await saveBreak(staffId!, breakForm);
+        
+        toast({
+          title: 'Break added',
+          description: `Your ${breakForm.name} break has been added.`,
+        });
+      }
+      
+      // Close dialog and reset form
+      setIsBreakDialogOpen(false);
+      setSelectedBreak(null);
+      setIsEditMode(false);
+      
+      // Refresh data
+      fetchBreaks(staffId!);
+    } catch (error) {
+      console.error('Error saving break:', error);
+      toast({
+        title: 'Error saving break',
+        description: 'There was a problem saving your break. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteBreak = async (breakId: number) => {
+    try {
+      await removeBreak(staffId!, breakId);
+      
+      toast({
+        title: 'Break deleted',
+        description: 'Your break has been deleted.',
+      });
+      
+      // Refresh data
+      fetchBreaks(staffId!);
+    } catch (error) {
+      console.error('Error deleting break:', error);
+      toast({
+        title: 'Error deleting break',
+        description: 'There was a problem deleting your break. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openAddBreakDialog = (day: string | number) => {
+    setIsBreakDialogOpen(true);
+    setIsEditMode(false);
+    setSelectedBreak(null);
+    
+    // If day is a string, convert to number
+    const numericDay = typeof day === 'string' ? dayOfWeekMap[day] : day;
+    
+    setBreakForm({
+      name: 'Lunch Break',
+      day_of_week: numericDay,
+      start_time: '12:00:00',
+      end_time: '13:00:00'
+    });
+  };
+
+  const openEditBreakDialog = (breakItem: Break) => {
+    setIsBreakDialogOpen(true);
+    setIsEditMode(true);
+    setSelectedBreak(breakItem);
+    
+    setBreakForm({
+      name: breakItem.name,
+      day_of_week: breakItem.day_of_week,
+      start_time: breakItem.start_time,
+      end_time: breakItem.end_time
+    });
+  };
+
+  const handleQuickBreakSelect = (preset: Partial<Break>) => {
+    setBreakForm({
+      ...breakForm,
+      ...preset
+    });
+  };
+
   const openAddDialog = (day: keyof WorkingHours) => {
     setSelectedDay(day);
     setIsEditMode(false);
@@ -303,7 +533,7 @@ export const StaffWorkingHours: React.FC = () => {
       start: '09:00',
       end: '17:00',
     });
-    setIsDialogOpen(true);
+    setIsWorkingHoursDialogOpen(true);
   };
 
   const openEditDialog = (day: keyof WorkingHours, slot: TimeSlot) => {
@@ -315,13 +545,14 @@ export const StaffWorkingHours: React.FC = () => {
       end: slot.end,
       isBreak: slot.isBreak,
     });
-    setIsDialogOpen(true);
+    setIsWorkingHoursDialogOpen(true);
   };
 
   const handleQuickTimeSlotSelect = (preset: TimeSlot) => {
     setTimeSlotForm(preset);
   };
 
+  // Format functions
   const formatTimeSlotDisplay = (slot: TimeSlot) => {
     // Convert 24h time to AM/PM format
     const formatTime = (time: string) => {
@@ -331,6 +562,17 @@ export const StaffWorkingHours: React.FC = () => {
     };
     
     return `${formatTime(slot.start)} - ${formatTime(slot.end)}`;
+  };
+
+  const formatBreakTimeDisplay = (breakItem: Break) => {
+    // Convert 24h time to AM/PM format
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(':');
+      const h = parseInt(hours, 10);
+      return `${h % 12 || 12}:${minutes} ${h < 12 ? 'AM' : 'PM'}`;
+    };
+    
+    return `${formatTime(breakItem.start_time.slice(0, 5))} - ${formatTime(breakItem.end_time.slice(0, 5))}`;
   };
 
   const calculateDayTotalHours = (day: keyof WorkingHours) => {
@@ -379,11 +621,24 @@ export const StaffWorkingHours: React.FC = () => {
     );
   }
 
+  // Group breaks by day of week
+  const breaksByDay: Record<string, Break[]> = {};
+  breaks.forEach(breakItem => {
+    const day = typeof breakItem.day_of_week === 'number' 
+      ? dayOfWeekNumberToString[breakItem.day_of_week] 
+      : breakItem.day_of_week;
+    
+    if (!breaksByDay[day]) {
+      breaksByDay[day] = [];
+    }
+    breaksByDay[day].push(breakItem);
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Working Hours"
-        description="Manage your availability for appointments. Changes are saved automatically."
+        description="Manage your availability and breaks for appointments. Changes are saved automatically."
       />
 
       {(staffError || updateError) && (
@@ -445,15 +700,15 @@ export const StaffWorkingHours: React.FC = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="weekdays" className="space-y-6">
+      <Tabs defaultValue="workingHours" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="weekdays">Weekdays</TabsTrigger>
-          <TabsTrigger value="weekend">Weekend</TabsTrigger>
+          <TabsTrigger value="workingHours">Working Hours</TabsTrigger>
+          <TabsTrigger value="breaks">Breaks</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="weekdays">
-          <div className="grid md:grid-cols-3 gap-6">
-            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].map((day) => (
+        <TabsContent value="workingHours">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {dayNames.map((day) => (
               <Card key={day} className="border shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/40 p-3">
                   <div className="flex items-center justify-between">
@@ -557,61 +812,62 @@ export const StaffWorkingHours: React.FC = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="weekend">
+        <TabsContent value="breaks">
+          <div className="mb-4 flex justify-between items-center">
+            <h3 className="text-lg font-medium">Manage Your Breaks</h3>
+            <Button onClick={() => openAddBreakDialog(1)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Break
+            </Button>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6">
-            {['saturday', 'sunday'].map((day) => (
+            {dayNames.map((day) => {
+              const dayBreaks = breaksByDay[day] || [];
+              if (dayBreaks.length === 0) return null;
+              
+              return (
               <Card key={day} className="border shadow-sm overflow-hidden">
                 <CardHeader className="bg-muted/40 p-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base capitalize">{day}</CardTitle>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => openAddDialog(day as keyof WorkingHours)}
+                        onClick={() => openAddBreakDialog(day)}
                             className="h-8 px-2"
                           >
                             <Plus className="h-4 w-4 mr-1" />
                             Add
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Add new time slot</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
                   </div>
-                  {workingHours[day as keyof WorkingHours].length > 0 && 
-                   !workingHours[day as keyof WorkingHours].every(slot => slot.isBreak) && (
                     <CardDescription className="mt-1">
-                      Total: {calculateDayTotalHours(day as keyof WorkingHours)}
+                      {dayBreaks.length} {dayBreaks.length === 1 ? 'break' : 'breaks'}
                     </CardDescription>
-                  )}
                 </CardHeader>
                 <CardContent className="p-3 max-h-[200px] overflow-y-auto">
-                  {workingHours[day as keyof WorkingHours].length > 0 ? (
                     <div className="space-y-2">
-                      {workingHours[day as keyof WorkingHours].map((slot, index) => (
+                      {dayBreaks.map((breakItem) => (
                         <div 
-                          key={index} 
-                          className={`flex items-center justify-between p-2 rounded-md border ${slot.isBreak ? 'bg-muted/30' : 'bg-card'}`}
+                          key={breakItem.id} 
+                          className="flex items-center justify-between p-2 rounded-md border bg-muted/30"
                         >
                           <div className="flex items-center flex-1 min-w-0">
-                            <Clock className={`h-4 w-4 mr-2 ${slot.isBreak ? 'text-muted-foreground' : 'text-primary'}`} />
-                            <span className="text-sm truncate">
-                              {formatTimeSlotDisplay(slot)}
-                              {slot.isBreak && <Badge variant="outline" className="ml-2 text-xs">Break</Badge>}
-                            </span>
+                            <Coffee className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <div>
+                              <div className="text-sm font-medium">{breakItem.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatBreakTimeDisplay(breakItem)}
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center ml-2 flex-shrink-0">
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              onClick={() => openEditDialog(day as keyof WorkingHours, slot)}
+                              onClick={() => openEditBreakDialog(breakItem)}
                               className="h-7 w-7"
-                              disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
+                              disabled={deletingBreak}
                             >
                               <Edit className="h-3.5 w-3.5" />
                             </Button>
@@ -621,27 +877,23 @@ export const StaffWorkingHours: React.FC = () => {
                                   variant="ghost" 
                                   size="icon"
                                   className="h-7 w-7"
-                                  disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
+                                  disabled={deletingBreak}
                                 >
-                                  {deletingSlot === `${day}-${slot.start}-${slot.end}` ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
-                                  ) : (
                                     <Trash className="h-3.5 w-3.5 text-destructive" />
-                                  )}
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Time Slot</AlertDialogTitle>
+                                  <AlertDialogTitle>Delete Break</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete this time slot? This action cannot be undone.
+                                    Are you sure you want to delete this break? This action cannot be undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction 
-                                    onClick={() => handleDeleteTimeSlot(day as keyof WorkingHours, slot)}
-                                    disabled={deletingSlot === `${day}-${slot.start}-${slot.end}`}
+                                    onClick={() => handleDeleteBreak(breakItem.id!)}
+                                    disabled={deletingBreak}
                                   >
                                     Delete
                                   </AlertDialogAction>
@@ -652,20 +904,30 @@ export const StaffWorkingHours: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground p-2 text-center bg-muted/20 rounded-md">
-                      No hours set (day off)
-                    </div>
-                  )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
+          
+          {Object.keys(breaksByDay).length === 0 && (
+            <div className="text-center p-8 bg-muted/20 rounded-lg">
+              <Coffee className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+              <h3 className="text-lg font-medium mb-1">No Breaks Added</h3>
+              <p className="text-muted-foreground mb-4">
+                Add breaks to your schedule to block off time for lunch, meetings, or personal time.
+              </p>
+              <Button onClick={() => openAddBreakDialog(1)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Break
+              </Button>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
-      {/* Time slot dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Working Hours Dialog */}
+      <Dialog open={isWorkingHoursDialogOpen} onOpenChange={setIsWorkingHoursDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -686,8 +948,7 @@ export const StaffWorkingHours: React.FC = () => {
                     variant="outline"
                     className={`justify-start h-auto py-2 px-3 text-left ${
                       timeSlotForm.start === preset.start && 
-                      timeSlotForm.end === preset.end && 
-                      timeSlotForm.isBreak === preset.isBreak 
+                      timeSlotForm.end === preset.end
                         ? 'border-primary' 
                         : ''
                     }`}
@@ -696,7 +957,7 @@ export const StaffWorkingHours: React.FC = () => {
                     <div>
                       <div className="font-medium">{preset.label}</div>
                       <div className="text-xs text-muted-foreground">
-                        {preset.isBreak ? 'Break Time' : 'Working Hours'}
+                        Working Hours
                       </div>
                     </div>
                   </Button>
@@ -725,25 +986,127 @@ export const StaffWorkingHours: React.FC = () => {
                     onChange={(e) => setTimeSlotForm({ ...timeSlotForm, end: e.target.value })}
                   />
                 </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is-break"
-                checked={timeSlotForm.isBreak || false}
-                onCheckedChange={(checked) => setTimeSlotForm({ ...timeSlotForm, isBreak: checked })}
-              />
-              <Label htmlFor="is-break">Mark as break time</Label>
-            </div>
-          </div>
-          
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={addingSlot}>
+            <Button variant="outline" onClick={() => setIsWorkingHoursDialogOpen(false)} disabled={addingSlot}>
               Cancel
             </Button>
             <Button onClick={handleAddTimeSlot} disabled={addingSlot}>
               {addingSlot ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isEditMode ? 'Updating...' : 'Adding...'}
+                </>
+              ) : (
+                isEditMode ? 'Update' : 'Add'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Break Dialog */}
+      <Dialog open={isBreakDialogOpen} onOpenChange={setIsBreakDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditMode ? "Edit Break" : "Add Break"}
+            </DialogTitle>
+            <DialogDescription>
+              Set your break details
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="break-name">Break Name</Label>
+              <Input
+                id="break-name"
+                value={breakForm.name}
+                onChange={(e) => setBreakForm({ ...breakForm, name: e.target.value })}
+                placeholder="e.g., Lunch Break"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="break-day">Day</Label>
+              <select
+                id="break-day"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={typeof breakForm.day_of_week === 'number' ? breakForm.day_of_week : dayOfWeekMap[breakForm.day_of_week as string]}
+                onChange={(e) => setBreakForm({ ...breakForm, day_of_week: parseInt(e.target.value) })}
+              >
+                <option value="0">Sunday</option>
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Quick select:</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {quickBreaks.map((preset, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    className={`justify-start h-auto py-2 px-3 text-left ${
+                      breakForm.name === preset.name && 
+                      breakForm.start_time === preset.start_time && 
+                      breakForm.end_time === preset.end_time
+                        ? 'border-primary' 
+                        : ''
+                    }`}
+                    onClick={() => handleQuickBreakSelect(preset)}
+                  >
+                    <div>
+                      <div className="font-medium">{preset.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatBreakTimeDisplay({...preset, id: 0, day_of_week: 0})}
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Custom time:</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="break-start-time" className="text-xs">Start Time</Label>
+                  <Input
+                    id="break-start-time"
+                    type="time"
+                    value={breakForm.start_time.slice(0, 5)}
+                    onChange={(e) => setBreakForm({ ...breakForm, start_time: `${e.target.value}:00` })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="break-end-time" className="text-xs">End Time</Label>
+                  <Input
+                    id="break-end-time"
+                    type="time"
+                    value={breakForm.end_time.slice(0, 5)}
+                    onChange={(e) => setBreakForm({ ...breakForm, end_time: `${e.target.value}:00` })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBreakDialogOpen(false)} disabled={creatingBreak || updatingBreak}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddBreak} disabled={creatingBreak || updatingBreak}>
+              {(creatingBreak || updatingBreak) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {isEditMode ? 'Updating...' : 'Adding...'}

@@ -15,6 +15,7 @@ export interface Staff extends User {
   bio?: string;
   services: string[];
   workingHours: WorkingHours;
+  breaks: Break[];
   commissionPercentage: number;
   totalEarnings: number;
   totalAppointments: number;
@@ -35,6 +36,14 @@ export interface TimeSlot {
   start: string; // format: "HH:MM"
   end: string; // format: "HH:MM"
   isBreak?: boolean;
+}
+
+export interface Break {
+  id?: number;
+  name: string;
+  day_of_week: number | string;
+  start_time: string; // format: "HH:MM:SS"
+  end_time: string; // format: "HH:MM:SS"
 }
 
 export interface Service {

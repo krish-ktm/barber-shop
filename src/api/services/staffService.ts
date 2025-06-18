@@ -25,6 +25,7 @@ export interface Staff {
   updated_at?: string;
   user?: User;
   workingHours?: WorkingHour[];
+  breaks?: Break[];
 }
 
 export interface WorkingHour {
@@ -34,6 +35,16 @@ export interface WorkingHour {
   start_time: string;
   end_time: string;
   is_break: boolean;
+}
+
+export interface Break {
+  id?: number;
+  staff_id?: string;
+  day_of_week: number | string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  business_hour_id?: number | null;
 }
 
 // Interface for creating a new staff member (includes password)
@@ -70,6 +81,13 @@ interface StaffResponse {
 interface WorkingHoursResponse {
   success: boolean;
   workingHours: WorkingHour[];
+  breaks?: Break[];
+}
+
+// New interfaces for breaks
+interface BreaksResponse {
+  success: boolean;
+  breaks: Break[];
 }
 
 /**
@@ -166,11 +184,40 @@ export const deleteStaff = async (id: string): Promise<{ success: boolean; messa
 };
 
 /**
- * Update staff availability (working hours)
+ * Update staff availability (working hours and breaks)
  */
 export const updateStaffAvailability = async (
   id: string,
-  workingHours: WorkingHour[]
+  workingHours: WorkingHour[],
+  breaks?: Break[]
 ): Promise<WorkingHoursResponse> => {
-  return put<WorkingHoursResponse>(`/staff/${id}/availability`, { workingHours });
+  return put<WorkingHoursResponse>(`/staff/${id}/availability`, { workingHours, breaks });
+};
+
+/**
+ * Get staff breaks
+ */
+export const getStaffBreaks = async (id: string): Promise<BreaksResponse> => {
+  return get<BreaksResponse>(`/staff/${id}/breaks`);
+};
+
+/**
+ * Create staff break
+ */
+export const createStaffBreak = async (id: string, breakData: Omit<Break, 'id' | 'staff_id'>): Promise<{ success: boolean; break: Break }> => {
+  return post<{ success: boolean; break: Break }>(`/staff/${id}/breaks`, breakData);
+};
+
+/**
+ * Update staff break
+ */
+export const updateStaffBreak = async (staffId: string, breakId: number, breakData: Partial<Break>): Promise<{ success: boolean; break: Break }> => {
+  return put<{ success: boolean; break: Break }>(`/staff/${staffId}/breaks/${breakId}`, breakData);
+};
+
+/**
+ * Delete staff break
+ */
+export const deleteStaffBreak = async (staffId: string, breakId: number): Promise<{ success: boolean; message: string }> => {
+  return del<{ success: boolean; message: string }>(`/staff/${staffId}/breaks/${breakId}`);
 }; 
