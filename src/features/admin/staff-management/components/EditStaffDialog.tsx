@@ -34,13 +34,32 @@ import {
 } from '@/components/ui/collapsible';
 import { formatCurrency } from '@/utils';
 
+// Custom styles to override red color
+const customStyles = `
+  .custom-form .text-destructive {
+    color: #f59e0b !important; /* amber-500 */
+  }
+  .custom-form [data-state="error"] {
+    color: #f59e0b !important; /* amber-500 */
+  }
+  .custom-form [data-state="error"] .text-destructive {
+    color: #f59e0b !important; /* amber-500 */
+  }
+  .custom-form .form-item-custom [data-state="error"] {
+    color: #f59e0b !important; /* amber-500 */
+  }
+  .custom-form .form-item-custom .text-destructive {
+    color: #f59e0b !important; /* amber-500 */
+  }
+`;
+
 const formSchema = z.object({
   id: z.string(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   bio: z.string().optional(),
-  services: z.array(z.string()).min(1, 'Select at least one service'),
+  services: z.array(z.string()).min(1, 'Please select at least one service'),
   commissionPercentage: z.number().min(0).max(100),
   isActive: z.boolean(),
 });
@@ -65,7 +84,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   
   // Get unique categories from services
   const categories = Array.from(new Set(services.map(service => service.category || 'Uncategorized')));
@@ -78,19 +97,38 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       email: staff?.email || '',
       phone: staff?.phone || '',
       bio: staff?.bio || '',
-      services: staff?.services || [],
+      services: [], // Initialize empty, will be set in useEffect
       commissionPercentage: staff?.commissionPercentage || 0,
       isActive: staff?.isAvailable || false,
     },
   });
 
-  // Initialize selected services from staff data
+  // Initialize selected services from staff data when component mounts or staff/services change
   useEffect(() => {
-    if (staff?.services) {
-      setSelectedServices(staff.services);
-      form.setValue('services', staff.services);
+    if (staff?.services && Array.isArray(staff.services) && services.length > 0) {
+      // Filter out any service IDs that don't exist in the available services
+      const validServiceIds = staff.services.filter(id => 
+        services.some(service => service.id === id)
+      );
+      
+      setSelectedServiceIds(validServiceIds);
+      form.setValue('services', validServiceIds, { shouldValidate: true });
+      
+      // Open categories that have selected services
+      const categoriesToOpen: Record<string, boolean> = {};
+      validServiceIds.forEach(id => {
+        const service = services.find(s => s.id === id);
+        if (service) {
+          categoriesToOpen[service.category || 'Uncategorized'] = true;
+        }
+      });
+      
+      setOpenCategories(prev => ({
+        ...prev,
+        ...categoriesToOpen
+      }));
     }
-  }, [staff, form]);
+  }, [staff, services, form]);
 
   const toggleCategory = (category: string) => {
     setOpenCategories(prev => ({
@@ -100,24 +138,27 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
   };
 
   const handleServiceSelection = (serviceId: string) => {
-    const isSelected = selectedServices.includes(serviceId);
-    
-    let updatedServices: string[];
-    if (isSelected) {
-      // Remove service if already selected
-      updatedServices = selectedServices.filter(id => id !== serviceId);
-    } else {
-      // Add new service
-      updatedServices = [...selectedServices, serviceId];
-    }
-    
-    setSelectedServices(updatedServices);
-    form.setValue('services', updatedServices);
+    setSelectedServiceIds(prev => {
+      const isSelected = prev.includes(serviceId);
+      
+      let updatedServices: string[];
+      if (isSelected) {
+        // Remove service if already selected
+        updatedServices = prev.filter(id => id !== serviceId);
+      } else {
+        // Add new service
+        updatedServices = [...prev, serviceId];
+      }
+      
+      // Update form value
+      form.setValue('services', updatedServices, { shouldValidate: true });
+      return updatedServices;
+    });
   };
 
   const getSelectedServicesCount = (category: string) => {
     return services
-      .filter(service => service.category === category && selectedServices.includes(service.id))
+      .filter(service => service.category === category && selectedServiceIds.includes(service.id))
       .length;
   };
 
@@ -130,6 +171,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
         ...staff,
         ...values,
         isAvailable: values.isActive,
+        services: selectedServiceIds, // Use the selected service IDs
       };
       
       await onUpdate(updatedStaff);
@@ -158,6 +200,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
         onOpenChange(isOpen);
       }
     }}>
+      <style>{customStyles}</style>
       <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit Staff Profile</DialogTitle>
@@ -168,7 +211,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
 
         <ScrollArea className="flex-1">
           <div className="px-6 pb-6">
-            <Form {...form}>
+            <Form {...form} className="custom-form">
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
@@ -261,8 +304,8 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                   control={form.control}
                   name="services"
                   render={() => (
-                    <FormItem>
-                      <FormLabel>Services Offered</FormLabel>
+                    <FormItem className="form-item-custom">
+                      <FormLabel className="text-slate-700">Services Offered</FormLabel>
                       <div className="space-y-2">
                         {isLoadingServices ? (
                           <div className="flex justify-center p-6">
@@ -305,7 +348,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                                       {services
                                         .filter(s => s.category === category)
                                         .map((s) => {
-                                          const isSelected = selectedServices.includes(s.id);
+                                          const isSelected = selectedServiceIds.includes(s.id);
                                           return (
                                             <Button
                                               key={s.id}
@@ -327,10 +370,10 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                               );
                             })}
                             
-                            {selectedServices.length > 0 && (
+                            {selectedServiceIds.length > 0 && (
                               <div className="mt-4 space-y-2">
                                 <div className="text-sm font-medium">Selected Services</div>
-                                {selectedServices.map((serviceId) => {
+                                {selectedServiceIds.map((serviceId) => {
                                   const selectedService = services.find(s => s.id === serviceId);
                                   if (!selectedService) return null;
                                   
@@ -348,11 +391,12 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                                         </span>
                                         <Button
                                           type="button"
-                                          variant="ghost"
+                                          variant="outline"
                                           size="icon"
                                           onClick={() => handleServiceSelection(serviceId)}
+                                          className="hover:bg-muted"
                                         >
-                                          <Trash className="h-4 w-4" />
+                                          <Trash className="h-4 w-4 text-muted-foreground" />
                                         </Button>
                                       </div>
                                     </div>
