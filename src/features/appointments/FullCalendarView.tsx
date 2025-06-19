@@ -334,7 +334,8 @@ export const FullCalendarView = ({
           className={cn(
             "rounded-sm border-l-2 flex flex-col cursor-pointer relative overflow-hidden w-full h-full",
             isCompact ? "min-h-[20px] px-1 py-0.5" : "min-h-[40px] p-1",
-            "bg-background hover:bg-background/80 transition-colors"
+            "bg-background hover:bg-background/80 transition-colors",
+            "min-w-0" // Ensure it doesn't expand beyond parent
           )}
           style={{ 
             borderLeftColor: statusColor,
@@ -342,10 +343,10 @@ export const FullCalendarView = ({
           }}
         >
           {/* Time and staff initial */}
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1">
-              <Clock className={cn("text-muted-foreground", isCompact ? "h-2 w-2" : "h-3 w-3")} />
-              <span className={cn("font-medium text-muted-foreground", isCompact ? "text-[8px]" : "text-[10px]")}>
+          <div className="flex justify-between items-center w-full min-w-0">
+            <div className="flex items-center gap-1 min-w-0 flex-shrink overflow-hidden">
+              <Clock className={cn("text-muted-foreground flex-shrink-0", isCompact ? "h-2 w-2" : "h-3 w-3")} />
+              <span className={cn("font-medium text-muted-foreground truncate", isCompact ? "text-[8px]" : "text-[10px]")}>
                 {appointment.time}
               </span>
             </div>
@@ -353,7 +354,7 @@ export const FullCalendarView = ({
             {/* Staff avatar */}
             <div 
               className={cn(
-                "rounded-full flex items-center justify-center text-white",
+                "rounded-full flex items-center justify-center text-white flex-shrink-0",
                 isCompact ? "w-3 h-3 text-[6px]" : "w-4 h-4 text-[8px]"
               )}
               style={{ backgroundColor: statusColor }}
@@ -364,13 +365,13 @@ export const FullCalendarView = ({
           </div>
           
           {/* Customer name */}
-          <div className={cn("font-medium truncate", isCompact ? "text-[8px]" : "text-[10px]")}>
+          <div className={cn("font-medium truncate w-full", isCompact ? "text-[8px]" : "text-[10px]")}>
             {appointment.customerName.split(' ')[0]}
           </div>
           
           {/* Service (only if not compact) */}
           {!isCompact && appointment.services.length > 0 && (
-            <div className="text-[8px] text-muted-foreground truncate mt-0.5">
+            <div className="text-[8px] text-muted-foreground truncate mt-0.5 w-full">
               {appointment.services[0].serviceName}
             </div>
           )}
@@ -445,22 +446,24 @@ export const FullCalendarView = ({
                   });
                   
                   return (
-                    <div key={`slot-${hour}-${index}`} className="h-16 sm:h-20 md:h-24 border-b border-r p-1 relative">
+                    <div key={`slot-${hour}-${index}`} className="h-16 sm:h-20 md:h-24 border-b border-r p-1 relative overflow-hidden">
                       {Object.entries(appointmentsByTime).map(([time, appts]) => (
                         <div key={time} className="mb-1 last:mb-0">
                           {appts.length > 1 ? (
                             <div className={cn(
-                              "grid gap-1",
+                              "grid gap-1 max-w-full overflow-hidden",
                               appts.length === 2 ? "grid-cols-2" : 
                               appts.length === 3 ? "grid-cols-3" : 
                               "grid-cols-4"
                             )}>
                               {appts.map(appointment => (
-                                <WeekViewAppointment
-                                  key={appointment.id}
-                                  appointment={appointment}
-                                  onClick={() => onViewAppointment(appointment.id)}
-                                />
+                                <div key={appointment.id} className="min-w-0 w-full">
+                                  <WeekViewAppointment
+                                    appointment={appointment}
+                                    onClick={() => onViewAppointment(appointment.id)}
+                                    isCompact={appts.length > 2}
+                                  />
+                                </div>
                               ))}
                             </div>
                           ) : (
