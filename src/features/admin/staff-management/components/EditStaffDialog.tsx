@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -25,8 +25,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Staff } from '@/types';
 import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronRight, Trash } from 'lucide-react';
 import { Service } from '@/api/services/serviceService';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { formatCurrency } from '@/utils';
 
 const formSchema = z.object({
   id: z.string(),
@@ -58,6 +64,11 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  
+  // Get unique categories from services
+  const categories = Array.from(new Set(services.map(service => service.category || 'Uncategorized')));
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,6 +83,43 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       isActive: staff?.isAvailable || false,
     },
   });
+
+  // Initialize selected services from staff data
+  useEffect(() => {
+    if (staff?.services) {
+      setSelectedServices(staff.services);
+      form.setValue('services', staff.services);
+    }
+  }, [staff, form]);
+
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  const handleServiceSelection = (serviceId: string) => {
+    const isSelected = selectedServices.includes(serviceId);
+    
+    let updatedServices: string[];
+    if (isSelected) {
+      // Remove service if already selected
+      updatedServices = selectedServices.filter(id => id !== serviceId);
+    } else {
+      // Add new service
+      updatedServices = [...selectedServices, serviceId];
+    }
+    
+    setSelectedServices(updatedServices);
+    form.setValue('services', updatedServices);
+  };
+
+  const getSelectedServicesCount = (category: string) => {
+    return services
+      .filter(service => service.category === category && selectedServices.includes(service.id))
+      .length;
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
@@ -212,42 +260,107 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                 <FormField
                   control={form.control}
                   name="services"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem>
                       <FormLabel>Services Offered</FormLabel>
-                      <div className="grid grid-cols-2 gap-2 border rounded-md p-4 relative">
+                      <div className="space-y-2">
                         {isLoadingServices ? (
-                          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                          <div className="flex justify-center p-6">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                           </div>
                         ) : services.length === 0 ? (
-                          <div className="col-span-2 py-2 text-center text-muted-foreground">
-                            No services available
+                          <div className="text-center p-4 border rounded-lg bg-muted/30">
+                            <p>No services found. Please add services first.</p>
                           </div>
                         ) : (
-                          services.map((service) => (
-                            <label
-                              key={service.id}
-                              className="flex items-center space-x-2 text-sm"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={field.value.includes(service.id)}
-                                onChange={(e) => {
-                                  const value = service.id;
-                                  if (e.target.checked) {
-                                    field.onChange([...field.value, value]);
-                                  } else {
-                                    field.onChange(
-                                      field.value.filter((v) => v !== value)
-                                    );
-                                  }
-                                }}
-                                className="form-checkbox h-4 w-4"
-                              />
-                              <span>{service.name}</span>
-                            </label>
-                          ))
+                          <div className="space-y-2">
+                            {categories.map((category) => {
+                              const selectedCount = getSelectedServicesCount(category);
+                              return (
+                                <Collapsible
+                                  key={category}
+                                  open={openCategories[category]}
+                                  onOpenChange={() => toggleCategory(category)}
+                                  className="border rounded-lg"
+                                >
+                                  <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-muted/50">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">
+                                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                                      </span>
+                                      {selectedCount > 0 && (
+                                        <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                                          {selectedCount}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {openCategories[category] ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="p-2">
+                                    <div className="grid gap-2">
+                                      {services
+                                        .filter(s => s.category === category)
+                                        .map((s) => {
+                                          const isSelected = selectedServices.includes(s.id);
+                                          return (
+                                            <Button
+                                              key={s.id}
+                                              type="button"
+                                              variant={isSelected ? "default" : "outline"}
+                                              className="w-full justify-between group"
+                                              onClick={() => handleServiceSelection(s.id)}
+                                            >
+                                              <span>{s.name}</span>
+                                              <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
+                                                {formatCurrency(Number(s.price) || 0)}
+                                              </span>
+                                            </Button>
+                                          );
+                                        })}
+                                    </div>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              );
+                            })}
+                            
+                            {selectedServices.length > 0 && (
+                              <div className="mt-4 space-y-2">
+                                <div className="text-sm font-medium">Selected Services</div>
+                                {selectedServices.map((serviceId) => {
+                                  const selectedService = services.find(s => s.id === serviceId);
+                                  if (!selectedService) return null;
+                                  
+                                  return (
+                                    <div key={serviceId} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                                      <div className="flex items-center gap-2">
+                                        <span>{selectedService.name}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {selectedService.category}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-4">
+                                        <span className="text-sm font-medium">
+                                          {formatCurrency(Number(selectedService.price) || 0)}
+                                        </span>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleServiceSelection(serviceId)}
+                                        >
+                                          <Trash className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                       <FormMessage />
@@ -266,6 +379,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                           type="number"
                           min="0"
                           max="100"
+                          placeholder="Enter commission percentage"
                           {...field}
                           onChange={(e) => field.onChange(Number(e.target.value))}
                         />
@@ -279,8 +393,16 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="mt-6">
-          <Button 
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
             onClick={form.handleSubmit(onSubmit)}
             disabled={isSubmitting}
           >
@@ -290,7 +412,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                 Updating...
               </>
             ) : (
-              'Update Profile'
+              'Update Staff'
             )}
           </Button>
         </DialogFooter>
