@@ -46,6 +46,7 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(appointment.date));
   const [selectedTime, setSelectedTime] = useState<string>(appointment.time);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // Available time slots (in a real app, these would come from an API)
   const availableTimeSlots = [
@@ -61,11 +62,12 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
   
   const handleReschedule = async () => {
     try {
+      setIsProcessing(true);
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       
       // Create an optimistic update of the appointment
-      const optimisticAppointment: ApiAppointment = {
-        ...appointment,
+      const optimisticAppointment = {
+        id: appointment.id,
         date: formattedDate,
         time: selectedTime,
         // Add missing properties required by ApiAppointment
@@ -77,29 +79,34 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
         customer_phone: appointment.customerPhone,
         customer_email: appointment.customerEmail,
         staff_name: appointment.staffName,
-        status: appointment.status
-      };
+        status: appointment.status,
+        // Convert services to API format
+        appointmentServices: appointment.services.map(service => ({
+          service_id: service.serviceId,
+          service_name: service.serviceName,
+          price: service.price,
+          duration: service.duration
+        }))
+      } as ApiAppointment;
       
-      // Call the parent's callback with the optimistic update
+      // Make the actual API call using the direct function
+      await rescheduleAppointmentDirect(appointment.id, formattedDate, selectedTime);
+      
+      // Call the parent's callback with the optimistic update after successful API call
       if (onRescheduleComplete) {
         onRescheduleComplete(optimisticAppointment);
       }
       
-      // Close the dialog immediately for better UX
+      // Close the dialog after successful API call
       onOpenChange(false);
-      
-      // Then make the actual API call using the direct function
-      await rescheduleAppointmentDirect(appointment.id, formattedDate, selectedTime);
       
       toast({
         title: 'Appointment Rescheduled',
         description: `Appointment rescheduled to ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedTime}`,
       });
-      
-      // If the API call was successful and the result is different from our optimistic update,
-      // we could update again with the real data, but this is usually not necessary
     } catch (error) {
       console.error('Error rescheduling appointment:', error);
+      setIsProcessing(false);
       toast({
         title: 'Error',
         description: 'Failed to reschedule appointment. Please try again.',
@@ -107,9 +114,17 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
       });
     }
   };
+
+  // Reset processing state when dialog is closed
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setIsProcessing(false);
+    }
+    onOpenChange(open);
+  };
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Reschedule Appointment</DialogTitle>
@@ -127,13 +142,20 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
               </p>
             </div>
             
+            {isProcessing && (
+              <div className="flex items-center justify-center py-2 bg-muted/30 rounded-md">
+                <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+                <span className="text-sm">Processing rescheduling...</span>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Select New Date</h3>
               <CalendarComponent
                 mode="single"
                 selected={selectedDate}
                 onSelect={(date) => date && setSelectedDate(date)}
-                disabled={(date) => date < new Date() || date > addDays(new Date(), 60)}
+                disabled={(date) => date < new Date() || date > addDays(new Date(), 60) || isProcessing}
                 initialFocus
               />
             </div>
@@ -151,6 +173,7 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
                       selectedTime === time && "font-semibold"
                     )}
                     onClick={() => setSelectedTime(time)}
+                    disabled={isProcessing}
                   >
                     {time}
                   </Button>
@@ -169,21 +192,15 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
               e.stopPropagation();
               onOpenChange(false);
             }}
+            disabled={isProcessing}
           >
             Cancel
           </Button>
           <Button 
             onClick={handleReschedule} 
-            disabled={isRescheduling || !selectedDate || !selectedTime}
+            disabled={isProcessing || isRescheduling || !selectedDate || !selectedTime}
           >
-            {isRescheduling ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Rescheduling...
-              </>
-            ) : (
-              'Reschedule Appointment'
-            )}
+            {isProcessing ? 'Rescheduling...' : 'Reschedule Appointment'}
           </Button>
         </DialogFooter>
       </DialogContent>

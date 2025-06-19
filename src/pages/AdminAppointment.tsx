@@ -89,6 +89,9 @@ export const AdminAppointment: React.FC = () => {
     error: updateStatusError
   } = useApi(updateAppointmentStatus);
 
+  // Track loading state per appointment ID
+  const [loadingAppointmentIds, setLoadingAppointmentIds] = useState<Record<string, boolean>>({});
+
   // Basic filters
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
@@ -165,6 +168,9 @@ export const AdminAppointment: React.FC = () => {
         return;
       }
       
+      // Set loading state for this specific appointment
+      setLoadingAppointmentIds(prev => ({ ...prev, [appointmentId]: true }));
+      
       // Optimistically update the UI first
       const updatedAppointments = appointments.map(app => {
         if (app.id === appointmentId) {
@@ -182,8 +188,7 @@ export const AdminAppointment: React.FC = () => {
         setAdminData(updatedAdminData);
       }
       
-      // Then make the API call without showing the loading state
-      // We'll handle errors separately
+      // Then make the API call
       await updateAppointmentStatusDirect(appointmentId, newStatus);
       
       toast({
@@ -191,9 +196,13 @@ export const AdminAppointment: React.FC = () => {
         description: `Appointment status changed to ${newStatus}`,
       });
       
-      // No need to refresh the entire list - we've already updated the UI
+      // Clear loading state
+      setLoadingAppointmentIds(prev => ({ ...prev, [appointmentId]: false }));
     } catch (error) {
       console.error('Error updating appointment status:', error);
+      
+      // Clear loading state
+      setLoadingAppointmentIds(prev => ({ ...prev, [appointmentId]: false }));
       
       // If there was an error, refresh the data to get back to a consistent state
       const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -219,6 +228,9 @@ export const AdminAppointment: React.FC = () => {
     setSelectedAppointmentId(null);
     setShowAppointmentDetails(false);
     
+    // Don't set loading state yet - wait until user confirms rescheduling
+    // setLoadingAppointmentIds(prev => ({ ...prev, [appointment.id]: true }));
+    
     // Open reschedule dialog
     setAppointmentToReschedule(appointment);
     setShowRescheduleDialog(true);
@@ -229,6 +241,9 @@ export const AdminAppointment: React.FC = () => {
     // Prevent details dialog from opening when cancelling
     setSelectedAppointmentId(null);
     setShowAppointmentDetails(false);
+    
+    // Don't set loading state yet - wait until user confirms cancellation
+    // setLoadingAppointmentIds(prev => ({ ...prev, [appointment.id]: true }));
     
     // Open cancel dialog
     setAppointmentToCancel(appointment);
@@ -252,12 +267,17 @@ export const AdminAppointment: React.FC = () => {
       ...adminData,
       appointments: updatedAppointments
     };
-    
     setAdminData(updatedAdminData);
+    
+    // No need to clear loading state as it's handled in the dialog component
+    
+    // Close the dialog
+    setShowRescheduleDialog(false);
+    setAppointmentToReschedule(null);
     
     toast({
       title: 'Appointment Rescheduled',
-      description: `Appointment successfully rescheduled to ${updatedAppointment.date} at ${updatedAppointment.time}`,
+      description: 'The appointment has been successfully rescheduled.',
     });
   };
   
@@ -265,7 +285,9 @@ export const AdminAppointment: React.FC = () => {
   const handleCancelComplete = (appointmentId: string) => {
     if (!adminData) return;
     
-    // Update the appointment status in the local state
+    // No need to set loading state as it's handled in the dialog component
+    
+    // Update the appointment in the local state
     const updatedAppointments = adminData.appointments.map(app => {
       if (app.id === appointmentId) {
         return { ...app, status: 'cancelled' as const };
@@ -278,12 +300,17 @@ export const AdminAppointment: React.FC = () => {
       ...adminData,
       appointments: updatedAppointments
     };
-    
     setAdminData(updatedAdminData);
+    
+    // No need to clear loading state as it's handled in the dialog component
+    
+    // Close the dialog
+    setShowCancelDialog(false);
+    setAppointmentToCancel(null);
     
     toast({
       title: 'Appointment Cancelled',
-      description: 'Appointment has been cancelled successfully',
+      description: 'The appointment has been successfully cancelled.',
     });
   };
 
@@ -781,6 +808,7 @@ export const AdminAppointment: React.FC = () => {
                 onViewAppointment={handleViewAppointment}
                 onRescheduleAppointment={handleRescheduleAppointment}
                 onCancelAppointment={handleCancelAppointment}
+                loadingAppointmentIds={loadingAppointmentIds}
               />
             </div>
           )}

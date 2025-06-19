@@ -8,7 +8,8 @@ import {
   XCircle,
   Scissors,
   CheckCheck,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { Appointment } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -34,6 +35,7 @@ interface AppointmentListProps {
   onStatusChange?: (appointmentId: string, status: Appointment['status']) => void;
   onRescheduleAppointment?: (appointment: Appointment) => void;
   onCancelAppointment?: (appointment: Appointment) => void;
+  loadingAppointmentIds?: Record<string, boolean>; // Track loading state per appointment ID
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
@@ -45,10 +47,11 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   onStatusChange,
   onRescheduleAppointment,
   onCancelAppointment,
+  loadingAppointmentIds = {},
 }) => {
   const getStaffImage = (staffId: string) => {
     const staff = staffList.find(s => s.id === staffId);
-    return staff?.avatar || null;
+    return staff?.avatar || undefined;
   };
 
   const getStatusStyle = (status: Appointment['status']) => {
@@ -82,6 +85,17 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   // Render action buttons based on appointment status
   const renderStatusButtons = (appointment: Appointment) => {
     if (!showActions) return null;
+    
+    const isLoading = loadingAppointmentIds[appointment.id] || false;
+    
+    // Show a single loading indicator when action is in progress
+    if (isLoading) {
+      return (
+        <div className="flex justify-center mt-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      );
+    }
     
     const buttons = [];
     
@@ -241,13 +255,16 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="flex items-start space-x-4">
                 <Avatar className="h-12 w-12 shrink-0">
-                  <AvatarImage src={getStaffImage(appointment.staffId)} />
-                  <AvatarFallback>
-                    {appointment.staffName
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </AvatarFallback>
+                  {getStaffImage(appointment.staffId) ? (
+                    <AvatarImage src={getStaffImage(appointment.staffId)} />
+                  ) : (
+                    <AvatarFallback>
+                      {appointment.staffName
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
                 
                 <div className="space-y-1 min-w-0">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { XCircle, Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -29,6 +29,7 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
   onCancelComplete,
 }) => {
   const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // API hook for cancelling
   const {
@@ -37,16 +38,18 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
   
   const handleCancel = async () => {
     try {
-      // Call the parent's callback with the appointment ID immediately
+      setIsProcessing(true);
+      
+      // Make the actual API call using the direct function
+      await updateAppointmentStatusDirect(appointment.id, 'cancelled');
+      
+      // Call the parent's callback with the appointment ID after successful API call
       if (onCancelComplete && appointment && appointment.id) {
         onCancelComplete(appointment.id);
       }
       
-      // Close the dialog immediately for better UX
+      // Close the dialog after successful API call
       onOpenChange(false);
-      
-      // Then make the actual API call using the direct function
-      await updateAppointmentStatusDirect(appointment.id, 'cancelled');
       
       toast({
         title: 'Appointment Cancelled',
@@ -54,6 +57,7 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
       });
     } catch (error) {
       console.error('Error cancelling appointment:', error);
+      setIsProcessing(false);
       toast({
         title: 'Error',
         description: 'Failed to cancel appointment. Please try again.',
@@ -61,9 +65,17 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
       });
     }
   };
+
+  // Reset processing state when dialog is closed
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setIsProcessing(false);
+    }
+    onOpenChange(open);
+  };
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -89,6 +101,13 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
           <p className="text-sm text-muted-foreground">
             Cancelling this appointment will free up the time slot and notify relevant staff.
           </p>
+          
+          {isProcessing && (
+            <div className="flex items-center justify-center py-2">
+              <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+              <span className="text-sm">Processing cancellation...</span>
+            </div>
+          )}
         </div>
         
         <DialogFooter className="gap-2 sm:gap-0">
@@ -99,6 +118,7 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
               e.stopPropagation();
               onOpenChange(false);
             }}
+            disabled={isProcessing}
           >
             Keep Appointment
           </Button>
@@ -109,16 +129,9 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
               e.stopPropagation();
               handleCancel();
             }}
-            disabled={isCancelling}
+            disabled={isProcessing || isCancelling}
           >
-            {isCancelling ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cancelling...
-              </>
-            ) : (
-              'Cancel Appointment'
-            )}
+            {isProcessing ? 'Cancelling...' : 'Cancel Appointment'}
           </Button>
         </DialogFooter>
       </DialogContent>
