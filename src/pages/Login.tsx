@@ -135,8 +135,8 @@ export const Login: React.FC = () => {
       email = 'admin@barbershop.com';
       password = 'admin123';
     } else if (role === 'staff') {
-      email = 'staff@barbershop.com';
-      password = 'staff123';
+      email = 'Joj@barber.com';
+      password = 'Joj@barber.com';
     } else if (role === 'billing') {
       email = 'billing@barbershop.com';
       password = 'billing123';
