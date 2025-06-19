@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -28,13 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 import { Service } from '@/api/services/serviceService';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  price: z.number().min(0, 'Price must be positive'),
-  duration: z.number().min(5, 'Duration must be at least 5 minutes'),
+  price: z.coerce.number().min(0, 'Price must be positive'),
+  duration: z.coerce.number().min(5, 'Duration must be at least 5 minutes'),
   category: z.string().min(1, 'Please select a category'),
 });
 
@@ -51,20 +52,21 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
   onOpenChange,
   onSave,
 }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: service?.name || '',
-      description: service?.description || '',
-      price: service?.price || 0,
-      duration: service?.duration || 30,
-      category: service?.category || '',
+      name: '',
+      description: '',
+      price: 0,
+      duration: 30,
+      category: '',
     },
   });
 
   // Update form values when service changes
   useEffect(() => {
-    if (service) {
+    if (service && open) {
       form.reset({
         name: service.name,
         description: service.description || '',
@@ -73,16 +75,21 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
         category: service.category,
       });
     }
-  }, [form, service]);
+  }, [form, service, open]);
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!service) return;
     
-    onSave({
-      ...values,
-      id: service.id
-    });
-    onOpenChange(false);
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        ...values,
+        id: service.id
+      });
+    } finally {
+      setIsSubmitting(false);
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -103,7 +110,11 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    value={field.value} 
+                    onValueChange={field.onChange}
+                    disabled={isSubmitting}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
@@ -130,7 +141,11 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
                 <FormItem>
                   <FormLabel>Service Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter service name" {...field} />
+                    <Input 
+                      placeholder="Enter service name" 
+                      {...field} 
+                      disabled={isSubmitting}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -148,6 +163,7 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
                       placeholder="Enter service description"
                       className="resize-none"
                       {...field}
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -168,7 +184,9 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
                         min={0}
                         step={0.01}
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        value={field.value}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        disabled={isSubmitting}
                       />
                     </FormControl>
                     <FormMessage />
@@ -188,7 +206,9 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
                         min={5}
                         step={5}
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        value={field.value}
+                        onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                        disabled={isSubmitting}
                       />
                     </FormControl>
                     <FormMessage />
@@ -198,7 +218,16 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
             </div>
 
             <DialogFooter>
-              <Button type="submit">Save changes</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save changes'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

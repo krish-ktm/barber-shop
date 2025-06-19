@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Filter, Plus, Search, SortAsc, X, Loader2 } from 'lucide-react';
+import { Clock, Filter, Plus, Search, SortAsc, X, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils';
 import { EditServiceDialog } from '@/features/services/EditServiceDialog';
@@ -37,7 +47,8 @@ import { useApi } from '@/hooks/useApi';
 import { 
   getAllServices, 
   createService, 
-  updateService, 
+  updateService,
+  deleteService,
   Service
 } from '@/api/services/serviceService';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +61,9 @@ export const Services: React.FC = () => {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingService, setDeletingService] = useState<Service | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [page] = useState(1);
   const [limit] = useState(100); // Get more services to allow client-side filtering
   
@@ -68,12 +82,16 @@ export const Services: React.FC = () => {
   } = useApi(getAllServices);
   
   const {
-    execute: saveService
+    execute: saveService,
   } = useApi(createService);
   
   const {
-    execute: executeUpdateService
+    execute: executeUpdateService,
   } = useApi(updateService);
+  
+  const {
+    execute: executeDeleteService,
+  } = useApi(deleteService);
   
   useEffect(() => {
     // Convert sort state to API parameter format
@@ -170,6 +188,37 @@ export const Services: React.FC = () => {
     setShowEditDialog(true);
   };
 
+  const handleDeleteClick = (service: Service, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingService(service);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingService) return;
+    
+    setIsDeleting(true);
+    try {
+      await executeDeleteService(deletingService.id);
+      toast({
+        title: "Success",
+        description: "Service deleted successfully",
+      });
+      fetchServices(page, limit);
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete service",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setDeletingService(null);
+    }
+  };
+
   const handleSaveService = async (serviceData: Partial<Service>) => {
     try {
       await saveService(serviceData);
@@ -180,6 +229,11 @@ export const Services: React.FC = () => {
       fetchServices(page, limit);
     } catch (error) {
       console.error("Error saving service:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create service",
+        variant: "destructive"
+      });
     }
   };
   
@@ -195,10 +249,13 @@ export const Services: React.FC = () => {
       fetchServices(page, limit);
     } catch (error) {
       console.error("Error updating service:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update service",
+        variant: "destructive"
+      });
     }
   };
-  
-
   
   const handleCategoryChange = (value: string) => {
     setSelectedCategories(prev => {
@@ -327,12 +384,13 @@ export const Services: React.FC = () => {
                   <TableHead>Category</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8">
+                    <TableCell colSpan={5} className="text-center py-8">
                       <div className="flex justify-center items-center">
                         <Loader2 className="h-6 w-6 animate-spin mr-2" />
                         <span>Loading services...</span>
@@ -341,7 +399,7 @@ export const Services: React.FC = () => {
                   </TableRow>
                 ) : filteredServices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No services found matching the current filters
                     </TableCell>
                   </TableRow>
@@ -349,8 +407,7 @@ export const Services: React.FC = () => {
                   filteredServices.map((service) => (
                     <TableRow
                       key={service.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleEditService(service)}
+                      className="hover:bg-muted/50"
                     >
                       <TableCell>
                         <div>
@@ -371,6 +428,27 @@ export const Services: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(service.price)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditService(service)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                            onClick={(e) => handleDeleteClick(service, e)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -510,6 +588,35 @@ export const Services: React.FC = () => {
         onOpenChange={setShowAddDialog}
         onSave={handleSaveService}
       />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the service "{deletingService?.name}". 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
