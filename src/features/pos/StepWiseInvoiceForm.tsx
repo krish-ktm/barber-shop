@@ -766,7 +766,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Calculate subtotal
     const subtotal = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
-      return sum + (selectedService?.price || 0);
+      return sum + (Number(selectedService?.price) || 0);
     }, 0);
     
     // Calculate discount amount
@@ -774,11 +774,14 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     const discountType = form.watch('discountType');
     const discountValue = Number(form.watch('discountValue')) || 0;
     
-    if (discountType === 'percentage') {
+    if (discountType === 'percentage' && !isNaN(discountValue) && subtotal > 0) {
       discountAmount = (subtotal * discountValue) / 100;
-    } else if (discountType === 'fixed') {
+    } else if (discountType === 'fixed' && !isNaN(discountValue)) {
       discountAmount = discountValue;
     }
+    
+    // Ensure discount amount is a valid number
+    discountAmount = isNaN(discountAmount) ? 0 : discountAmount;
     
     // Get tip amount
     const tipAmount = Number(form.watch('tipAmount')) || 0;
@@ -867,12 +870,16 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   <FormControl>
                     <div className="relative">
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         min="0"
-                        step={form.watch('discountType') === 'percentage' ? '1' : '0.01'}
+                        placeholder="0"
                         disabled={form.watch('discountType') === 'none'}
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value === 0 ? '' : field.value}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                          field.onChange(value);
+                        }}
                         className={form.watch('discountType') === 'percentage' ? 'pr-8' : ''}
                       />
                       {form.watch('discountType') === 'percentage' && (
@@ -924,11 +931,15 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   <FormLabel>Tip Amount</FormLabel>
                   <FormControl>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       min="0"
-                      step="0.01"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      placeholder="0"
+                      value={field.value === 0 ? '' : field.value}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                        field.onChange(value);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -943,9 +954,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   <span className="font-medium">Tip amount:</span>
                   <span className="font-medium">{formatCurrency(tipAmount)}</span>
                 </div>
-                {subtotal > 0 && (
+                {subtotal > 0 && discountAmount <= subtotal && (
                   <div className="text-xs text-muted-foreground mt-1">
-                    {((tipAmount / (subtotal - discountAmount)) * 100).toFixed(1)}% of post-discount total
+                    {(((tipAmount || 0) / Math.max(subtotal - discountAmount, 0.01)) * 100).toFixed(1)}% of post-discount total
                   </div>
                 )}
               </div>
@@ -977,20 +988,26 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     const discountType = form.getValues().discountType;
     const discountValue = Number(form.getValues().discountValue) || 0;
     
-    if (discountType === 'percentage') {
+    if (discountType === 'percentage' && !isNaN(discountValue) && subtotal > 0) {
       discountAmount = (subtotal * discountValue) / 100;
-    } else if (discountType === 'fixed') {
+    } else if (discountType === 'fixed' && !isNaN(discountValue)) {
       discountAmount = discountValue;
     }
+    
+    // Ensure discount amount is a valid number
+    discountAmount = isNaN(discountAmount) ? 0 : discountAmount;
     
     // Calculate tax
     const taxRate = Number(selectedGstRate?.totalRate) || 0;
     const taxableAmount = subtotal - discountAmount;
     const taxAmount = (taxableAmount * taxRate) / 100;
     
+    // Ensure tax amount is a valid number
+    const validTaxAmount = isNaN(taxAmount) ? 0 : taxAmount;
+    
     // Calculate total
     const tipAmount = Number(form.getValues().tipAmount) || 0;
-    const total = taxableAmount + taxAmount + tipAmount;
+    const total = taxableAmount + validTaxAmount + tipAmount;
     
     return (
       <div className="space-y-4">
@@ -1043,7 +1060,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             <h4 className="font-medium">Payment</h4>
             <div className="flex justify-between">
               <span>Staff</span>
-              <span>{staffData?.find(s => s.id === form.getValues().staffId)?.name || 'Not selected'}</span>
+              <span>{staffData?.find(s => s.id === form.getValues().staffId)?.name || 'No staff selected'}</span>
             </div>
             <div className="flex justify-between">
               <span>Payment Method</span>
@@ -1075,7 +1092,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 ))}
                 <div className="flex justify-between font-medium">
                   <span>Total Tax</span>
-                  <span>{formatCurrency(taxAmount)}</span>
+                  <span>{formatCurrency(validTaxAmount)}</span>
                 </div>
               </div>
             )}
@@ -1083,7 +1100,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             {form.getValues().tipAmount > 0 && (
               <div className="flex justify-between pt-2">
                 <span>Tip</span>
-                <span>{formatCurrency(form.getValues().tipAmount)}</span>
+                <span>{formatCurrency(tipAmount)}</span>
               </div>
             )}
           </div>
@@ -1109,7 +1126,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       // Ensure customGstValue is a valid number
       const rateValue = Number(customGstValue) || 0;
       
-      if (!customGstRate || rateValue <= 0) {
+      if (!customGstRate || rateValue <= 0 || isNaN(rateValue)) {
         toast({
           title: 'Invalid custom GST',
           description: 'Please provide a name and a positive rate value',
@@ -1251,10 +1268,14 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                       />
                       <div className="relative">
                         <Input 
-                          type="number" 
+                          type="text"
+                          inputMode="decimal"
                           placeholder="Rate %" 
-                          value={customGstValue || ''}
-                          onChange={(e) => setCustomGstValue(parseFloat(e.target.value) || 0)}
+                          value={customGstValue === 0 ? '' : customGstValue}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                            setCustomGstValue(value);
+                          }}
                           className="text-sm pr-8"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
