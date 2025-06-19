@@ -5,13 +5,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Plus,
   Search,
   Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
-import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
 import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
 import { CancelAppointmentDialog } from '@/features/appointments/CancelAppointmentDialog';
@@ -57,7 +55,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Sliders } from 'lucide-react';
 
 // API imports
@@ -111,7 +108,6 @@ export const AdminAppointment: React.FC = () => {
   
   // UI state
   const [showFilters, setShowFilters] = useState(false);
-  const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   // Appointment details state
@@ -511,11 +507,6 @@ export const AdminAppointment: React.FC = () => {
       <PageHeader
         title="Appointments"
         description="Manage and track all appointments"
-        action={{
-          label: "New Appointment",
-          onClick: () => setShowNewAppointment(true),
-          icon: <Plus className="h-4 w-4 mr-2" />,
-        }}
       />
       
       <div className="bg-card border rounded-lg">
@@ -589,24 +580,6 @@ export const AdminAppointment: React.FC = () => {
                   </Badge>
                 )}
               </Button>
-              
-              <div className="hidden md:flex items-center">
-                <div className="flex items-center space-x-2 pl-4 border-l">
-                  <Label htmlFor="advancedFilters" className="mr-2 text-sm">Advanced</Label>
-                  <Switch
-                    id="advancedFilters"
-                    checked={useAdvancedFilters}
-                    onCheckedChange={(checked) => {
-                      setUseAdvancedFilters(checked);
-                      if (!checked) {
-                        // Reset advanced filters when switching to basic mode
-                        setDateRange({ from: undefined, to: undefined });
-                        // We'll fetch data via the useEffect hook
-                      }
-                    }}
-                  />
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1061,33 +1034,6 @@ export const AdminAppointment: React.FC = () => {
           </div>
         </SheetContent>
       </Sheet>
-      
-      <NewAppointmentDialog
-        open={showNewAppointment}
-        onOpenChange={setShowNewAppointment}
-        selectedDate={selectedDate}
-        staffList={staff}
-        serviceList={services}
-        onAppointmentCreated={(newAppointment) => {
-          // Add the new appointment to the list without refreshing
-          if (adminData && newAppointment) {
-            const updatedAppointments = [...adminData.appointments, newAppointment];
-            
-            // Update the UI immediately
-            const updatedAdminData = {
-              ...adminData,
-              appointments: updatedAppointments
-            };
-            
-            setAdminData(updatedAdminData);
-            
-            toast({
-              title: 'Appointment Created',
-              description: `New appointment created for ${newAppointment.customer_name}`,
-            });
-          }
-        }}
-      />
       
       {/* Appointment Details Dialog */}
       {selectedAppointment && (
