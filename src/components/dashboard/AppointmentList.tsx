@@ -25,12 +25,20 @@ import { updateAppointmentStatusDirect } from '@/api/services/appointmentService
 export interface SimpleAppointment {
   id: string;
   customerName: string;
+  customerId: string;
+  customerPhone: string;
+  customerEmail?: string;
   staffId: string;
   staffName: string;
   date: string;
   time: string;
+  endTime: string;
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show';
-  services: string[] | { serviceId: string; serviceName: string }[];
+  services: Array<{ serviceId: string; serviceName: string; price: number; duration: number }>;
+  totalAmount: number;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AppointmentListProps {
@@ -39,6 +47,7 @@ interface AppointmentListProps {
   className?: string;
   showActions?: boolean;
   onRefresh?: () => void;
+  onReschedule?: (appointment: SimpleAppointment) => void;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
@@ -46,7 +55,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   title,
   className,
   showActions = true,
-  onRefresh
+  onRefresh,
+  onReschedule
 }) => {
   const { toast } = useToast();
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
@@ -78,24 +88,32 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   // Quick actions handlers with API integration
   const handleStatusChange = async (appointmentId: string, newStatus: SimpleAppointment['status']) => {
     try {
+      // Set loading state for this specific appointment
       setLoadingStates(prev => ({ ...prev, [appointmentId]: true }));
       
       // Optimistically update the UI first
-      setLocalAppointments(prev => 
-        prev.map(app => 
-          app.id === appointmentId 
-            ? { ...app, status: newStatus } 
-            : app
-        )
-      );
+      const updatedAppointments = localAppointments.map(app => {
+        if (app.id === appointmentId) {
+          return { ...app, status: newStatus };
+        }
+        return app;
+      });
       
-      // Then make the API call without showing the loading state
+      // Update local state immediately
+      setLocalAppointments(updatedAppointments);
+      
+      // Then make the API call
       await updateAppointmentStatusDirect(appointmentId, newStatus);
       
       toast({
         title: "Status Updated",
         description: `Appointment status changed to ${newStatus}`
       });
+      
+      // Call the refresh callback if provided
+      if (onRefresh) {
+        onRefresh();
+      }
       
     } catch (error) {
       console.error('Error updating appointment status:', error);
@@ -135,10 +153,14 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   };
 
   const handleReschedule = (appointment: SimpleAppointment) => {
-    toast({
-      title: "Reschedule Initiated",
-      description: `Please use the appointments page to reschedule for ${appointment.customerName}`
-    });
+    if (onReschedule) {
+      onReschedule(appointment);
+    } else {
+      toast({
+        title: "Reschedule Initiated",
+        description: `Please use the appointments page to reschedule for ${appointment.customerName}`
+      });
+    }
   };
 
   // Render action buttons based on appointment status
@@ -167,7 +189,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                 variant="outline" 
                 size="icon" 
                 className="h-7 w-7" 
-                onClick={() => handleConfirm(appointment)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirm(appointment);
+                }}
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
               </Button>
@@ -188,7 +213,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                 variant="outline" 
                 size="icon" 
                 className="h-7 w-7" 
-                onClick={() => handleComplete(appointment)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleComplete(appointment);
+                }}
               >
                 <CheckCheck className="h-3.5 w-3.5" />
               </Button>
@@ -209,7 +237,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                 variant="outline" 
                 size="icon" 
                 className="h-7 w-7" 
-                onClick={() => handleNoShow(appointment)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNoShow(appointment);
+                }}
               >
                 <AlertTriangle className="h-3.5 w-3.5" />
               </Button>
@@ -230,7 +261,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                 variant="outline" 
                 size="icon" 
                 className="h-7 w-7" 
-                onClick={() => handleCancel(appointment)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCancel(appointment);
+                }}
               >
                 <XCircle className="h-3.5 w-3.5" />
               </Button>
@@ -248,10 +282,13 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleReschedule(appointment)}
+                variant="outline" 
+                size="icon" 
+                className="h-7 w-7" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReschedule(appointment);
+                }}
               >
                 <Calendar className="h-3.5 w-3.5" />
               </Button>
@@ -262,77 +299,67 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       );
     }
     
-    return buttons.length > 0 ? (
-      <div className="flex gap-1 mt-2">
+    return (
+      <div className="flex space-x-1 mt-2">
         {buttons}
       </div>
-    ) : null;
+    );
   };
 
-  // Helper function to get service names regardless of format
+  // Get service names from the services array
   const getServiceNames = (services: SimpleAppointment['services']) => {
-    if (!services || services.length === 0) return '';
+    if (!services || services.length === 0) return 'No services';
     
-    if (typeof services[0] === 'string') {
-      return services.join(', ');
-    } else {
-      return (services as { serviceId: string; serviceName: string }[])
-        .map(service => service.serviceName)
-        .join(', ');
-    }
+    return services.map(service => service.serviceName).join(', ');
   };
 
   return (
-    <Card className={cn('p-4', className)}>
-      <h3 className="font-semibold mb-4">{title}</h3>
+    <Card className={cn("p-4", className)}>
+      <h3 className="text-lg font-semibold mb-4">{title}</h3>
       
       {localAppointments.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center p-4">
+        <div className="text-center py-6 text-muted-foreground">
           No appointments to display
-        </p>
+        </div>
       ) : (
         <div className="space-y-4">
           {localAppointments.map((appointment) => (
-            <div
-              key={appointment.id}
-              className="border-b pb-3 last:border-0 last:pb-0"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar>
+            <div key={appointment.id} className="border rounded-md p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 mr-2">
                     <AvatarFallback>
-                      {appointment.customerName
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
+                      {appointment.customerName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  
                   <div>
-                    <p className="font-medium">{appointment.customerName}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{formatTime(appointment.time)}</span>
-                      <span>•</span>
-                      <span>{appointment.staffName}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="font-medium">{appointment.customerName}</div>
+                    <div className="text-sm text-muted-foreground">
                       {getServiceNames(appointment.services)}
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex flex-col items-end">
-                  <span
-                    className={cn(
-                      'text-xs px-2 py-1 rounded-full',
-                      getStatusStyle(appointment.status)
-                    )}
-                  >
-                    {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                <div className="text-right">
+                  <span className={cn("text-xs px-2 py-1 rounded-full", getStatusStyle(appointment.status))}>
+                    {appointment.status}
                   </span>
-                  
-                  {renderActions(appointment)}
                 </div>
+              </div>
+              
+              <div className="flex justify-between items-center mt-2">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">With:</span> {appointment.staffName}
+                </div>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Time:</span> {formatTime(appointment.time)}
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center mt-2">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Date:</span> {appointment.date}
+                </div>
+                {renderActions(appointment)}
               </div>
             </div>
           ))}
