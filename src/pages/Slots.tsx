@@ -1,16 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Plus, Save, Loader2, Trash2, Info } from 'lucide-react';
+import { Clock, Plus, Save, Loader2, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
@@ -34,8 +27,7 @@ import {
   batchUpdateBusinessHoursAndBreaks
 } from '@/api/services/businessHoursService';
 import { 
-  getBusinessSettings, 
-  updateBusinessSettings 
+  getBusinessSettings
 } from '@/api/services/settingsService';
 
 const DAYS = [
@@ -46,13 +38,6 @@ const DAYS = [
   { value: 'friday', label: 'Friday' },
   { value: 'saturday', label: 'Saturday' },
   { value: 'sunday', label: 'Sunday' },
-];
-
-const SLOT_DURATIONS = [
-  { value: '15', label: '15 minutes' },
-  { value: '30', label: '30 minutes' },
-  { value: '45', label: '45 minutes' },
-  { value: '60', label: '60 minutes' },
 ];
 
 export const Slots: React.FC = () => {
@@ -79,15 +64,8 @@ export const Slots: React.FC = () => {
     execute: fetchSettings
   } = useApi(getBusinessSettings);
 
-  const {
-    loading: updateSettingsLoading,
-    error: updateSettingsError,
-    execute: saveSettings
-  } = useApi(updateBusinessSettings);
-
   // State
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
-  const [slotDuration, setSlotDuration] = useState('30');
   const [localBreaks, setLocalBreaks] = useState<{ [dayId: number]: Break[] }>({});
   const [pendingBreakChanges, setPendingBreakChanges] = useState<{
     create: { dayId: number, break: Omit<Break, 'id'> }[];
@@ -128,19 +106,12 @@ export const Slots: React.FC = () => {
     }
   }, [hoursData]);
 
-  useEffect(() => {
-    if (settingsData?.settings) {
-      setSlotDuration(settingsData.settings.slot_duration.toString());
-    }
-  }, [settingsData]);
-
   // Handle API errors
   useEffect(() => {
     const errors = [
       { error: hoursError, message: 'Error loading business hours' },
       { error: updateHoursError, message: 'Error saving business hours' },
       { error: settingsError, message: 'Error loading settings' },
-      { error: updateSettingsError, message: 'Error saving settings' }
     ];
 
     errors.forEach(({ error, message }) => {
@@ -153,7 +124,7 @@ export const Slots: React.FC = () => {
       }
     });
   }, [
-    hoursError, updateHoursError, settingsError, updateSettingsError, toast
+    hoursError, updateHoursError, settingsError, toast
   ]);
 
   // Helper function to get business hour for a specific day
@@ -196,17 +167,9 @@ export const Slots: React.FC = () => {
         breakChanges: pendingBreakChanges
       });
       
-      // Save slot duration only if we have settings data
-      if (settingsData?.settings) {
-        await saveSettings({ 
-          ...settingsData.settings,
-          slot_duration: parseInt(slotDuration) 
-        });
-      }
-      
       toast({
         title: 'Settings saved',
-        description: 'Slot configuration has been updated successfully.',
+        description: 'Business hours have been updated successfully.',
       });
       
       // Refresh data
@@ -309,7 +272,7 @@ export const Slots: React.FC = () => {
     return hour ? !hour.open_time && !hour.close_time : false;
   };
 
-  const isLoading = hoursLoading || settingsLoading || updateHoursLoading || updateSettingsLoading;
+  const isLoading = hoursLoading || settingsLoading || updateHoursLoading;
 
   // Count breaks for a day
   const getBreakCount = (hour: BusinessHour): number => {
@@ -473,7 +436,7 @@ export const Slots: React.FC = () => {
       {Object.values(localBreaks).some(breaks => 
         breaks.some(breakItem => breakItem.day_of_week === null || breakItem.day_of_week === undefined)
       ) && (
-        <Alert variant="warning">
+        <Alert>
           <div className="flex justify-between items-center">
             <div>
               <AlertTitle>Warning</AlertTitle>
@@ -499,64 +462,8 @@ export const Slots: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Slot Duration Card */}
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Slot Settings</CardTitle>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Info className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>This determines how long each appointment slot will be</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <CardDescription>Configure appointment slot duration</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="slot-duration" className="text-base font-medium">Default Slot Duration</Label>
-                  <Select value={slotDuration} onValueChange={setSlotDuration}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SLOT_DURATIONS.map((duration) => (
-                        <SelectItem key={duration.value} value={duration.value}>
-                          {duration.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    This is the default time allocated for each appointment slot in your calendar.
-                  </p>
-                </div>
-                
-                <div className="rounded-lg bg-muted p-4">
-                  <h3 className="font-medium mb-2 flex items-center">
-                    <Clock className="h-4 w-4 mr-2" />
-                    Quick Tips
-                  </h3>
-                  <ul className="text-sm space-y-2 text-muted-foreground list-disc pl-5">
-                    <li>Shorter slots (15-30 min) are ideal for simple services</li>
-                    <li>Longer slots (45-60 min) work better for complex services</li>
-                    <li>Match slot duration to your most common service length</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
           {/* Business Hours Card */}
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-3">
             <CardHeader>
               <CardTitle>Business Hours</CardTitle>
               <CardDescription>Set your working hours for each day of the week</CardDescription>

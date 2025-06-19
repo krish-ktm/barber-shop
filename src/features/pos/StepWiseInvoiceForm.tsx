@@ -39,10 +39,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-import { formatCurrency, formatPhoneNumber } from '@/utils';
-import { useToast } from '@/hooks/use-toast';
-import { Customer } from '@/types';
 import {
   Collapsible,
   CollapsibleContent,
@@ -57,8 +53,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+import { formatCurrency, formatPhoneNumber } from '@/utils';
+import { useToast } from '@/hooks/use-toast';
 import { useApi } from '@/hooks/useApi';
-import { getCustomerByPhone } from '@/api/services/customerService';
+import { Customer, getCustomerByPhone } from '@/api/services/customerService';
 
 // Guest user handled directly in component, no need for a constant
 
@@ -211,7 +210,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     }
 
     // Use both local and API loading states for UI feedback
-  setIsSearching(true);
+    setIsSearching(true);
     
     // Format the phone for API query (remove non-digits)
     const formattedPhone = phone.replace(/\D/g, '');
@@ -287,11 +286,19 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     switch (currentStep) {
       case 'customer':
         // Check if there's any customer info provided
-        if (!selectedCustomer && !isNewCustomer) {
-          // No customer selected - use guest user
-          setIsGuestUser(true);
-          setCurrentStep('services');
-        } else if (isNewCustomer) {
+        if (activeTab === 'search') {
+          if (!selectedCustomer) {
+            // No customer selected in search tab - use guest user
+            setIsGuestUser(true);
+            setIsNewCustomer(false);
+            setCurrentStep('services');
+          } else {
+            // Existing customer selected
+            setIsGuestUser(false);
+            setIsNewCustomer(false);
+            setCurrentStep('services');
+          }
+        } else if (activeTab === 'new') {
           // Validate new customer data
           const newCustomerData = newCustomerForm.getValues();
           if (!newCustomerData.name) {
@@ -302,11 +309,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             });
             return;
           }
+          // Ensure we're using new customer mode, not guest
           setIsGuestUser(false);
-          setCurrentStep('services');
-        } else {
-          // Existing customer selected
-          setIsGuestUser(false);
+          setIsNewCustomer(true);
           setCurrentStep('services');
         }
         break;
@@ -526,7 +531,14 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     return (
       <Card className="p-4">
         <h3 className="text-lg font-medium mb-4">Customer Information</h3>
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'search' | 'new')}>
+        <Tabs value={activeTab} onValueChange={(value) => {
+          const newTab = value as 'search' | 'new';
+          setActiveTab(newTab);
+          if (newTab === 'new') {
+            setIsNewCustomer(true);
+            setIsGuestUser(false);
+          }
+        }}>
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="search">Search Customer</TabsTrigger>
             <TabsTrigger value="new">New Customer</TabsTrigger>

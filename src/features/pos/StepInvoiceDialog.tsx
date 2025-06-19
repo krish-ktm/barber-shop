@@ -14,7 +14,7 @@ import { createInvoice } from '@/api/services/invoiceService';
 import { getAllStaff } from '@/api/services/staffService';
 import { getAllServices } from '@/api/services/serviceService';
 import { getGSTRates } from '@/api/services/settingsService';
-import { Customer } from '@/types';
+import { Customer } from '@/api/services/customerService';
 import { Loader2 } from 'lucide-react';
 
 // Type for a GST rate
@@ -70,6 +70,11 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   const {
     execute: fetchServices
   } = useApi(getAllServices);
+
+  // Add API hook for creating customers
+  const {
+    loading: isCreatingCustomer
+  } = useApi(() => Promise.resolve({ success: true }));
   
   // Add API hook for fetching GST rates
   const {
@@ -267,11 +272,31 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         console.warn(`Staff member not found in local cache: ${formData.staffId}. Using original ID.`);
       }
       
-      // IMPORTANT: Use real customer and staff IDs
+      // Handle customer data based on form input
       let customerId;
       let customerName;
+      let isNewCustomer = false;
+      let customerDetails = null;
 
-      if (formData.isGuestUser) {
+      console.log('Form data customer info:', {
+        isNewCustomer: formData.isNewCustomer,
+        isGuestUser: formData.isGuestUser,
+        hasSelectedCustomer: !!formData.selectedCustomer,
+        hasCustomerDetails: !!formData.customerDetails
+      });
+
+      // Check if this is a new customer that needs to be created
+      if (formData.isNewCustomer && formData.customerDetails) {
+        // Set flag for backend to create customer
+        isNewCustomer = true;
+        customerDetails = formData.customerDetails;
+        
+        // Use temporary ID and name for the request
+        customerId = 'pending-creation';
+        customerName = formData.customerDetails.name;
+        
+        console.log('New customer will be created on the server:', customerDetails);
+      } else if (formData.isGuestUser) {
         // For guest user, use the guest-user ID
         customerId = 'guest-user'; // Guest customer ID that exists in the database
         customerName = 'Guest Customer';
@@ -306,7 +331,10 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         payment_method: formData.paymentMethod,
         status: 'paid', // Invoice is created as paid
         notes: formData.notes || '',
-        tip_amount: tipAmount || 0 // Always include tip_amount even if 0
+        tip_amount: tipAmount || 0, // Always include tip_amount even if 0
+        // Add customer creation fields
+        is_new_customer: isNewCustomer,
+        customer_details: customerDetails
       } as const; // Use const assertion instead of individual property assertion
       
       // Always include discount fields even if no discount
@@ -360,12 +388,12 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const response = await executeCreateInvoice(invoiceData);
       
       if (response.success) {
-    toast({
-      title: 'Invoice created',
-      description: 'New invoice has been created successfully.',
-    });
+        toast({
+          title: 'Invoice created',
+          description: 'New invoice has been created successfully.',
+        });
         
-    onOpenChange(false);
+        onOpenChange(false);
         
         // Call the onInvoiceCreated callback if provided
         if (onInvoiceCreated) {
@@ -478,7 +506,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
           <StepWiseInvoiceForm 
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
-            isSubmitting={loading || isSubmitting}
+            isSubmitting={loading || isSubmitting || isCreatingCustomer}
             staffData={staffMembers}
             isLoadingStaff={isLoadingStaff}
             serviceData={serviceItems}
