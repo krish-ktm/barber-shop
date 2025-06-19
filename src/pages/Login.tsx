@@ -73,6 +73,15 @@ export const Login: React.FC = () => {
         description: 'You have been successfully logged out.',
       });
     }
+    
+    // If user was redirected due to token expiration
+    if (location.state?.tokenExpired) {
+      toast({
+        title: 'Session Expired',
+        description: 'Your session has expired. Please log in again.',
+        variant: 'destructive',
+      });
+    }
   }, [location, toast]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>, event?: React.BaseSyntheticEvent) => {

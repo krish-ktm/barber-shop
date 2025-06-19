@@ -13,6 +13,7 @@ import { Login } from './pages/Login';
 import { MainLayout } from './components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { AuthListener } from '@/components/AuthListener';
 import { AdminProducts } from './pages/AdminProducts';
 import AdminReviews from './pages/AdminReviews';
 import AdminSettings from './pages/AdminSettings';
@@ -46,6 +47,7 @@ import { Barbers } from './pages/public/Barbers';
 function App() {
   return (
     <BrowserRouter>
+      <AuthListener />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<PublicLayout />}>

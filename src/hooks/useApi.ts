@@ -20,7 +20,12 @@ export function useApi<T, P extends unknown[]>(
         return result;
       } catch (err) {
         const errorObject = err instanceof Error ? err : new Error('Unknown error occurred');
+        
+        // Set the error state
         setError(errorObject);
+        
+        // Let the error propagate to be caught by the global handler
+        // if it's an authentication error
         throw errorObject;
       } finally {
         setLoading(false);

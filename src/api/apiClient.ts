@@ -3,6 +3,9 @@ import { getApiBaseUrl } from '@/hooks/useApiConfig';
 
 const API_BASE_URL = 'https://barber-shop-api-eight.vercel.app/api';
 
+// Create a custom event for token expiration
+export const TOKEN_EXPIRED_EVENT = 'token_expired';
+
 /**
  * Core API client for making authenticated requests to the backend
  */
@@ -64,7 +67,11 @@ export const apiClient = async <T>(
       if (response.status === 401) {
         console.error('Authentication error: Token expired or invalid');
         removeToken();
-        // Instead of redirecting immediately, throw an error that can be handled by the calling code
+        
+        // Dispatch a global event for token expiration
+        window.dispatchEvent(new CustomEvent(TOKEN_EXPIRED_EVENT));
+        
+        // Throw an error that can be handled by the calling code
         throw new Error('Authentication failed. Please log in again.');
       }
       
@@ -112,6 +119,17 @@ const handleResponse = async (response: Response) => {
   const data = await response.json();
   
   if (!response.ok) {
+    // Handle unauthorized error (expired token)
+    if (response.status === 401) {
+      console.error('Authentication error: Token expired or invalid');
+      removeToken();
+      
+      // Dispatch a global event for token expiration
+      window.dispatchEvent(new CustomEvent(TOKEN_EXPIRED_EVENT));
+      
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    
     const error = data.message || response.statusText;
     throw new Error(error);
   }
