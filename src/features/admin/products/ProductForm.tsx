@@ -27,10 +27,10 @@ import { Product } from '@/api/services/productService';
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
   category: z.string().min(1, 'Category is required'),
-  price: z.number().min(0, 'Price must be positive'),
-  stock: z.number().min(0, 'Stock must be positive'),
+  price: z.coerce.number().min(0, 'Price must be positive'),
+  stock: z.coerce.number().min(0, 'Stock must be positive'),
   status: z.enum(['active', 'inactive']),
-  commission: z.number().min(0, 'Commission must be positive').max(100, 'Commission cannot exceed 100%'),
+  commission: z.coerce.number().min(0, 'Commission must be positive').max(100, 'Commission cannot exceed 100%'),
   imageUrl: z.string().optional(),
   description: z.string().optional(),
 });
@@ -60,10 +60,10 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
     defaultValues: initialData || {
       name: '',
       category: '',
-      price: 0,
-      stock: 0,
+      price: undefined as unknown as number,
+      stock: undefined as unknown as number,
       status: 'active',
-      commission: 0,
+      commission: undefined as unknown as number,
       imageUrl: '',
       description: '',
     },
@@ -143,7 +143,11 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
                         step="0.01"
                         placeholder="0.00"
                         {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        value={field.value === undefined ? '' : field.value}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === '' ? undefined : parseFloat(value));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -162,7 +166,11 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
                         type="number"
                         placeholder="0"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        value={field.value === undefined ? '' : field.value}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === '' ? undefined : parseInt(value));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -186,7 +194,11 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
                         max="100"
                         placeholder="0"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        value={field.value === undefined ? '' : field.value}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === '' ? undefined : parseInt(value));
+                        }}
                       />
                     </FormControl>
                     <FormMessage />

@@ -231,9 +231,9 @@ export function ProductsPage() {
                         </div>
                       </TableCell>
                       <TableCell>{product.category}</TableCell>
-                      <TableCell>${parseFloat(product.price.toString()).toFixed(2)}</TableCell>
-                      <TableCell>{parseFloat(product.commission.toString())}%</TableCell>
-                      <TableCell>{product.stock}</TableCell>
+                      <TableCell>{product.price !== undefined ? `$${parseFloat(product.price.toString()).toFixed(2)}` : '-'}</TableCell>
+                      <TableCell>{product.commission !== undefined ? `${parseFloat(product.commission.toString())}%` : '-'}</TableCell>
+                      <TableCell>{product.stock !== undefined ? product.stock : '-'}</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
