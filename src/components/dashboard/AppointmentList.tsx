@@ -91,7 +91,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       // Set loading state for this specific appointment
       setLoadingStates(prev => ({ ...prev, [appointmentId]: true }));
       
-      // Optimistically update the UI first
+      // Make the API call first
+      await updateAppointmentStatusDirect(appointmentId, newStatus);
+      
+      // Update local state only after API call succeeds
       const updatedAppointments = localAppointments.map(app => {
         if (app.id === appointmentId) {
           return { ...app, status: newStatus };
@@ -99,11 +102,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
         return app;
       });
       
-      // Update local state immediately
+      // Update local state
       setLocalAppointments(updatedAppointments);
-      
-      // Then make the API call
-      await updateAppointmentStatusDirect(appointmentId, newStatus);
       
       toast({
         title: "Status Updated",
@@ -118,9 +118,6 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     } catch (error) {
       console.error('Error updating appointment status:', error);
       
-      // Revert the optimistic update
-      setLocalAppointments(appointments);
-      
       toast({
         title: "Error",
         description: "An error occurred while updating the appointment status",
@@ -132,7 +129,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
         onRefresh();
       }
     } finally {
-      setLoadingStates(prev => ({ ...prev, [appointmentId]: false }));
+      // Keep loading state for a moment to ensure UI consistency
+      setTimeout(() => {
+        setLoadingStates(prev => ({ ...prev, [appointmentId]: false }));
+      }, 500);
     }
   };
 

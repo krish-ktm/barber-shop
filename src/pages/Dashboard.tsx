@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
 import { getAdminAppointments, Appointment as ApiAppointment } from '@/api/services/appointmentService';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const Dashboard: React.FC = () => {
   const { toast } = useToast();
@@ -27,8 +28,8 @@ export const Dashboard: React.FC = () => {
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
   
-  // State to track loading state during refresh
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // State to track loading state during tab switching
+  const [isTabSwitching, setIsTabSwitching] = useState(false);
 
   // Handle error
   useEffect(() => {
@@ -43,7 +44,13 @@ export const Dashboard: React.FC = () => {
   
   // Handle period change
   const handlePeriodChange = (newPeriod: DashboardPeriod) => {
+    setIsTabSwitching(true);
     setPeriod(newPeriod);
+    
+    // Add a small delay to ensure the loading state is visible
+    setTimeout(() => {
+      setIsTabSwitching(false);
+    }, 600);
   };
 
   // Fetch today's appointments
@@ -96,6 +103,46 @@ export const Dashboard: React.FC = () => {
     fetchTodayAppointments();
   }, []);
 
+  // Handle reschedule appointment
+  const handleRescheduleAppointment = (appointment: SimpleAppointment) => {
+    // Convert SimpleAppointment to Appointment if needed
+    const fullAppointment: Appointment = {
+      id: appointment.id,
+      customerId: appointment.customerId,
+      customerName: appointment.customerName,
+      customerPhone: appointment.customerPhone,
+      customerEmail: appointment.customerEmail,
+      staffId: appointment.staffId,
+      staffName: appointment.staffName,
+      date: appointment.date,
+      time: appointment.time,
+      endTime: appointment.endTime,
+      services: appointment.services,
+      status: appointment.status,
+      totalAmount: appointment.totalAmount,
+      notes: appointment.notes,
+      createdAt: appointment.createdAt || new Date().toISOString(),
+      updatedAt: appointment.updatedAt || new Date().toISOString()
+    };
+    
+    setAppointmentToReschedule(fullAppointment);
+    setShowRescheduleDialog(true);
+  };
+
+  // Handle reschedule complete
+  const handleRescheduleComplete = (updatedAppointment: ApiAppointment) => {
+    // Refresh data after rescheduling
+    Promise.all([
+      refetch(),
+      fetchTodayAppointments()
+    ]);
+    
+    toast({
+      title: 'Appointment Rescheduled',
+      description: `Appointment for ${updatedAppointment.customer_name} has been rescheduled.`
+    });
+  };
+
   // If data is loading, show a loading indicator
   if (isLoading && !dashboardData) {
     return (
@@ -104,12 +151,6 @@ export const Dashboard: React.FC = () => {
         <span className="ml-3">Loading dashboard data...</span>
       </div>
     );
-  }
-
-  // Debug logging
-  if (dashboardData?.summary) {
-    console.log('avgTipPercentage type:', typeof dashboardData.summary.avgTipPercentage);
-    console.log('avgTipPercentage value:', dashboardData.summary.avgTipPercentage);
   }
 
   // Map the appointment stats for the chart
@@ -166,81 +207,65 @@ export const Dashboard: React.FC = () => {
     updatedAt: apt.updatedAt || apt.createdAt || new Date().toISOString()
   })) || [];
 
-  // Handle refresh of dashboard data
-  const handleRefresh = async () => {
-    try {
-      setIsRefreshing(true);
-      await Promise.all([
-        refetch(),
-        fetchTodayAppointments()
-      ]);
-    } catch (error) {
-      console.error('Error refreshing dashboard data:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  // Render chart skeleton during tab switching
+  const renderChartSkeleton = () => (
+    <div className="space-y-2">
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="h-[300px] w-full" />
+    </div>
+  );
 
-  // Handle reschedule appointment
-  const handleRescheduleAppointment = (appointment: SimpleAppointment) => {
-    // Convert SimpleAppointment to Appointment if needed
-    const fullAppointment: Appointment = {
-      id: appointment.id,
-      customerId: appointment.customerId,
-      customerName: appointment.customerName,
-      customerPhone: appointment.customerPhone,
-      customerEmail: appointment.customerEmail,
-      staffId: appointment.staffId,
-      staffName: appointment.staffName,
-      date: appointment.date,
-      time: appointment.time,
-      endTime: appointment.endTime,
-      services: appointment.services,
-      status: appointment.status,
-      totalAmount: appointment.totalAmount,
-      notes: appointment.notes,
-      createdAt: appointment.createdAt || new Date().toISOString(),
-      updatedAt: appointment.updatedAt || new Date().toISOString()
-    };
-    
-    setAppointmentToReschedule(fullAppointment);
-    setShowRescheduleDialog(true);
-  };
-
-  // Handle reschedule complete
-  const handleRescheduleComplete = (updatedAppointment: ApiAppointment) => {
-    // Refresh data after rescheduling
-    handleRefresh();
-    
-    toast({
-      title: 'Appointment Rescheduled',
-      description: `Appointment for ${updatedAppointment.customer_name} has been rescheduled.`
-    });
-  };
+  // Render table skeleton during tab switching
+  const renderTableSkeleton = () => (
+    <div className="space-y-2">
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-12 w-full" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <PageHeader 
-          title="Dashboard" 
-          description="Overview of your barber shop business"
-        />
-        <button 
-          onClick={handleRefresh}
-          className="bg-primary text-white px-4 py-2 rounded"
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? (
-            <span className="flex items-center">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Refreshing...
-            </span>
-          ) : 'Refresh'}
-        </button>
-      </div>
+      <PageHeader 
+        title="Dashboard" 
+        description="Overview of your barber shop business"
+      />
       
       {dashboardData && (
         <>
+          {/* Appointments Sections - Moved to the top */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Today's Appointments */}
+            <div>
+              <AppointmentList 
+                title="Today's Appointments" 
+                appointments={todayAppointments}
+                showActions={true}
+                onRefresh={fetchTodayAppointments}
+                onReschedule={handleRescheduleAppointment}
+              />
+              {loadingTodayAppointments && (
+                <div className="flex justify-center items-center h-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            
+            {/* Upcoming Appointments */}
+            <div>
+              <AppointmentList 
+                title="Upcoming Appointments" 
+                appointments={mappedAppointments}
+                showActions={true}
+                onRefresh={refetch}
+                onReschedule={handleRescheduleAppointment}
+              />
+            </div>
+          </div>
+          
           {/* Calculate tip percentage with proper type handling */}
           {(() => {
             const tipPercentage = dashboardData.summary?.avgTipPercentage;
@@ -252,7 +277,7 @@ export const Dashboard: React.FC = () => {
             
             return (
               /* Stats Cards Row */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                 <StatsCard
                   title="Total Revenue"
                   value={formatCurrency(parseFloat(dashboardData.summary.totalRevenue || '0'))}
@@ -285,36 +310,6 @@ export const Dashboard: React.FC = () => {
             );
           })()}
           
-          {/* Appointments Sections - Always visible regardless of tab */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-            {/* Today's Appointments */}
-            <div>
-              <AppointmentList 
-                title="Today's Appointments" 
-                appointments={todayAppointments}
-                showActions={true}
-                onRefresh={fetchTodayAppointments}
-                onReschedule={handleRescheduleAppointment}
-              />
-              {loadingTodayAppointments && (
-                <div className="flex justify-center items-center h-20">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
-            </div>
-            
-            {/* Upcoming Appointments */}
-            <div>
-              <AppointmentList 
-                title="Upcoming Appointments" 
-                appointments={mappedAppointments}
-                showActions={true}
-                onRefresh={refetch}
-                onReschedule={handleRescheduleAppointment}
-              />
-            </div>
-          </div>
-          
           {/* Period Tabs - Only for charts and performance tables */}
           <Tabs defaultValue={period} onValueChange={(value) => handlePeriodChange(value as DashboardPeriod)} className="mt-6">
             <TabsList className="grid grid-cols-4 w-full max-w-md">
@@ -324,132 +319,208 @@ export const Dashboard: React.FC = () => {
               <TabsTrigger value="yearly">Yearly</TabsTrigger>
             </TabsList>
             
+            {/* Daily Tab Content */}
             <TabsContent value="daily" className="mt-4">
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <RevenueChart 
-                  title="Appointments Over Time" 
-                  data={appointmentChartData} 
-                  className="col-span-1"
-                />
-                <RevenueChart 
-                  title="Revenue Over Time" 
-                  data={revenueChartData} 
-                  className="col-span-1"
-                />
-              </div>
-              
-              {/* Performance Tables Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                <PerformanceTable
-                  title="Top Services"
-                  data={servicePerformanceData.slice(0, 5)}
-                  type="service"
-                  className="lg:col-span-6"
-                />
-                <PerformanceTable
-                  title="Top Staff"
-                  data={staffPerformanceData.slice(0, 5)}
-                  type="staff"
-                  className="lg:col-span-6"
-                />
-              </div>
+              {isTabSwitching ? (
+                <>
+                  {/* Charts Row Skeleton */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div className="col-span-1">{renderChartSkeleton()}</div>
+                    <div className="col-span-1">{renderChartSkeleton()}</div>
+                  </div>
+                  
+                  {/* Performance Tables Row Skeleton */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
+                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Charts Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <RevenueChart 
+                      title="Appointments Over Time" 
+                      data={appointmentChartData} 
+                      className="col-span-1"
+                    />
+                    <RevenueChart 
+                      title="Revenue Over Time" 
+                      data={revenueChartData} 
+                      className="col-span-1"
+                    />
+                  </div>
+                  
+                  {/* Performance Tables Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                    <PerformanceTable
+                      title="Top Services"
+                      data={servicePerformanceData.slice(0, 5)}
+                      type="service"
+                      className="lg:col-span-6"
+                    />
+                    <PerformanceTable
+                      title="Top Staff"
+                      data={staffPerformanceData.slice(0, 5)}
+                      type="staff"
+                      className="lg:col-span-6"
+                    />
+                  </div>
+                </>
+              )}
             </TabsContent>
             
+            {/* Weekly Tab Content */}
             <TabsContent value="weekly" className="mt-4">
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <RevenueChart 
-                  title="Appointments Over Time" 
-                  data={appointmentChartData} 
-                  className="col-span-1"
-                />
-                <RevenueChart 
-                  title="Revenue Over Time" 
-                  data={revenueChartData} 
-                  className="col-span-1"
-                />
-              </div>
-              
-              {/* Performance Tables Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                <PerformanceTable
-                  title="Top Services"
-                  data={servicePerformanceData.slice(0, 5)}
-                  type="service"
-                  className="lg:col-span-6"
-                />
-                <PerformanceTable
-                  title="Top Staff"
-                  data={staffPerformanceData.slice(0, 5)}
-                  type="staff"
-                  className="lg:col-span-6"
-                />
-              </div>
+              {isTabSwitching ? (
+                <>
+                  {/* Charts Row Skeleton */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div className="col-span-1">{renderChartSkeleton()}</div>
+                    <div className="col-span-1">{renderChartSkeleton()}</div>
+                  </div>
+                  
+                  {/* Performance Tables Row Skeleton */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
+                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Charts Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <RevenueChart 
+                      title="Appointments Over Time" 
+                      data={appointmentChartData} 
+                      className="col-span-1"
+                    />
+                    <RevenueChart 
+                      title="Revenue Over Time" 
+                      data={revenueChartData} 
+                      className="col-span-1"
+                    />
+                  </div>
+                  
+                  {/* Performance Tables Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                    <PerformanceTable
+                      title="Top Services"
+                      data={servicePerformanceData.slice(0, 5)}
+                      type="service"
+                      className="lg:col-span-6"
+                    />
+                    <PerformanceTable
+                      title="Top Staff"
+                      data={staffPerformanceData.slice(0, 5)}
+                      type="staff"
+                      className="lg:col-span-6"
+                    />
+                  </div>
+                </>
+              )}
             </TabsContent>
             
+            {/* Monthly Tab Content */}
             <TabsContent value="monthly" className="mt-4">
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <RevenueChart 
-                  title="Appointments Over Time" 
-                  data={appointmentChartData} 
-                  className="col-span-1"
-                />
-                <RevenueChart 
-                  title="Revenue Over Time" 
-                  data={revenueChartData} 
-                  className="col-span-1"
-                />
-              </div>
-              
-              {/* Performance Tables Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                <PerformanceTable
-                  title="Top Services"
-                  data={servicePerformanceData.slice(0, 5)}
-                  type="service"
-                  className="lg:col-span-6"
-                />
-                <PerformanceTable
-                  title="Top Staff"
-                  data={staffPerformanceData.slice(0, 5)}
-                  type="staff"
-                  className="lg:col-span-6"
-                />
-              </div>
+              {isTabSwitching ? (
+                <>
+                  {/* Charts Row Skeleton */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div className="col-span-1">{renderChartSkeleton()}</div>
+                    <div className="col-span-1">{renderChartSkeleton()}</div>
+                  </div>
+                  
+                  {/* Performance Tables Row Skeleton */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
+                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Charts Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <RevenueChart 
+                      title="Appointments Over Time" 
+                      data={appointmentChartData} 
+                      className="col-span-1"
+                    />
+                    <RevenueChart 
+                      title="Revenue Over Time" 
+                      data={revenueChartData} 
+                      className="col-span-1"
+                    />
+                  </div>
+                  
+                  {/* Performance Tables Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                    <PerformanceTable
+                      title="Top Services"
+                      data={servicePerformanceData.slice(0, 5)}
+                      type="service"
+                      className="lg:col-span-6"
+                    />
+                    <PerformanceTable
+                      title="Top Staff"
+                      data={staffPerformanceData.slice(0, 5)}
+                      type="staff"
+                      className="lg:col-span-6"
+                    />
+                  </div>
+                </>
+              )}
             </TabsContent>
             
+            {/* Yearly Tab Content */}
             <TabsContent value="yearly" className="mt-4">
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <RevenueChart 
-                  title="Appointments Over Time" 
-                  data={appointmentChartData} 
-                  className="col-span-1"
-                />
-                <RevenueChart 
-                  title="Revenue Over Time" 
-                  data={revenueChartData} 
-                  className="col-span-1"
-                />
-              </div>
-              
-              {/* Performance Tables Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                <PerformanceTable
-                  title="Top Services"
-                  data={servicePerformanceData.slice(0, 5)}
-                  type="service"
-                  className="lg:col-span-6"
-                />
-                <PerformanceTable
-                  title="Top Staff"
-                  data={staffPerformanceData.slice(0, 5)}
-                  type="staff"
-                  className="lg:col-span-6"
-                />
-              </div>
+              {isTabSwitching ? (
+                <>
+                  {/* Charts Row Skeleton */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div className="col-span-1">{renderChartSkeleton()}</div>
+                    <div className="col-span-1">{renderChartSkeleton()}</div>
+                  </div>
+                  
+                  {/* Performance Tables Row Skeleton */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
+                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Charts Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <RevenueChart 
+                      title="Appointments Over Time" 
+                      data={appointmentChartData} 
+                      className="col-span-1"
+                    />
+                    <RevenueChart 
+                      title="Revenue Over Time" 
+                      data={revenueChartData} 
+                      className="col-span-1"
+                    />
+                  </div>
+                  
+                  {/* Performance Tables Row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                    <PerformanceTable
+                      title="Top Services"
+                      data={servicePerformanceData.slice(0, 5)}
+                      type="service"
+                      className="lg:col-span-6"
+                    />
+                    <PerformanceTable
+                      title="Top Staff"
+                      data={staffPerformanceData.slice(0, 5)}
+                      type="staff"
+                      className="lg:col-span-6"
+                    />
+                  </div>
+                </>
+              )}
             </TabsContent>
           </Tabs>
           
