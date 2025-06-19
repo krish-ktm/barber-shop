@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Trash, Plus, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Trash, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogClose,
 } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface ShopClosure {
   id?: string;
@@ -42,6 +50,9 @@ const ShopClosures: React.FC = () => {
     start_time: '09:00',
     end_time: '17:00',
   });
+  
+  // Date state for the Calendar component
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Fetch shop closures
   const fetchClosures = async () => {
@@ -126,6 +137,17 @@ const ShopClosures: React.FC = () => {
     }));
   };
 
+  // Handle date change from Calendar
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      setFormData(prev => ({
+        ...prev,
+        date: format(date, 'yyyy-MM-dd')
+      }));
+    }
+  };
+
   // Handle switch change
   const handleSwitchChange = (checked: boolean) => {
     setFormData(prev => ({
@@ -136,8 +158,10 @@ const ShopClosures: React.FC = () => {
 
   // Reset form
   const resetForm = () => {
+    const today = new Date();
+    setSelectedDate(today);
     setFormData({
-      date: format(new Date(), 'yyyy-MM-dd'),
+      date: format(today, 'yyyy-MM-dd'),
       reason: '',
       is_full_day: true,
       start_time: '09:00',
@@ -171,91 +195,111 @@ const ShopClosures: React.FC = () => {
 
       {/* Modal Dialog for Adding Shop Closure */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Add New Shop Closure</DialogTitle>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit} className="space-y-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Date</Label>
-                <div className="relative">
-                  <Calendar className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                  <Input
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Date Field with Shadcn Date Picker */}
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
                     id="date"
-                    name="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    required
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? (
+                      format(selectedDate, 'MMMM d, yyyy')
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateChange}
+                    initialFocus
                   />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_full_day"
-                  checked={formData.is_full_day}
-                  onCheckedChange={handleSwitchChange}
-                />
-                <Label htmlFor="is_full_day">Full Day Closure</Label>
-              </div>
-
-              {!formData.is_full_day && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="start_time">Start Time</Label>
-                    <div className="relative">
-                      <Clock className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="start_time"
-                        name="start_time"
-                        type="time"
-                        value={formData.start_time}
-                        onChange={handleInputChange}
-                        className="pl-10"
-                        required={!formData.is_full_day}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="end_time">End Time</Label>
-                    <div className="relative">
-                      <Clock className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="end_time"
-                        name="end_time"
-                        type="time"
-                        value={formData.end_time}
-                        onChange={handleInputChange}
-                        className="pl-10"
-                        required={!formData.is_full_day}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="reason">Reason</Label>
-                <Textarea
-                  id="reason"
-                  name="reason"
-                  value={formData.reason}
-                  onChange={handleInputChange}
-                  rows={3}
-                  required
-                />
-              </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={resetForm}>
-                Cancel
-              </Button>
+            {/* Full Day Switch */}
+            <div className="flex items-center justify-between border rounded-md p-3">
+              <Label htmlFor="is_full_day" className="font-medium">Full Day Closure</Label>
+              <Switch
+                id="is_full_day"
+                checked={formData.is_full_day}
+                onCheckedChange={handleSwitchChange}
+              />
+            </div>
+
+            {/* Time Fields - Only shown when not full day */}
+            {!formData.is_full_day && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start_time">Start Time</Label>
+                  <div className="relative">
+                    <Clock className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="start_time"
+                      name="start_time"
+                      type="time"
+                      value={formData.start_time}
+                      onChange={handleInputChange}
+                      className="pl-10"
+                      required={!formData.is_full_day}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="end_time">End Time</Label>
+                  <div className="relative">
+                    <Clock className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="end_time"
+                      name="end_time"
+                      type="time"
+                      value={formData.end_time}
+                      onChange={handleInputChange}
+                      className="pl-10"
+                      required={!formData.is_full_day}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reason Field */}
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason</Label>
+              <Textarea
+                id="reason"
+                name="reason"
+                value={formData.reason}
+                onChange={handleInputChange}
+                rows={3}
+                placeholder="Enter reason for closure"
+                required
+              />
+            </div>
+
+            <DialogFooter className="mt-6">
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+              </DialogClose>
               <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isSubmitting ? 'Saving...' : 'Save Closure'}
@@ -272,7 +316,7 @@ const ShopClosures: React.FC = () => {
       ) : closures.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+            <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium">No shop closures found</p>
             <p className="text-sm text-muted-foreground">Add a closure to get started</p>
             <Button onClick={() => setShowForm(true)} className="mt-4">
@@ -287,7 +331,7 @@ const ShopClosures: React.FC = () => {
               <div className="bg-primary text-primary-foreground p-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
-                    <Calendar className="mr-2 h-5 w-5" />
+                    <CalendarIcon className="mr-2 h-5 w-5" />
                     <span className="font-medium">{format(new Date(closure.date), 'MMM dd, yyyy')}</span>
                   </div>
                   <Button
