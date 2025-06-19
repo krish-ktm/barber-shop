@@ -279,9 +279,13 @@ export const StaffManagement: React.FC = () => {
     
     // Update pagination state if provided by the API
     if (staffData?.currentPage) {
-      setCurrentPage(staffData.currentPage);
+      // If the API returns a different page than what we requested,
+      // update our state to match (this happens when requesting a page beyond what's available)
+      if (staffData.currentPage !== currentPage) {
+        setCurrentPage(staffData.currentPage);
+      }
     }
-  }, [staffData]);
+  }, [staffData, currentPage]);
   
   // Show error if services fail to load
   useEffect(() => {

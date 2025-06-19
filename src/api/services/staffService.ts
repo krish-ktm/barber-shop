@@ -97,7 +97,8 @@ interface BreaksResponse {
  */
 export const getAllStaff = async (
   page = 1,
-  limit = 10,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _limit = 10, // Kept for backward compatibility but not used
   sort = 'name_asc',
   searchQuery?: string,
   availability?: 'all' | 'available' | 'unavailable',
@@ -115,7 +116,10 @@ export const getAllStaff = async (
     sortParam = sort.includes('_asc') ? 'name_asc' : 'name_desc';
   }
   
-  let url = `/staff?page=${page}&limit=${limit}&sort=${sortParam}`;
+  // Always use 10 items per page
+  const fixedLimit = 10;
+  
+  let url = `/staff?page=${page}&limit=${fixedLimit}&sort=${sortParam}`;
   
   // Add search query parameter
   if (searchQuery) {
@@ -222,4 +226,4 @@ export const updateStaffBreak = async (staffId: string, breakId: number, breakDa
  */
 export const deleteStaffBreak = async (staffId: string, breakId: number): Promise<{ success: boolean; message: string }> => {
   return del<{ success: boolean; message: string }>(`/staff/${staffId}/breaks/${breakId}`);
-}; 
+};
