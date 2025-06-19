@@ -14,7 +14,14 @@ interface StaffSelectionProps {
 }
 
 export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = false }) => {
-  const { selectedStaffId, setSelectedStaffId, selectedServices, bookingFlow } = useBooking();
+  const { 
+    selectedStaffId, 
+    setSelectedStaffId, 
+    setSelectedStaffName,
+    setSelectedStaffPosition,
+    selectedServices, 
+    bookingFlow 
+  } = useBooking();
   const [staffList, setStaffList] = useState<BookingStaff[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,8 +77,10 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
     : staffList;
 
   // Handle staff selection without memoization to prevent unnecessary re-renders
-  const handleStaffSelect = (staffId: string) => {
-    setSelectedStaffId(staffId);
+  const handleStaffSelect = (staff: BookingStaff) => {
+    setSelectedStaffId(staff.id);
+    setSelectedStaffName(staff.name);
+    setSelectedStaffPosition(staff.position);
   };
 
   if (isLoading) {
@@ -124,7 +133,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                 onClick={(e) => {
                   e.preventDefault(); // Prevent default button behavior
                   e.stopPropagation(); // Stop event propagation
-                  handleStaffSelect(staff.id);
+                  handleStaffSelect(staff);
                 }}
                 type="button" // Explicitly set type to button
               >

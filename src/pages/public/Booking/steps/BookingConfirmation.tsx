@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Calendar, CheckCircle, Clock, Scissors, User, Globe } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { staffData } from '@/mocks';
 import { formatCurrency } from '@/utils';
 import { useBooking } from '../BookingContext';
 import { useToast } from '@/hooks/use-toast';
-import { createBooking, BookingRequest, BookingResponse, getStaffDetails, BookingStaff } from '@/api/services/bookingService';
+import { createBooking, BookingRequest, BookingResponse } from '@/api/services/bookingService';
 
 export const BookingConfirmation: React.FC = () => {
   const { toast } = useToast();
@@ -21,13 +20,8 @@ export const BookingConfirmation: React.FC = () => {
     customerDetails, 
     totalDuration, 
     totalPrice,
-    setSelectedServices,
-    setSelectedStaffId,
-    setSelectedDate,
-    setSelectedTime,
-    setFirstSelection,
-    setBookingFlow,
-    setCustomerDetails
+    selectedStaffName,
+    selectedStaffPosition
   } = useBooking();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,41 +29,9 @@ export const BookingConfirmation: React.FC = () => {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [bookingTimezone, setBookingTimezone] = useState<string | null>(null);
   const [bookingResponse, setBookingResponse] = useState<BookingResponse | null>(null);
-  const [selectedStaff, setSelectedStaff] = useState<BookingStaff | null>(null);
-  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
 
   // Get client timezone
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-  // Fetch selected staff details
-  useEffect(() => {
-    const fetchStaffDetails = async () => {
-      if (!selectedStaffId) return;
-      
-      setIsLoadingStaff(true);
-      try {
-        // Try to get staff details from API
-        const response = await getStaffDetails(selectedStaffId);
-        
-        if (response && response.success && response.staff) {
-          setSelectedStaff(response.staff);
-        } else {
-          // Fallback to mock data
-          const mockStaff = staffData.find(staff => staff.id === selectedStaffId);
-          setSelectedStaff(mockStaff as unknown as BookingStaff || null);
-        }
-      } catch (error) {
-        console.error("Error fetching staff details:", error);
-        // Fallback to mock data
-        const mockStaff = staffData.find(staff => staff.id === selectedStaffId);
-        setSelectedStaff(mockStaff as unknown as BookingStaff || null);
-      } finally {
-        setIsLoadingStaff(false);
-      }
-    };
-
-    fetchStaffDetails();
-  }, [selectedStaffId]);
 
   const handleSubmitBooking = async () => {
     if (!selectedStaffId || !selectedServices.length || !selectedDate || !selectedTime || !customerDetails) {
@@ -138,19 +100,8 @@ export const BookingConfirmation: React.FC = () => {
   };
 
   const handleStartOver = () => {
-    // Reset all booking state
-    setSelectedServices([]);
-    setSelectedStaffId(null);
-    setSelectedDate(undefined);
-    setSelectedTime(null);
-    setFirstSelection(null);
-    setBookingFlow(null);
-    setCustomerDetails({
-      name: '',
-      email: '',
-      phone: '',
-      notes: ''
-    });
+    // Refresh the page and redirect to booking
+    window.location.href = '/booking';
   };
 
   // Format time for display in 12-hour format
@@ -208,7 +159,7 @@ export const BookingConfirmation: React.FC = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Staff:</span>
-              <span className="font-medium">{selectedStaff?.name || "Selected Staff"}</span>
+              <span className="font-medium">{selectedStaffName || "No staff selected"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Timezone:</span>
@@ -312,28 +263,19 @@ export const BookingConfirmation: React.FC = () => {
             </div>
           </div>
           
-          {isLoadingStaff ? (
-            <div className="flex justify-center py-4">
-              <div className="animate-pulse flex space-x-4">
-                <div className="rounded-full bg-muted h-12 w-12"></div>
-                <div className="flex-1 space-y-2 py-1">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-5/6"></div>
-                </div>
-              </div>
-            </div>
-          ) : selectedStaff ? (
+          {selectedStaffName ? (
             <div className="pl-9">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12 border">
-                  <AvatarImage src={selectedStaff.image} alt={selectedStaff.name} />
                   <AvatarFallback className="bg-primary/10 text-primary">
-                    {selectedStaff.name?.charAt(0) || <User className="h-5 w-5" />}
+                    {selectedStaffName?.charAt(0) || <User className="h-5 w-5" />}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">{selectedStaff.name}</p>
-                  <p className="text-sm text-muted-foreground">{selectedStaff.position}</p>
+                  <p className="font-medium">{selectedStaffName}</p>
+                  {selectedStaffPosition && (
+                    <p className="text-sm text-muted-foreground">{selectedStaffPosition}</p>
+                  )}
                 </div>
               </div>
             </div>

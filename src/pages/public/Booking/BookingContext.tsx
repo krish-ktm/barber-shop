@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState } from 'react';
-import { Service, Staff } from '@/types';
+import { Service } from '@/types';
 
 interface BookingContextType {
   selectedServices: Service[];
   selectedStaffId: string | null;
+  selectedStaffName: string | null;
+  selectedStaffPosition: string | null;
   selectedDate: Date | undefined;
   selectedTime: string | null;
   firstSelection: 'service' | 'staff' | null;
@@ -18,6 +20,8 @@ interface BookingContextType {
   totalPrice: number;
   setSelectedServices: (services: Service[]) => void;
   setSelectedStaffId: (staffId: string | null) => void;
+  setSelectedStaffName: (name: string | null) => void;
+  setSelectedStaffPosition: (position: string | null) => void;
   setSelectedDate: (date: Date | undefined) => void;
   setSelectedTime: (time: string | null) => void;
   setFirstSelection: (type: 'service' | 'staff' | null) => void;
@@ -35,6 +39,8 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [selectedStaffName, setSelectedStaffName] = useState<string | null>(null);
+  const [selectedStaffPosition, setSelectedStaffPosition] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [firstSelection, setFirstSelection] = useState<'service' | 'staff' | null>(null);
@@ -55,6 +61,8 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       value={{
         selectedServices,
         selectedStaffId,
+        selectedStaffName,
+        selectedStaffPosition,
         selectedDate,
         selectedTime,
         firstSelection,
@@ -64,6 +72,8 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         totalPrice,
         setSelectedServices,
         setSelectedStaffId,
+        setSelectedStaffName,
+        setSelectedStaffPosition,
         setSelectedDate,
         setSelectedTime,
         setFirstSelection,
