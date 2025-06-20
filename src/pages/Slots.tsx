@@ -91,7 +91,7 @@ export const Slots: React.FC = () => {
       // Initialize local breaks from API data
       const breaksMap: { [dayId: number]: Break[] } = {};
       hoursData.hours.forEach(hour => {
-        if (hour.id && hour.breaks) {
+        if (hour.id !== undefined && hour.breaks) {
           breaksMap[hour.id] = [...hour.breaks];
         }
       });
@@ -186,13 +186,14 @@ export const Slots: React.FC = () => {
 
   // Get breaks for a specific day
   const getBreaksForDay = (dayId: number | undefined): Break[] => {
-    if (!dayId) return [];
+    if (dayId === undefined) return [];
+    // Special handling for dayId 0 (Sunday)
     return localBreaks[dayId] || [];
   };
 
   // Handle add break
   const handleAddBreak = (dayId: number) => {
-    if (!dayId) return;
+    if (dayId === undefined) return;
     
     const businessHour = businessHours.find(hour => hour.id === dayId);
     if (!businessHour) return;
@@ -267,7 +268,7 @@ export const Slots: React.FC = () => {
 
   // Count breaks for a day
   const getBreakCount = (hour: BusinessHour): number => {
-    if (!hour.id) return 0;
+    if (hour.id === undefined) return 0;
     return (localBreaks[hour.id] || []).length;
   };
 
@@ -505,7 +506,7 @@ export const Slots: React.FC = () => {
                             </div>
                             
                             {/* Breaks section for each day */}
-                            {businessHour.id && (
+                            {businessHour.id !== undefined && (
                               <>
                                 <div className="mt-3 pt-3 border-t border-dashed">
                                   <div className="flex items-center justify-between mb-2">
@@ -513,7 +514,7 @@ export const Slots: React.FC = () => {
                                     <Button 
                                       variant="ghost" 
                                       size="sm"
-                                      onClick={() => businessHour.id && handleAddBreak(businessHour.id)}
+                                      onClick={() => businessHour.id !== undefined && handleAddBreak(businessHour.id)}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
                                       Add
@@ -567,7 +568,7 @@ export const Slots: React.FC = () => {
                                               variant="ghost"
                                               size="icon"
                                               className="h-6 w-6 flex-shrink-0"
-                                              onClick={() => businessHour.id && handleRemoveBreak(businessHour.id, breakItem.id as number)}
+                                              onClick={() => businessHour.id !== undefined && handleRemoveBreak(businessHour.id, breakItem.id as number)}
                                             >
                                               <Trash2 className="h-3 w-3 text-destructive" />
                                             </Button>
@@ -580,7 +581,7 @@ export const Slots: React.FC = () => {
                                       variant="outline" 
                                       size="sm" 
                                       className="w-full mt-2"
-                                      onClick={() => businessHour.id && handleAddBreak(businessHour.id)}
+                                      onClick={() => businessHour.id !== undefined && handleAddBreak(businessHour.id)}
                                     >
                                       <Plus className="h-4 w-4 mr-2" />
                                       Add Break
