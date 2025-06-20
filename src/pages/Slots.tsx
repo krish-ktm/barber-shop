@@ -197,26 +197,17 @@ export const Slots: React.FC = () => {
     const businessHour = businessHours.find(hour => hour.id === dayId);
     if (!businessHour) return;
     
-    // Convert day_of_week string to number (0 = Sunday, 1 = Monday, etc.)
-    let dayNumber: number | null = null;
-    switch (businessHour.day_of_week.toLowerCase()) {
-      case 'sunday': dayNumber = 0; break;
-      case 'monday': dayNumber = 1; break;
-      case 'tuesday': dayNumber = 2; break;
-      case 'wednesday': dayNumber = 3; break;
-      case 'thursday': dayNumber = 4; break;
-      case 'friday': dayNumber = 5; break;
-      case 'saturday': dayNumber = 6; break;
-    }
+    // Use the string day_of_week directly instead of converting to number
+    const dayName = businessHour.day_of_week.toLowerCase();
     
-    console.log(`Creating break for ${businessHour.day_of_week} (day number: ${dayNumber})`);
+    console.log(`Creating break for ${businessHour.day_of_week} (day name: ${dayName})`);
     
     const newBreak: Omit<Break, 'id'> = {
       name: `Break ${getBreaksForDay(dayId).length + 1}`,
       start_time: '12:00:00',
       end_time: '13:00:00',
       business_hour_id: dayId,
-      day_of_week: dayNumber,
+      day_of_week: dayName, // Use string value directly
       staff_id: null
     };
     
@@ -291,17 +282,8 @@ export const Slots: React.FC = () => {
     businessHours.forEach(hour => {
       if (!hour.id) return;
 
-      // Get the numeric day of week
-      let dayNumber: number | null = null;
-      switch (hour.day_of_week.toLowerCase()) {
-        case 'sunday': dayNumber = 0; break;
-        case 'monday': dayNumber = 1; break;
-        case 'tuesday': dayNumber = 2; break;
-        case 'wednesday': dayNumber = 3; break;
-        case 'thursday': dayNumber = 4; break;
-        case 'friday': dayNumber = 5; break;
-        case 'saturday': dayNumber = 6; break;
-      }
+      // Get the day name directly
+      const dayName = hour.day_of_week.toLowerCase();
 
       // Get the breaks for this day
       const dayBreaks = updatedBreaks[hour.id] || [];
@@ -319,18 +301,18 @@ export const Slots: React.FC = () => {
             if (existingUpdateIndex >= 0) {
               updatedPendingChanges.update[existingUpdateIndex].data = {
                 ...updatedPendingChanges.update[existingUpdateIndex].data,
-                day_of_week: dayNumber
+                day_of_week: dayName
               };
             } else {
               updatedPendingChanges.update.push({
                 id: breakItem.id as number,
-                data: { day_of_week: dayNumber }
+                data: { day_of_week: dayName }
               });
             }
           }
           
           // Update the break in local state
-          return { ...breakItem, day_of_week: dayNumber };
+          return { ...breakItem, day_of_week: dayName };
         }
         return breakItem;
       });
