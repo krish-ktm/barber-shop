@@ -432,10 +432,18 @@ export const StaffWorkingHours: React.FC = () => {
       return;
     }
 
+    // Make sure day_of_week is a number (API expects numeric value)
+    const breakFormData = {
+      ...breakForm,
+      day_of_week: typeof breakForm.day_of_week === 'string' 
+        ? dayOfWeekMap[breakForm.day_of_week as string] || 1 
+        : breakForm.day_of_week
+    };
+
     try {
       if (isEditMode && selectedBreak?.id) {
         // Update existing break
-        await updateBreak(staffId!, selectedBreak.id, breakForm);
+        await updateBreak(staffId!, selectedBreak.id, breakFormData);
         
         toast({
           title: 'Break updated',
@@ -443,7 +451,7 @@ export const StaffWorkingHours: React.FC = () => {
         });
       } else {
         // Create new break
-        await saveBreak(staffId!, breakForm);
+        await saveBreak(staffId!, breakFormData);
         
         toast({
           title: 'Break added',
@@ -624,14 +632,17 @@ export const StaffWorkingHours: React.FC = () => {
   // Group breaks by day of week
   const breaksByDay: Record<string, Break[]> = {};
   breaks.forEach(breakItem => {
-    const day = typeof breakItem.day_of_week === 'number' 
-      ? dayOfWeekNumberToString[breakItem.day_of_week] 
+    // Ensure day_of_week is a number and convert to string key for grouping
+    const dayNumber = typeof breakItem.day_of_week === 'string' 
+      ? dayOfWeekMap[breakItem.day_of_week.toLowerCase()] || 0
       : breakItem.day_of_week;
     
-    if (!breaksByDay[day]) {
-      breaksByDay[day] = [];
+    const dayKey = dayOfWeekNumberToString[dayNumber];
+    
+    if (!breaksByDay[dayKey]) {
+      breaksByDay[dayKey] = [];
     }
-    breaksByDay[day].push(breakItem);
+    breaksByDay[dayKey].push(breakItem);
   });
 
   return (

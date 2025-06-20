@@ -41,7 +41,7 @@ export interface TimeSlot {
 export interface Break {
   id?: number;
   name: string;
-  day_of_week: number | string;
+  day_of_week: number; // 0 = Sunday, 6 = Saturday
   start_time: string; // format: "HH:MM:SS"
   end_time: string; // format: "HH:MM:SS"
 }

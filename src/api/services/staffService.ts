@@ -40,7 +40,7 @@ export interface WorkingHour {
 export interface Break {
   id?: number;
   staff_id?: string;
-  day_of_week: number | string;
+  day_of_week: number;
   name: string;
   start_time: string;
   end_time: string;
