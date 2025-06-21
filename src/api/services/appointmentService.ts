@@ -167,17 +167,29 @@ export const getAdminAppointments = async (
   page = 1,
   limit = 100,
   sort = 'date_asc',
-  date?: string,
+  startDate?: string,
+  endDate?: string,
   staffId?: string,
   customerId?: string,
-  status?: string
+  status?: string,
+  searchTerm?: string,
+  timeOfDay?: string,
+  serviceIds?: string[]
 ): Promise<AdminAppointmentsResponse> => {
   let url = `/appointments/admin-dashboard?page=${page}&limit=${limit}&sort=${sort}`;
   
-  if (date) url += `&date=${date}`;
+  if (startDate) url += `&startDate=${startDate}`;
+  if (endDate) url += `&endDate=${endDate}`;
   if (staffId) url += `&staffId=${staffId}`;
   if (customerId) url += `&customerId=${customerId}`;
   if (status) url += `&status=${status}`;
+  if (searchTerm) url += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+  if (timeOfDay) url += `&timeOfDay=${timeOfDay}`;
+  if (serviceIds && serviceIds.length > 0) {
+    serviceIds.forEach(serviceId => {
+      url += `&serviceId=${serviceId}`;
+    });
+  }
   
   return get<AdminAppointmentsResponse>(url);
 };

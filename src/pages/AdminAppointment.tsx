@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { format, parse, startOfDay, endOfDay, isWithinInterval, isAfter } from 'date-fns';
+import { format, parse, startOfDay, endOfDay, isWithinInterval, isAfter, addDays, startOfWeek, endOfWeek } from 'date-fns';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Filter,
   Search,
-  Loader2
+  Loader2,
+  Clock,
+  Scissors,
+  User
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
@@ -56,6 +59,10 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Sliders } from 'lucide-react';
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from '@/components/ui/radio-group';
 
 // API imports
 import { useApi } from '@/hooks/useApi';
@@ -67,6 +74,17 @@ import {
 } from '@/api/services/appointmentService';
 import { useToast } from '@/hooks/use-toast';
 import { Appointment as UIAppointment } from '@/types';
+
+// Date range options
+type DateRangeType = 'today' | 'tomorrow' | 'thisWeek' | 'nextWeek' | 'custom';
+
+const DATE_RANGE_OPTIONS: Record<DateRangeType, string> = {
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  thisWeek: 'This Week',
+  nextWeek: 'Next Week',
+  custom: 'Custom Range'
+};
 
 export const AdminAppointment: React.FC = () => {
   const { toast } = useToast();
@@ -91,17 +109,25 @@ export const AdminAppointment: React.FC = () => {
 
   // Basic filters
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateRangeType, setDateRangeType] = useState<DateRangeType>('today');
+  const [dateRange, setDateRange] = useState<{start: Date, end: Date}>({
+    start: new Date(),
+    end: new Date()
+  });
+  // Temporary date range for custom selection before applying
+  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date()
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [staffFilter, setStaffFilter] = useState<string>('all');
   const [serviceFilter, setServiceFilter] = useState<string>('all');
+  const [timeOfDayFilter, setTimeOfDayFilter] = useState<string>('all');
+  const [multiServiceFilter, setMultiServiceFilter] = useState<string[]>([]);
   
   // Advanced filters
   const [useAdvancedFilters, setUseAdvancedFilters] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: undefined,
-    to: undefined,
-  });
   const [timeRange, setTimeRange] = useState<[string, string] | null>(['09:00', '18:00']);
   const [priceRange, setPriceRange] = useState<[number, number] | null>([0, 100]);
   const [durationRange, setDurationRange] = useState<[number, number] | null>([15, 120]);
@@ -125,10 +151,24 @@ export const AdminAppointment: React.FC = () => {
   // Fetch data only when necessary - this one is needed for initial data loading
   useEffect(() => {
     if (!useAdvancedFilters) {
-      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-      fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+      const startDateString = format(dateRange.start, 'yyyy-MM-dd');
+      const endDateString = format(dateRange.end, 'yyyy-MM-dd');
+      
+      fetchAdminData(
+        1, 
+        100, 
+        'time_asc', 
+        startDateString,
+        endDateString,
+        staffFilter !== 'all' ? staffFilter : undefined, 
+        undefined, 
+        statusFilter !== 'all' ? statusFilter : undefined,
+        undefined,
+        timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+        multiServiceFilter.length > 0 ? multiServiceFilter : undefined
+      );
     }
-  }, [fetchAdminData, selectedDate, staffFilter, statusFilter, useAdvancedFilters]);
+  }, [fetchAdminData, dateRange, staffFilter, statusFilter, useAdvancedFilters, timeOfDayFilter, multiServiceFilter]);
 
   // Handle errors
   useEffect(() => {
@@ -150,6 +190,43 @@ export const AdminAppointment: React.FC = () => {
       });
     }
   }, [updateStatusError, toast]);
+
+  // Handle date range selection
+  useEffect(() => {
+    let start = new Date();
+    let end = new Date();
+    
+    switch (dateRangeType) {
+      case 'today':
+        // Keep start and end as today
+        break;
+      case 'tomorrow':
+        start = addDays(new Date(), 1);
+        end = addDays(new Date(), 1);
+        break;
+      case 'thisWeek':
+        start = startOfWeek(new Date(), { weekStartsOn: 1 }); // Start from Monday
+        end = endOfWeek(new Date(), { weekStartsOn: 1 }); // End on Sunday
+        break;
+      case 'nextWeek':
+        start = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 7);
+        end = addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 7);
+        break;
+      case 'custom':
+        // Don't update dateRange for custom - it will be updated when Apply is clicked
+        return;
+      default:
+        break;
+    }
+    
+    if (dateRangeType !== 'custom') {
+      setDateRange({ start, end });
+      setSelectedDate(start);
+      
+      // Also update tempDateRange to keep them in sync
+      setTempDateRange({ from: start, to: end });
+    }
+  }, [dateRangeType]);
 
   // Handle appointment status change
   const handleStatusChange = async (appointmentId: string, newStatus: UIAppointment['status']) => {
@@ -201,8 +278,22 @@ export const AdminAppointment: React.FC = () => {
       setLoadingAppointmentIds(prev => ({ ...prev, [appointmentId]: false }));
       
       // If there was an error, refresh the data to get back to a consistent state
-      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-      fetchAdminData(1, 100, 'time_asc', selectedDateStr, staffFilter !== 'all' ? staffFilter : undefined, undefined, statusFilter !== 'all' ? statusFilter : undefined);
+      const startDateString = format(dateRange.start, 'yyyy-MM-dd');
+      const endDateString = format(dateRange.end, 'yyyy-MM-dd');
+      
+      fetchAdminData(
+        1, 
+        100, 
+        'time_asc', 
+        startDateString,
+        endDateString,
+        staffFilter !== 'all' ? staffFilter : undefined, 
+        undefined, 
+        statusFilter !== 'all' ? statusFilter : undefined,
+        undefined,
+        timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+        multiServiceFilter.length > 0 ? multiServiceFilter : undefined
+      );
       
       toast({
         title: 'Error',
@@ -476,9 +567,15 @@ export const AdminAppointment: React.FC = () => {
     setStatusFilter('all');
     setStaffFilter('all');
     setServiceFilter('all');
+    setTimeOfDayFilter('all');
+    setMultiServiceFilter([]);
+    setDateRangeType('today');
+    
+    const today = new Date();
+    setDateRange({ start: today, end: today });
+    setTempDateRange({ from: today, to: today });
     
     if (useAdvancedFilters) {
-      setDateRange({ from: undefined, to: undefined });
       setTimeRange(['09:00', '18:00']);
       setPriceRange([0, 100]);
       setDurationRange([15, 120]);
@@ -500,6 +597,34 @@ export const AdminAppointment: React.FC = () => {
     }
     
     return count;
+  };
+
+  // Search is now performed via API instead of locally filtering
+  const handleSearch = () => {
+    const startDateString = format(dateRange.start, 'yyyy-MM-dd');
+    const endDateString = format(dateRange.end, 'yyyy-MM-dd');
+    
+    fetchAdminData(
+      1,
+      100,
+      'time_asc',
+      startDateString,
+      endDateString,
+      staffFilter !== 'all' ? staffFilter : undefined,
+      undefined,
+      statusFilter !== 'all' ? statusFilter : undefined,
+      searchQuery.trim() !== '' ? searchQuery : undefined,
+      timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+      multiServiceFilter.length > 0 ? multiServiceFilter : undefined
+    );
+  };
+
+  // Format date range for display
+  const formatDateRange = () => {
+    if (dateRange.start.toDateString() === dateRange.end.toDateString()) {
+      return format(dateRange.start, 'MMM d, yyyy');
+    }
+    return `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}`;
   };
 
   return (
@@ -527,25 +652,100 @@ export const AdminAppointment: React.FC = () => {
                   <Button
                     variant="outline"
                     className={cn(
-                      'w-[140px] sm:w-[180px] justify-start text-left font-normal',
+                      'w-[200px] sm:w-[240px] justify-start text-left font-normal',
                       !selectedDate && 'text-muted-foreground'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? (
-                      format(selectedDate, 'MMM d, yyyy')
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
+                    {formatDateRange()}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 min-w-[300px]" align="start">
+                  <Tabs defaultValue="preset" className="w-full">
+                    <TabsList className="grid grid-cols-2 w-full">
+                      <TabsTrigger value="preset">Presets</TabsTrigger>
+                      <TabsTrigger value="custom">Custom</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="preset" className="p-4 space-y-4">
+                      <RadioGroup 
+                        value={dateRangeType} 
+                        onValueChange={(value: string) => {
+                          setDateRangeType(value as DateRangeType);
+                          // Close the popover after selecting a preset
+                          const popoverTrigger = document.querySelector('[aria-expanded="true"]');
+                          if (popoverTrigger instanceof HTMLElement) {
+                            popoverTrigger.click();
+                          }
+                        }}
+                      >
+                        {Object.entries(DATE_RANGE_OPTIONS).map(([value, label]) => (
+                          <div className="flex items-center space-x-2" key={value}>
+                            <RadioGroupItem value={value} id={`date-range-${value}`} />
+                            <Label htmlFor={`date-range-${value}`}>{label}</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </TabsContent>
+                    <TabsContent value="custom" className="p-4 space-y-2">
+                      <p className="text-sm text-muted-foreground mb-2">Select a date range</p>
                   <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
+                        mode="range"
+                        selected={{
+                          from: tempDateRange?.from,
+                          to: tempDateRange?.to
+                        }}
+                        onSelect={(range) => {
+                          if (range?.from) {
+                            setTempDateRange(range);
+                            setDateRangeType('custom');
+                          }
+                        }}
                     initialFocus
-                  />
+                        numberOfMonths={2}
+                      />
+                      <Button 
+                        className="w-full mt-4" 
+                        onClick={() => {
+                          // Only update dateRange and make API call if we have a valid range
+                          if (tempDateRange?.from) {
+                            // Update the actual dateRange that triggers API calls
+                            setDateRange({
+                              start: tempDateRange.from,
+                              end: tempDateRange.to || tempDateRange.from
+                            });
+                            
+                            // Fetch appointments with the custom date range
+                            const startDateString = format(tempDateRange.from, 'yyyy-MM-dd');
+                            const endDateString = tempDateRange.to 
+                              ? format(tempDateRange.to, 'yyyy-MM-dd')
+                              : format(tempDateRange.from, 'yyyy-MM-dd');
+                            
+                            fetchAdminData(
+                              1, 
+                              100, 
+                              'time_asc', 
+                              startDateString,
+                              endDateString,
+                              staffFilter !== 'all' ? staffFilter : undefined,
+                              undefined,
+                              statusFilter !== 'all' ? statusFilter : undefined,
+                              searchQuery.trim() !== '' ? searchQuery : undefined,
+                              timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+                              multiServiceFilter.length > 0 ? multiServiceFilter : undefined
+                            );
+                          }
+                          
+                          // Close the popover
+                          const popoverTrigger = document.querySelector('[aria-expanded="true"]');
+                          if (popoverTrigger instanceof HTMLElement) {
+                            popoverTrigger.click();
+                          }
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </TabsContent>
+                  </Tabs>
                 </PopoverContent>
               </Popover>
               
@@ -593,13 +793,23 @@ export const AdminAppointment: React.FC = () => {
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
 
-          <div className="hidden sm:flex items-center gap-3 flex-wrap">
+          <Button 
+            variant="secondary" 
+            onClick={handleSearch}
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+            Search
+          </Button>
+          
+          <div className="hidden lg:flex items-center gap-3 flex-wrap">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
@@ -612,141 +822,72 @@ export const AdminAppointment: React.FC = () => {
             </Select>
 
             <Select value={staffFilter} onValueChange={setStaffFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by staff" />
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Staff" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Staff</SelectItem>
-                {staff.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.name}
+                {staff.map((staffMember) => (
+                  <SelectItem key={staffMember.id} value={staffMember.id}>
+                    {staffMember.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by service" />
+            <Select value={timeOfDayFilter} onValueChange={setTimeOfDayFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Time of Day" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Services</SelectItem>
-                {services.map((service) => (
-                  <SelectItem key={service.id} value={service.id}>
-                    {service.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">All Times</SelectItem>
+                <SelectItem value="morning">Morning</SelectItem>
+                <SelectItem value="afternoon">Afternoon</SelectItem>
+                <SelectItem value="evening">Evening</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          
+          {/* Show active filters as badges */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            {statusFilter !== 'all' && (
+              <Badge variant="secondary" className="flex gap-1 items-center">
+                Status: {statusFilter}
+              </Badge>
+            )}
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdvancedFilters(true)}
-              className="hidden md:flex"
-            >
-              <Sliders className="h-4 w-4 mr-2" />
-              More Filters
-            </Button>
+            {staffFilter !== 'all' && (
+              <Badge variant="secondary" className="flex gap-1 items-center">
+                Staff: {staff.find(s => s.id === staffFilter)?.name || staffFilter}
+              </Badge>
+            )}
             
-            <Dialog open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Advanced Filters</DialogTitle>
-                  <DialogDescription>
-                    Configure advanced filters for appointments
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-6 py-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label>Time Range</Label>
-                      <div className="flex gap-2 items-center">
-                        <Select
-                          value={timeRange?.[0] || '09:00'}
-                          onValueChange={(value) => setTimeRange([value, timeRange?.[1] || '18:00'])}
-                        >
-                          <SelectTrigger className="w-[100px]">
-                            <SelectValue placeholder="Start" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
-                              <SelectItem key={`start-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
-                                {`${hour.toString().padStart(2, '0')}:00`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span>to</span>
-                        <Select
-                          value={timeRange?.[1] || '18:00'}
-                          onValueChange={(value) => setTimeRange([timeRange?.[0] || '09:00', value])}
-                        >
-                          <SelectTrigger className="w-[100px]">
-                            <SelectValue placeholder="End" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
-                              <SelectItem key={`end-${hour}`} value={`${hour.toString().padStart(2, '0')}:00`}>
-                                {`${hour.toString().padStart(2, '0')}:00`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Price Range (${priceRange?.[0]} - ${priceRange?.[1]})</Label>
-                      </div>
-                      <Slider
-                        value={priceRange || [0, 100]}
-                        min={0}
-                        max={100}
-                        step={5}
-                        onValueChange={(value) => setPriceRange(value as [number, number])}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Duration Range ({durationRange?.[0]} - {durationRange?.[1]} mins)</Label>
-                      </div>
-                      <Slider
-                        value={durationRange || [15, 120]}
-                        min={15}
-                        max={120}
-                        step={15}
-                        onValueChange={(value) => setDurationRange(value as [number, number])}
-                      />
-                    </div>
-                  </div>
-                  
-                  <DialogFooter className="mt-6">
-                    <div className="flex gap-2 ml-auto">
+            {timeOfDayFilter !== 'all' && (
+              <Badge variant="secondary" className="flex gap-1 items-center">
+                Time: {timeOfDayFilter}
+              </Badge>
+            )}
+
+            {searchQuery.trim() !== '' && (
+              <Badge variant="secondary" className="flex gap-1 items-center">
+                Search: {searchQuery}
+              </Badge>
+            )}
+            
+            {/* Clear all filters button */}
+            {(statusFilter !== 'all' || 
+              staffFilter !== 'all' || 
+              timeOfDayFilter !== 'all' || 
+              searchQuery.trim() !== '' ||
+              dateRangeType !== 'today') && (
                       <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          clearFilters();
-                          setShowAdvancedFilters(false);
-                        }}
-                      >
-                        Reset
+                variant="ghost" 
+                size="sm" 
+                onClick={clearFilters} 
+                className="h-6 px-2">
+                Clear all
                       </Button>
-                      <Button
-                        type="button"
-                        onClick={() => setShowAdvancedFilters(false)}
-                      >
-                        Apply
-                      </Button>
-                    </div>
-                  </DialogFooter>
-                </div>
-              </DialogContent>
-            </Dialog>
+            )}
           </div>
         </div>
         
