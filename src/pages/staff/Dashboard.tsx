@@ -3,7 +3,6 @@ import { format } from 'date-fns';
 import { Calendar, Clock, DollarSign, Users } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { AppointmentList } from '@/components/dashboard/AppointmentList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/utils';
 import { getStaffDashboardData, StaffDashboardData } from '@/api/services/dashboardService';
@@ -52,16 +51,6 @@ export const StaffDashboard: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [period]);
-
-  // Filter today's appointments from upcoming appointments
-  const todayAppointments = dashboardData?.upcomingAppointments.filter(
-    appointment => appointment.date === format(new Date(), 'yyyy-MM-dd')
-  ) || [];
-
-  // Get upcoming appointments (excluding today)
-  const upcomingAppointments = dashboardData?.upcomingAppointments.filter(
-    appointment => appointment.date !== format(new Date(), 'yyyy-MM-dd')
-  ).slice(0, 5) || [];
 
   if (loading) {
     return (
@@ -148,13 +137,18 @@ export const StaffDashboard: React.FC = () => {
   }
 
   const { staffInfo, performanceSummary } = dashboardData;
+  
+  // Get today's appointments count for stats card
+  const todayAppointmentsCount = dashboardData.upcomingAppointments.filter(
+    appointment => appointment.date === format(new Date(), 'yyyy-MM-dd')
+  ).length;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <PageHeader 
           title={`Welcome, ${staffInfo.name}`}
-          description="Overview of your appointments and performance"
+          description="Overview of your performance"
         />
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">Period:</span>
@@ -177,7 +171,7 @@ export const StaffDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Today's Appointments"
-          value={todayAppointments.length.toString()}
+          value={todayAppointmentsCount.toString()}
           icon={<Calendar className="h-4 w-4" />}
           description="Scheduled for today"
         />
@@ -199,64 +193,6 @@ export const StaffDashboard: React.FC = () => {
           icon={<DollarSign className="h-4 w-4" />}
           description={`For ${period} period`}
         />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Today's Schedule</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayAppointments.length > 0 ? (
-              <AppointmentList
-                title=""
-                appointments={todayAppointments.map(apt => ({
-                  id: apt.id,
-                  customerName: apt.customer.name,
-                  date: apt.date,
-                  time: apt.time,
-                  status: apt.status as 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show',
-                  services: apt.appointmentServices.map(svc => svc.service_name),
-                  staffId: staffInfo.id,
-                  staffName: staffInfo.name,
-                }))}
-                onRefresh={fetchDashboardData}
-              />
-            ) : (
-              <p className="text-muted-foreground text-center py-4">
-                No appointments scheduled for today
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Appointments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {upcomingAppointments.length > 0 ? (
-              <AppointmentList
-                title=""
-                appointments={upcomingAppointments.map(apt => ({
-                  id: apt.id,
-                  customerName: apt.customer.name,
-                  date: apt.date,
-                  time: apt.time,
-                  status: apt.status as 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show',
-                  services: apt.appointmentServices.map(svc => svc.service_name),
-                  staffId: staffInfo.id,
-                  staffName: staffInfo.name,
-                }))}
-                onRefresh={fetchDashboardData}
-              />
-            ) : (
-              <p className="text-muted-foreground text-center py-4">
-                No upcoming appointments
-              </p>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
