@@ -13,6 +13,10 @@ import { AlertCircle } from 'lucide-react';
 import { AppointmentList, SimpleAppointment } from '@/components/dashboard/AppointmentList';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
+import { Appointment } from '@/types';
+import { Appointment as ApiAppointment } from '@/api/services/appointmentService';
+import { Button } from '@/components/ui/button';
 
 export const StaffDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<StaffDashboardData | null>(null);
@@ -21,6 +25,10 @@ export const StaffDashboard: React.FC = () => {
   const [period, setPeriod] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // State for reschedule dialog
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -54,6 +62,43 @@ export const StaffDashboard: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [period]);
+  
+  // Handle reschedule appointment
+  const handleRescheduleAppointment = (appointment: SimpleAppointment) => {
+    // Convert SimpleAppointment to Appointment
+    const fullAppointment: Appointment = {
+      id: appointment.id,
+      customerId: appointment.customerId,
+      customerName: appointment.customerName,
+      customerPhone: appointment.customerPhone,
+      customerEmail: appointment.customerEmail,
+      staffId: appointment.staffId,
+      staffName: appointment.staffName,
+      date: appointment.date,
+      time: appointment.time,
+      endTime: appointment.endTime,
+      services: appointment.services,
+      status: appointment.status,
+      totalAmount: appointment.totalAmount,
+      notes: appointment.notes,
+      createdAt: appointment.createdAt || new Date().toISOString(),
+      updatedAt: appointment.updatedAt || new Date().toISOString()
+    };
+    
+    setAppointmentToReschedule(fullAppointment);
+    setShowRescheduleDialog(true);
+  };
+
+  // Handle reschedule complete
+  const handleRescheduleComplete = (updatedAppointment: ApiAppointment) => {
+    // Refresh data after rescheduling
+    fetchDashboardData();
+    
+    toast({
+      title: 'Appointment Rescheduled',
+      description: `Appointment for ${updatedAppointment.customer_name} has been rescheduled.`
+    });
+  };
 
   if (loading) {
     return (
@@ -248,8 +293,15 @@ export const StaffDashboard: React.FC = () => {
             className=""
             showActions={true}
             onRefresh={fetchDashboardData}
-            onReschedule={handleViewAllAppointments}
+            onReschedule={handleRescheduleAppointment}
           />
+          {todayAppointments.length > 0 && (
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" size="sm" onClick={handleViewAllAppointments}>
+                View All Appointments
+              </Button>
+            </div>
+          )}
         </div>
         
         {/* Upcoming Appointments */}
@@ -260,8 +312,15 @@ export const StaffDashboard: React.FC = () => {
             className=""
             showActions={true}
             onRefresh={fetchDashboardData}
-            onReschedule={handleViewAllAppointments}
+            onReschedule={handleRescheduleAppointment}
           />
+          {upcomingAppointments.length > 0 && (
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" size="sm" onClick={handleViewAllAppointments}>
+                View All Appointments
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -319,6 +378,16 @@ export const StaffDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Reschedule Dialog */}
+      {appointmentToReschedule && (
+        <RescheduleAppointmentDialog
+          appointment={appointmentToReschedule}
+          open={showRescheduleDialog}
+          onOpenChange={setShowRescheduleDialog}
+          onRescheduleComplete={handleRescheduleComplete}
+        />
+      )}
     </div>
   );
 };
