@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, addDays, startOfWeek, endOfWeek } from 'date-fns';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -7,7 +7,9 @@ import {
   Filter,
   Search,
   X,
-  Loader2
+  Loader2,
+  Clock,
+  Scissors
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
@@ -34,6 +36,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
@@ -42,10 +53,33 @@ import { getStaffAppointments, updateAppointmentStatus } from '@/api/services/ap
 import { Appointment as ApiAppointment, Service } from '@/api/services/appointmentService';
 import { Appointment as UIAppointment } from '@/types';
 
+// Date range options
+type DateRangeType = 'today' | 'tomorrow' | 'thisWeek' | 'nextWeek' | 'custom';
+
+const DATE_RANGE_OPTIONS: Record<DateRangeType, string> = {
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  thisWeek: 'This Week',
+  nextWeek: 'Next Week',
+  custom: 'Custom Range'
+};
+
 export const StaffAppointments: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateRangeType, setDateRangeType] = useState<DateRangeType>('today');
+  const [dateRange, setDateRange] = useState<{start: Date, end: Date}>({
+    start: new Date(),
+    end: new Date()
+  });
+  // Temporary date range for custom selection before applying
+  const [tempDateRange, setTempDateRange] = useState<{from: Date | undefined, to: Date | undefined}>({
+    from: new Date(),
+    to: new Date()
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [timeOfDayFilter, setTimeOfDayFilter] = useState<string>('all');
+  const [serviceFilter, setServiceFilter] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -57,14 +91,55 @@ export const StaffAppointments: React.FC = () => {
   } | null>(null);
   const { toast } = useToast();
 
+  // Handle date range selection
+  useEffect(() => {
+    let start = new Date();
+    let end = new Date();
+    
+    switch (dateRangeType) {
+      case 'today':
+        // Keep start and end as today
+        break;
+      case 'tomorrow':
+        start = addDays(new Date(), 1);
+        end = addDays(new Date(), 1);
+        break;
+      case 'thisWeek':
+        start = startOfWeek(new Date(), { weekStartsOn: 1 }); // Start from Monday
+        end = endOfWeek(new Date(), { weekStartsOn: 1 }); // End on Sunday
+        break;
+      case 'nextWeek':
+        start = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 7);
+        end = addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 7);
+        break;
+      case 'custom':
+        // Don't update dateRange for custom - it will be updated when Apply is clicked
+        return;
+      default:
+        break;
+    }
+    
+    if (dateRangeType !== 'custom') {
+      setDateRange({ start, end });
+      setSelectedDate(start);
+      
+      // Also update tempDateRange to keep them in sync
+      setTempDateRange({ from: start, to: end });
+    }
+  }, [dateRangeType]);
+
   // Fetch appointments from API
   const fetchStaffData = async (
     page = 1,
     limit = 100,
     sort = 'time_asc',
-    date?: string,
+    startDate?: string,
+    endDate?: string,
     customerId?: string,
-    status?: string
+    status?: string,
+    searchTerm?: string,
+    timeOfDay?: string,
+    services?: string[]
   ) => {
     try {
       setIsLoading(true);
@@ -72,9 +147,13 @@ export const StaffAppointments: React.FC = () => {
         page,
         limit,
         sort,
-        date,
+        startDate,
+        endDate,
         customerId,
-        status
+        status,
+        searchTerm,
+        timeOfDay,
+        services
       );
       
       if (response.success) {
@@ -102,45 +181,110 @@ export const StaffAppointments: React.FC = () => {
     }
   };
 
-  // Fetch data when component mounts or when date/filters change
+  // Fetch data when component mounts or when filters change
   useEffect(() => {
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    const startDateString = format(dateRange.start, 'yyyy-MM-dd');
+    const endDateString = format(dateRange.end, 'yyyy-MM-dd');
+    
     fetchStaffData(
       1, 
       100, 
       'time_asc', 
-      dateString, 
+      startDateString,
+      endDateString,
       undefined, 
-      statusFilter !== 'all' ? statusFilter : undefined
+      statusFilter !== 'all' ? statusFilter : undefined,
+      undefined,
+      timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+      serviceFilter.length > 0 ? serviceFilter : undefined
     );
-  }, [selectedDate, statusFilter]);
+  }, [dateRange, statusFilter, timeOfDayFilter, serviceFilter]);
 
-  // Filter appointments by search query
-  const filteredAppointments = (staffData?.appointments || [])
-    .filter(appointment => {
-      const searchLower = searchQuery.toLowerCase();
-      return searchQuery === '' || 
-        appointment.customer_name.toLowerCase().includes(searchLower) ||
-        appointment.customer_phone.includes(searchQuery);
-    });
+  // Search is now performed via API instead of locally filtering
+  const handleSearch = () => {
+    const startDateString = format(dateRange.start, 'yyyy-MM-dd');
+    const endDateString = format(dateRange.end, 'yyyy-MM-dd');
+    
+    fetchStaffData(
+      1,
+      100,
+      'time_asc',
+      startDateString,
+      endDateString,
+      undefined,
+      statusFilter !== 'all' ? statusFilter : undefined,
+      searchQuery.trim() !== '' ? searchQuery : undefined,
+      timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+      serviceFilter.length > 0 ? serviceFilter : undefined
+    );
+  };
 
-  const goToPreviousDay = () => setSelectedDate(prev => {
-    const newDate = new Date(prev);
-    newDate.setDate(prev.getDate() - 1);
-    return newDate;
-  });
+  // Handle service filter toggle
+  const toggleServiceFilter = (serviceId: string) => {
+    setServiceFilter(current => 
+      current.includes(serviceId) 
+        ? current.filter(id => id !== serviceId) 
+        : [...current, serviceId]
+    );
+  };
 
-  const goToNextDay = () => setSelectedDate(prev => {
-    const newDate = new Date(prev);
-    newDate.setDate(prev.getDate() + 1);
-    return newDate;
-  });
+  const goToPreviousDay = () => {
+    if (dateRangeType === 'custom') {
+      setDateRange(prev => ({
+        start: addDays(prev.start, -1),
+        end: addDays(prev.end, -1)
+      }));
+    } else {
+      setSelectedDate(prev => {
+        const newDate = addDays(prev, -1);
+        setDateRange({
+          start: newDate,
+          end: newDate
+        });
+        return newDate;
+      });
+      setDateRangeType('custom');
+    }
+  };
 
-  const goToToday = () => setSelectedDate(new Date());
+  const goToNextDay = () => {
+    if (dateRangeType === 'custom') {
+      setDateRange(prev => ({
+        start: addDays(prev.start, 1),
+        end: addDays(prev.end, 1)
+      }));
+    } else {
+      setSelectedDate(prev => {
+        const newDate = addDays(prev, 1);
+        setDateRange({
+          start: newDate,
+          end: newDate
+        });
+        return newDate;
+      });
+      setDateRangeType('custom');
+    }
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    setDateRange({ start: today, end: today });
+    setDateRangeType('today');
+  };
 
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
+    setTimeOfDayFilter('all');
+    setServiceFilter([]);
+    setDateRangeType('today');
+    const today = new Date();
+    setDateRange({ start: today, end: today });
+    setTempDateRange({ from: today, to: today });
+    
+    // Reset search after clearing filters
+    fetchStaffData(1, 100, 'time_asc', format(today, 'yyyy-MM-dd'), format(today, 'yyyy-MM-dd'));
   };
 
   const handleViewAppointment = (appointmentId: string) => {
@@ -178,14 +322,20 @@ export const StaffAppointments: React.FC = () => {
       console.error('Error updating appointment status:', error);
       
       // If there was an error, refresh the data to get back to a consistent state
-      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      const startDateString = format(dateRange.start, 'yyyy-MM-dd');
+      const endDateString = format(dateRange.end, 'yyyy-MM-dd');
+      
       fetchStaffData(
         1, 
         100, 
         'time_asc', 
-        selectedDateStr, 
+        startDateString,
+        endDateString,
         undefined, 
-        statusFilter !== 'all' ? statusFilter : undefined
+        statusFilter !== 'all' ? statusFilter : undefined,
+        searchQuery.trim() !== '' ? searchQuery : undefined,
+        timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+        serviceFilter.length > 0 ? serviceFilter : undefined
       );
       
       toast({
@@ -234,12 +384,35 @@ export const StaffAppointments: React.FC = () => {
     return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
   };
 
-  // Get UI appointments
-  const uiAppointments = filteredAppointments.map(convertApiToUIAppointment);
+  // Get UI appointments - No need to filter locally as API handles it
+  const uiAppointments = staffData?.appointments.map(convertApiToUIAppointment) || [];
 
   const selectedAppointment = selectedAppointmentId 
     ? uiAppointments.find(app => app.id === selectedAppointmentId) 
     : null;
+
+  // Format date range for display
+  const formatDateRange = () => {
+    if (dateRange.start.toDateString() === dateRange.end.toDateString()) {
+      return format(dateRange.start, 'MMM d, yyyy');
+    }
+    return `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}`;
+  };
+
+  // Check if there are any active filters
+  const hasActiveFilters = searchQuery || 
+    statusFilter !== 'all' || 
+    timeOfDayFilter !== 'all' || 
+    serviceFilter.length > 0 || 
+    dateRangeType !== 'today';
+
+  // Count active filters
+  const activeFiltersCount = 
+    (searchQuery ? 1 : 0) + 
+    (statusFilter !== 'all' ? 1 : 0) + 
+    (timeOfDayFilter !== 'all' ? 1 : 0) + 
+    (serviceFilter.length > 0 ? 1 : 0) + 
+    (dateRangeType !== 'today' ? 1 : 0);
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -266,25 +439,102 @@ export const StaffAppointments: React.FC = () => {
                   <Button
                     variant="outline"
                     className={cn(
-                      'w-[140px] sm:w-[180px] justify-start text-left font-normal',
+                      'w-[200px] sm:w-[240px] justify-start text-left font-normal',
                       !selectedDate && 'text-muted-foreground'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? (
-                      format(selectedDate, 'MMM d, yyyy')
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
+                    {formatDateRange()}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    initialFocus
-                  />
+                <PopoverContent className="w-auto p-0 min-w-[300px]" align="start">
+                  <Tabs defaultValue="preset" className="w-full">
+                    <TabsList className="grid grid-cols-2 w-full">
+                      <TabsTrigger value="preset">Presets</TabsTrigger>
+                      <TabsTrigger value="custom">Custom</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="preset" className="p-4 space-y-4">
+                      <RadioGroup 
+                        value={dateRangeType} 
+                        onValueChange={(value: string) => {
+                          setDateRangeType(value as DateRangeType);
+                          // Close the popover after selecting a preset
+                          const popoverTrigger = document.querySelector('[aria-expanded="true"]');
+                          if (popoverTrigger instanceof HTMLElement) {
+                            popoverTrigger.click();
+                          }
+                        }}
+                      >
+                        {Object.entries(DATE_RANGE_OPTIONS).map(([value, label]) => (
+                          <div className="flex items-center space-x-2" key={value}>
+                            <RadioGroupItem value={value} id={`date-range-${value}`} />
+                            <Label htmlFor={`date-range-${value}`}>{label}</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </TabsContent>
+                    <TabsContent value="custom" className="p-4 space-y-2">
+                      <p className="text-sm text-muted-foreground mb-2">Select a date range</p>
+                      <Calendar
+                        mode="range"
+                        selected={{
+                          from: tempDateRange.from,
+                          to: tempDateRange.to
+                        }}
+                        onSelect={(range) => {
+                          if (range?.from) {
+                            setTempDateRange({
+                              from: range.from,
+                              to: range.to
+                            });
+                            setDateRangeType('custom');
+                          }
+                        }}
+                        initialFocus
+                        numberOfMonths={2}
+                      />
+                      <Button 
+                        className="w-full mt-4" 
+                        onClick={() => {
+                          // Only update dateRange and make API call if we have a valid range
+                          if (tempDateRange.from && tempDateRange.to) {
+                            // Update the actual dateRange that triggers API calls
+                            setDateRange({
+                              start: tempDateRange.from,
+                              end: tempDateRange.to || tempDateRange.from
+                            });
+                            
+                            // Fetch appointments with the custom date range
+                            const startDateString = format(tempDateRange.from, 'yyyy-MM-dd');
+                            const endDateString = tempDateRange.to 
+                              ? format(tempDateRange.to, 'yyyy-MM-dd')
+                              : format(tempDateRange.from, 'yyyy-MM-dd');
+                            
+                            fetchStaffData(
+                              1, 
+                              100, 
+                              'time_asc', 
+                              startDateString,
+                              endDateString,
+                              undefined, 
+                              statusFilter !== 'all' ? statusFilter : undefined,
+                              searchQuery.trim() !== '' ? searchQuery : undefined,
+                              timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+                              serviceFilter.length > 0 ? serviceFilter : undefined
+                            );
+                          }
+                        
+                          // Close the popover
+                          const popoverTrigger = document.querySelector('[aria-expanded="true"]');
+                          if (popoverTrigger instanceof HTMLElement) {
+                            popoverTrigger.click();
+                          }
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </TabsContent>
+                  </Tabs>
                 </PopoverContent>
               </Popover>
               
@@ -295,14 +545,6 @@ export const StaffAppointments: React.FC = () => {
                 className="h-9 w-9"
               >
                 <ChevronRight className="h-4 w-4" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                onClick={goToToday}
-                className="hidden sm:inline-flex h-9"
-              >
-                Today
               </Button>
             </div>
 
@@ -323,13 +565,23 @@ export const StaffAppointments: React.FC = () => {
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
+          
+          <Button 
+            variant="secondary" 
+            onClick={handleSearch}
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+            Search
+          </Button>
 
-          <div className="hidden sm:flex items-center gap-3 flex-wrap">
+          <div className="hidden lg:flex items-center gap-3 flex-wrap">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
@@ -341,7 +593,19 @@ export const StaffAppointments: React.FC = () => {
               </SelectContent>
             </Select>
 
-            {(searchQuery || statusFilter !== 'all') && (
+            <Select value={timeOfDayFilter} onValueChange={setTimeOfDayFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Time of Day" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Times</SelectItem>
+                <SelectItem value="morning">Morning</SelectItem>
+                <SelectItem value="afternoon">Afternoon</SelectItem>
+                <SelectItem value="evening">Evening</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -358,13 +622,13 @@ export const StaffAppointments: React.FC = () => {
             <SheetTrigger asChild>
               <Button
                 variant="outline"
-                className="sm:hidden"
+                className="lg:hidden"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
-                {(searchQuery || statusFilter !== 'all') && (
+                {activeFiltersCount > 0 && (
                   <Badge variant="secondary" className="ml-2">
-                    {(searchQuery ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0)}
+                    {activeFiltersCount}
                   </Badge>
                 )}
               </Button>
@@ -377,10 +641,7 @@ export const StaffAppointments: React.FC = () => {
               <div className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Status</label>
-                  <Select value={statusFilter} onValueChange={(value) => {
-                    setStatusFilter(value);
-                    setShowFilters(false);
-                  }}>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
@@ -396,27 +657,156 @@ export const StaffAppointments: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Date</label>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        setSelectedDate(date);
-                        setShowFilters(false);
-                      }
-                    }}
-                    className="border rounded-md p-3"
-                  />
+                  <label className="text-sm font-medium">Time of Day</label>
+                  <Select value={timeOfDayFilter} onValueChange={setTimeOfDayFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Times</SelectItem>
+                      <SelectItem value="morning">Morning (6AM-12PM)</SelectItem>
+                      <SelectItem value="afternoon">Afternoon (12PM-5PM)</SelectItem>
+                      <SelectItem value="evening">Evening (5PM-12AM)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Date Range</label>
+                  <Select value={dateRangeType} onValueChange={(value: string) => setDateRangeType(value as DateRangeType)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select date range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DATE_RANGE_OPTIONS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {dateRangeType === 'custom' && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Custom Date Range</label>
+                    <Calendar
+                      mode="range"
+                      selected={{
+                        from: tempDateRange.from,
+                        to: tempDateRange.to
+                      }}
+                      onSelect={(range) => {
+                        if (range?.from) {
+                          setTempDateRange({
+                            from: range.from,
+                            to: range.to
+                          });
+                        }
+                      }}
+                      className="border rounded-md p-3"
+                    />
+                  </div>
+                )}
                 
-                <SheetClose asChild>
-                  <Button className="w-full">Apply Filters</Button>
-                </SheetClose>
+                {staffData?.services && staffData.services.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Services</label>
+                    <div className="flex flex-col space-y-2 max-h-[200px] overflow-y-auto p-2 border rounded-md">
+                      {staffData.services.map(service => (
+                        <div key={service.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`service-${service.id}`}
+                            checked={serviceFilter.includes(service.id)}
+                            onCheckedChange={() => toggleServiceFilter(service.id)}
+                          />
+                          <label
+                            htmlFor={`service-${service.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex justify-between w-full"
+                          >
+                            <span>{service.name}</span>
+                            <span className="text-muted-foreground">${service.price}</span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={clearFilters} className="flex-1">
+                    Reset
+                  </Button>
+                  <SheetClose asChild>
+                    <Button 
+                      className="flex-1"
+                      onClick={() => {
+                        // If using custom date range, update dateRange from tempDateRange
+                        if ((dateRangeType as string) === 'custom' && tempDateRange.from) {
+                          setDateRange({
+                            start: tempDateRange.from,
+                            end: tempDateRange.to || tempDateRange.from
+                          });
+                        }
+                      }}
+                    >
+                      Apply Filters
+                    </Button>
+                  </SheetClose>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
         </div>
+
+        {hasActiveFilters && (
+          <div className="px-4 pb-2 flex flex-wrap gap-2">
+            {dateRangeType !== 'today' && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <CalendarIcon className="h-3 w-3" />
+                {dateRangeType === 'custom' 
+                  ? `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d')}`
+                  : DATE_RANGE_OPTIONS[dateRangeType]}
+                <button className="ml-1" onClick={() => {
+                  setDateRangeType('today');
+                  const today = new Date();
+                  setDateRange({ start: today, end: today });
+                }}>
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {statusFilter !== 'all' && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                Status: {statusFilter}
+                <button className="ml-1" onClick={() => setStatusFilter('all')}>
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {timeOfDayFilter !== 'all' && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {timeOfDayFilter}
+                <button className="ml-1" onClick={() => setTimeOfDayFilter('all')}>
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {serviceFilter.map(serviceId => {
+              const service = staffData?.services.find(s => s.id === serviceId);
+              return service ? (
+                <Badge key={serviceId} variant="outline" className="flex items-center gap-1">
+                  <Scissors className="h-3 w-3" />
+                  {service.name}
+                  <button className="ml-1" onClick={() => toggleServiceFilter(serviceId)}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ) : null;
+            })}
+          </div>
+        )}
 
         {isLoading ? (
           <div className="text-center py-10">

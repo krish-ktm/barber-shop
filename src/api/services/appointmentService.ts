@@ -189,15 +189,27 @@ export const getStaffAppointments = async (
   page = 1,
   limit = 100,
   sort = 'date_asc',
-  date?: string,
+  startDate?: string,
+  endDate?: string,
   customerId?: string,
-  status?: string
+  status?: string,
+  searchTerm?: string,
+  timeOfDay?: string,
+  services?: string[]
 ): Promise<StaffAppointmentsResponse> => {
   let url = `/appointments/staff-dashboard?page=${page}&limit=${limit}&sort=${sort}`;
   
-  if (date) url += `&date=${date}`;
+  if (startDate) url += `&startDate=${startDate}`;
+  if (endDate) url += `&endDate=${endDate}`;
   if (customerId) url += `&customerId=${customerId}`;
   if (status) url += `&status=${status}`;
+  if (searchTerm) url += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+  if (timeOfDay) url += `&timeOfDay=${timeOfDay}`;
+  if (services && services.length > 0) {
+    services.forEach(serviceId => {
+      url += `&serviceId=${serviceId}`;
+    });
+  }
   
   return get<StaffAppointmentsResponse>(url);
 };
