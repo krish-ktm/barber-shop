@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { format } from 'date-fns';
 import { Calendar, Clock, DollarSign, Users } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/utils';
-import { getStaffDashboardData, StaffDashboardData } from '@/api/services/dashboardService';
+import { getStaffDashboardData, StaffDashboardData, UpcomingAppointment } from '@/api/services/dashboardService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { AppointmentList, SimpleAppointment } from '@/components/dashboard/AppointmentList';
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
 export const StaffDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<StaffDashboardData | null>(null);
@@ -18,6 +20,7 @@ export const StaffDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fetchDashboardData = async () => {
     try {
@@ -139,9 +142,49 @@ export const StaffDashboard: React.FC = () => {
   const { staffInfo, performanceSummary } = dashboardData;
   
   // Get today's appointments count for stats card
-  const todayAppointmentsCount = dashboardData.upcomingAppointments.filter(
-    appointment => appointment.date === format(new Date(), 'yyyy-MM-dd')
-  ).length;
+  const todayAppointmentsCount = dashboardData.todayAppointments ? dashboardData.todayAppointments.length : 0;
+
+  // Convert API appointments to the format expected by AppointmentList component
+  const convertToSimpleAppointment = (appointment: UpcomingAppointment): SimpleAppointment => {
+    return {
+      id: appointment.id,
+      customerId: appointment.customer.id,
+      customerName: appointment.customer.name,
+      customerPhone: appointment.customer.phone || '',
+      customerEmail: appointment.customer.email || '',
+      staffId: staffInfo.id,
+      staffName: staffInfo.name,
+      date: appointment.date,
+      time: appointment.time,
+      endTime: appointment.time, // Using time as endTime if not available
+      status: appointment.status as 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show',
+      services: appointment.appointmentServices.map(service => ({
+        serviceId: service.service_id,
+        serviceName: service.service_name,
+        price: service.price,
+        duration: service.duration
+      })),
+      totalAmount: appointment.appointmentServices.reduce((sum, service) => sum + service.price, 0),
+      notes: ''
+    };
+  };
+
+  // Convert todayAppointments for the AppointmentList
+  const todayAppointments = dashboardData.todayAppointments 
+    ? dashboardData.todayAppointments.map(convertToSimpleAppointment)
+    : [];
+    
+  // Filter upcoming appointments to exclude today's appointments
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const upcomingAppointments = dashboardData.upcomingAppointments
+    ? dashboardData.upcomingAppointments
+        .filter(appointment => appointment.date !== today)
+        .map(convertToSimpleAppointment)
+    : [];
+
+  const handleViewAllAppointments = () => {
+    navigate('/staff/appointments');
+  };
 
   return (
     <div className="space-y-6">
@@ -193,6 +236,33 @@ export const StaffDashboard: React.FC = () => {
           icon={<DollarSign className="h-4 w-4" />}
           description={`For ${period} period`}
         />
+      </div>
+
+      {/* Appointments Sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Today's Appointments */}
+        <div>
+          <AppointmentList 
+            title="Today's Appointments"
+            appointments={todayAppointments}
+            className=""
+            showActions={true}
+            onRefresh={fetchDashboardData}
+            onReschedule={handleViewAllAppointments}
+          />
+        </div>
+        
+        {/* Upcoming Appointments */}
+        <div>
+          <AppointmentList 
+            title="Upcoming Appointments"
+            appointments={upcomingAppointments}
+            className=""
+            showActions={true}
+            onRefresh={fetchDashboardData}
+            onReschedule={handleViewAllAppointments}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -252,3 +322,5 @@ export const StaffDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default StaffDashboard;

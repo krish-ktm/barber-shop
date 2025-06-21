@@ -182,6 +182,7 @@ export interface StaffDashboardData {
   performanceSummary: PerformanceSummary;
   serviceBreakdown: ServiceBreakdown[];
   upcomingAppointments: UpcomingAppointment[];
+  todayAppointments: UpcomingAppointment[];
   returnCustomers: ReturnCustomer[];
   staffReviews: StaffReview[];
   commissionData: CommissionData[];
