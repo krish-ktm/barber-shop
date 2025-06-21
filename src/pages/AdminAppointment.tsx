@@ -710,7 +710,7 @@ export const AdminAppointment: React.FC = () => {
                   <Button
                     variant="outline"
                     className={cn(
-                      'w-[200px] sm:w-[240px] justify-start text-left font-normal',
+                      'w-[200px] sm:w-[240px] justify-center text-center font-normal',
                       !selectedDate && 'text-muted-foreground'
                     )}
                   >
