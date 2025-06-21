@@ -6,10 +6,7 @@ import {
   ChevronRight,
   Filter,
   Search,
-  Loader2,
-  Clock,
-  Scissors,
-  User
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
@@ -120,6 +117,7 @@ export const AdminAppointment: React.FC = () => {
     to: new Date()
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearchTerm, setActiveSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [staffFilter, setStaffFilter] = useState<string>('all');
   const [serviceFilter, setServiceFilter] = useState<string>('all');
@@ -436,13 +434,6 @@ export const AdminAppointment: React.FC = () => {
   const filteredAppointments = appointments
     .filter(appointment => {
       // Basic filtering
-      const searchLower = searchQuery.toLowerCase();
-      const isSearchMatch = searchQuery === '' || 
-        appointment.customer_name.toLowerCase().includes(searchLower) ||
-        appointment.staff_name.toLowerCase().includes(searchLower) ||
-        appointment.customer_phone.includes(searchQuery) ||
-        (appointment.customer_email?.toLowerCase().includes(searchLower) || false);
-      
       const isStatusMatch = statusFilter === 'all' || appointment.status === statusFilter;
       const isStaffMatch = staffFilter === 'all' || appointment.staff_id === staffFilter;
       
@@ -487,12 +478,12 @@ export const AdminAppointment: React.FC = () => {
         const totalDuration = appointmentServices.reduce((sum, service) => sum + service.duration, 0);
         const isDurationMatch = isDurationInRange(totalDuration, durationRange);
         
-        return isSearchMatch && isStatusMatch && isStaffMatch && 
+        return isStatusMatch && isStaffMatch && 
                isServiceMatch && isDateMatch && isTimeMatch && 
                isPriceMatch && isDurationMatch;
       }
       
-      return isSearchMatch && isStatusMatch && isStaffMatch && isServiceMatch && isDateMatch;
+      return isStatusMatch && isStaffMatch && isServiceMatch && isDateMatch;
     })
     .sort((a, b) => {
       const timeA = a.time.split(':').map(Number);
@@ -548,22 +539,86 @@ export const AdminAppointment: React.FC = () => {
     : null;
 
   // Navigation helpers
-  const goToPreviousDay = () => setSelectedDate(prev => {
-    const newDate = new Date(prev);
-    newDate.setDate(prev.getDate() - 1);
-    return newDate;
-  });
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() - 1);
+    setSelectedDate(newDate);
+    
+    // Update date range to the new date
+    setDateRange({ start: newDate, end: newDate });
+    setDateRangeType('today'); // Reset to "today" equivalent for the new date
+    
+    // Fetch data for the new date
+    const dateString = format(newDate, 'yyyy-MM-dd');
+    fetchAdminData(
+      1, 
+      100, 
+      'time_asc', 
+      dateString,
+      dateString,
+      staffFilter !== 'all' ? staffFilter : undefined, 
+      undefined, 
+      statusFilter !== 'all' ? statusFilter : undefined,
+      searchQuery.trim() !== '' ? searchQuery : undefined,
+      timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+      multiServiceFilter.length > 0 ? multiServiceFilter : undefined
+    );
+  };
 
-  const goToNextDay = () => setSelectedDate(prev => {
-    const newDate = new Date(prev);
-    newDate.setDate(prev.getDate() + 1);
-    return newDate;
-  });
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() + 1);
+    setSelectedDate(newDate);
+    
+    // Update date range to the new date
+    setDateRange({ start: newDate, end: newDate });
+    setDateRangeType('today'); // Reset to "today" equivalent for the new date
+    
+    // Fetch data for the new date
+    const dateString = format(newDate, 'yyyy-MM-dd');
+    fetchAdminData(
+      1, 
+      100, 
+      'time_asc', 
+      dateString,
+      dateString,
+      staffFilter !== 'all' ? staffFilter : undefined, 
+      undefined, 
+      statusFilter !== 'all' ? statusFilter : undefined,
+      searchQuery.trim() !== '' ? searchQuery : undefined,
+      timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+      multiServiceFilter.length > 0 ? multiServiceFilter : undefined
+    );
+  };
 
-  const goToToday = () => setSelectedDate(new Date());
+  const goToToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    
+    // Update date range to today
+    setDateRange({ start: today, end: today });
+    setDateRangeType('today');
+    
+    // Fetch data for today
+    const dateString = format(today, 'yyyy-MM-dd');
+    fetchAdminData(
+      1, 
+      100, 
+      'time_asc', 
+      dateString,
+      dateString,
+      staffFilter !== 'all' ? staffFilter : undefined, 
+      undefined, 
+      statusFilter !== 'all' ? statusFilter : undefined,
+      searchQuery.trim() !== '' ? searchQuery : undefined,
+      timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+      multiServiceFilter.length > 0 ? multiServiceFilter : undefined
+    );
+  };
 
   const clearFilters = () => {
     setSearchQuery('');
+    setActiveSearchTerm('');
     setStatusFilter('all');
     setStaffFilter('all');
     setServiceFilter('all');
@@ -603,6 +658,9 @@ export const AdminAppointment: React.FC = () => {
   const handleSearch = () => {
     const startDateString = format(dateRange.start, 'yyyy-MM-dd');
     const endDateString = format(dateRange.end, 'yyyy-MM-dd');
+    
+    // Update the active search term when search is executed
+    setActiveSearchTerm(searchQuery.trim());
     
     fetchAdminData(
       1,
@@ -670,7 +728,63 @@ export const AdminAppointment: React.FC = () => {
                       <RadioGroup 
                         value={dateRangeType} 
                         onValueChange={(value: string) => {
-                          setDateRangeType(value as DateRangeType);
+                          const selectedDateRange = value as DateRangeType;
+                          
+                          // If "today" is selected, use the goToToday function
+                          if (selectedDateRange === 'today') {
+                            goToToday();
+                            
+                            // Close the popover after selecting a preset
+                            const popoverTrigger = document.querySelector('[aria-expanded="true"]');
+                            if (popoverTrigger instanceof HTMLElement) {
+                              popoverTrigger.click();
+                            }
+                            return;
+                          }
+                          
+                          // Update the date range based on the selected preset
+                          let start = new Date();
+                          let end = new Date();
+                          
+                          switch (selectedDateRange) {
+                            case 'tomorrow':
+                              start = addDays(new Date(), 1);
+                              end = addDays(new Date(), 1);
+                              break;
+                            case 'thisWeek':
+                              start = startOfWeek(new Date(), { weekStartsOn: 1 });
+                              end = endOfWeek(new Date(), { weekStartsOn: 1 });
+                              break;
+                            case 'nextWeek':
+                              start = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 7);
+                              end = addDays(endOfWeek(new Date(), { weekStartsOn: 1 }), 7);
+                              break;
+                            default:
+                              break;
+                          }
+                          
+                          // Update date range state
+                          setDateRange({ start, end });
+                          setDateRangeType(selectedDateRange);
+                          
+                          // Fetch data with the new date range
+                          const startDateString = format(start, 'yyyy-MM-dd');
+                          const endDateString = format(end, 'yyyy-MM-dd');
+                          
+                          fetchAdminData(
+                            1, 
+                            100, 
+                            'time_asc', 
+                            startDateString,
+                            endDateString,
+                            staffFilter !== 'all' ? staffFilter : undefined, 
+                            undefined, 
+                            statusFilter !== 'all' ? statusFilter : undefined,
+                            searchQuery.trim() !== '' ? searchQuery : undefined,
+                            timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+                            multiServiceFilter.length > 0 ? multiServiceFilter : undefined
+                          );
+                          
                           // Close the popover after selecting a preset
                           const popoverTrigger = document.querySelector('[aria-expanded="true"]');
                           if (popoverTrigger instanceof HTMLElement) {
@@ -678,7 +792,8 @@ export const AdminAppointment: React.FC = () => {
                           }
                         }}
                       >
-                        {Object.entries(DATE_RANGE_OPTIONS).map(([value, label]) => (
+                        {Object.entries(DATE_RANGE_OPTIONS)
+                          .map(([value, label]) => (
                           <div className="flex items-center space-x-2" key={value}>
                             <RadioGroupItem value={value} id={`date-range-${value}`} />
                             <Label htmlFor={`date-range-${value}`}>{label}</Label>
@@ -688,7 +803,7 @@ export const AdminAppointment: React.FC = () => {
                     </TabsContent>
                     <TabsContent value="custom" className="p-4 space-y-2">
                       <p className="text-sm text-muted-foreground mb-2">Select a date range</p>
-                  <Calendar
+                      <Calendar
                         mode="range"
                         selected={{
                           from: tempDateRange?.from,
@@ -697,10 +812,10 @@ export const AdminAppointment: React.FC = () => {
                         onSelect={(range) => {
                           if (range?.from) {
                             setTempDateRange(range);
-                            setDateRangeType('custom');
+                            // Don't set dateRangeType to 'custom' here, only set it when Apply is clicked
                           }
                         }}
-                    initialFocus
+                        initialFocus
                         numberOfMonths={2}
                       />
                       <Button 
@@ -713,6 +828,9 @@ export const AdminAppointment: React.FC = () => {
                               start: tempDateRange.from,
                               end: tempDateRange.to || tempDateRange.from
                             });
+                            
+                            // Only set dateRangeType to 'custom' when Apply is clicked
+                            setDateRangeType('custom');
                             
                             // Fetch appointments with the custom date range
                             const startDateString = format(tempDateRange.from, 'yyyy-MM-dd');
@@ -757,29 +875,12 @@ export const AdminAppointment: React.FC = () => {
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              
-              <Button
-                variant="ghost"
-                onClick={goToToday}
-                className="hidden sm:inline-flex h-9"
-              >
-                Today
-              </Button>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                className="h-9"
-                onClick={clearFilters}
-              >
-                Clear Filters
-                {getActiveFiltersCount() > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {getActiveFiltersCount()}
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-9 px-4">
+                {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
                   </Badge>
-                )}
-              </Button>
             </div>
           </div>
         </div>
@@ -844,51 +945,60 @@ export const AdminAppointment: React.FC = () => {
                 <SelectItem value="morning">Morning</SelectItem>
                 <SelectItem value="afternoon">Afternoon</SelectItem>
                 <SelectItem value="evening">Evening</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+        {/* Show active filters as badges - moved below the controls */}
+        <div className="px-4 pb-4 flex flex-wrap gap-2">
+          {dateRangeType !== 'today' && (
+            <Badge variant="secondary" className="flex gap-1 items-center">
+              <CalendarIcon className="h-3 w-3 mr-1" />
+              {dateRangeType === 'custom' 
+                ? `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d')}`
+                : DATE_RANGE_OPTIONS[dateRangeType]}
+            </Badge>
+          )}
           
-          {/* Show active filters as badges */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            {statusFilter !== 'all' && (
-              <Badge variant="secondary" className="flex gap-1 items-center">
-                Status: {statusFilter}
-              </Badge>
-            )}
-            
-            {staffFilter !== 'all' && (
-              <Badge variant="secondary" className="flex gap-1 items-center">
-                Staff: {staff.find(s => s.id === staffFilter)?.name || staffFilter}
-              </Badge>
-            )}
-            
-            {timeOfDayFilter !== 'all' && (
-              <Badge variant="secondary" className="flex gap-1 items-center">
-                Time: {timeOfDayFilter}
-              </Badge>
-            )}
+          {statusFilter !== 'all' && (
+            <Badge variant="secondary" className="flex gap-1 items-center">
+              Status: {statusFilter}
+            </Badge>
+          )}
+          
+          {staffFilter !== 'all' && (
+            <Badge variant="secondary" className="flex gap-1 items-center">
+              Staff: {staff.find(s => s.id === staffFilter)?.name || staffFilter}
+            </Badge>
+          )}
+          
+          {timeOfDayFilter !== 'all' && (
+            <Badge variant="secondary" className="flex gap-1 items-center">
+              Time: {timeOfDayFilter}
+            </Badge>
+          )}
 
-            {searchQuery.trim() !== '' && (
-              <Badge variant="secondary" className="flex gap-1 items-center">
-                Search: {searchQuery}
-              </Badge>
-            )}
-            
-            {/* Clear all filters button */}
-            {(statusFilter !== 'all' || 
-              staffFilter !== 'all' || 
-              timeOfDayFilter !== 'all' || 
-              searchQuery.trim() !== '' ||
-              dateRangeType !== 'today') && (
-                      <Button
-                variant="ghost" 
-                size="sm" 
-                onClick={clearFilters} 
-                className="h-6 px-2">
-                Clear all
-                      </Button>
-            )}
-          </div>
+          {activeSearchTerm !== '' && (
+            <Badge variant="secondary" className="flex gap-1 items-center">
+              Search: {activeSearchTerm}
+            </Badge>
+          )}
+          
+          {/* Clear all filters button */}
+          {(statusFilter !== 'all' || 
+            staffFilter !== 'all' || 
+            timeOfDayFilter !== 'all' || 
+            activeSearchTerm !== '' ||
+            dateRangeType !== 'today') && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilters} 
+              className="h-6 px-2">
+              Clear all
+            </Button>
+          )}
         </div>
         
         <div className="p-4">
