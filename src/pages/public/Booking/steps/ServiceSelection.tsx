@@ -31,7 +31,14 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
       setSelectedServices(selectedServices.filter(s => s.id !== service.id));
     } else {
       // Add the service if it's not selected
-      setSelectedServices([...selectedServices, service as Service]);
+      // Ensure price is properly converted to a number
+      const serviceToAdd = {
+        ...service,
+        price: typeof service.price === 'string' ? parseFloat(service.price) : Number(service.price),
+        duration: typeof service.duration === 'string' ? parseInt(service.duration, 10) : Number(service.duration)
+      } as Service;
+      
+      setSelectedServices([...selectedServices, serviceToAdd]);
     }
   };
 

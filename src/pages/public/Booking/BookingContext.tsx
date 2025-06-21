@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Service } from '@/types';
 
 interface BookingContextType {
@@ -37,7 +37,16 @@ interface BookingContextType {
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  // Process services to ensure price and duration are numbers
+  const processServices = (services: Service[]): Service[] => {
+    return services.map(service => ({
+      ...service,
+      price: typeof service.price === 'string' ? parseFloat(service.price) : Number(service.price),
+      duration: typeof service.duration === 'string' ? parseInt(service.duration, 10) : Number(service.duration)
+    }));
+  };
+
+  const [selectedServices, setSelectedServicesRaw] = useState<Service[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [selectedStaffName, setSelectedStaffName] = useState<string | null>(null);
   const [selectedStaffPosition, setSelectedStaffPosition] = useState<string | null>(null);
@@ -52,9 +61,33 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     notes: '',
   });
 
+  // Custom setter that processes services before updating state
+  const setSelectedServices = (services: Service[]) => {
+    const processedServices = processServices(services);
+    setSelectedServicesRaw(processedServices);
+  };
+
+  // Debug selected services whenever they change
+  useEffect(() => {
+    console.log('Selected Services:', selectedServices);
+    
+    // Debug each service price
+    selectedServices.forEach((service, index) => {
+      console.log(`Service ${index + 1}: ${service.name}`);
+      console.log(`  - Price: ${service.price}`);
+      console.log(`  - Price type: ${typeof service.price}`);
+      console.log(`  - Is NaN: ${isNaN(Number(service.price))}`);
+    });
+  }, [selectedServices]);
+
   // Calculate total duration and price
-  const totalDuration = selectedServices.reduce((sum, service) => sum + service.duration, 0);
-  const totalPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
+  const totalDuration = selectedServices.reduce((sum, service) => sum + (service.duration || 0), 0);
+  const totalPrice = selectedServices.reduce((sum, service) => {
+    const price = Number(service.price);
+    return sum + (isNaN(price) ? 0 : price);
+  }, 0);
+
+  console.log('Total Price:', totalPrice);
 
   return (
     <BookingContext.Provider

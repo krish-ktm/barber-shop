@@ -49,11 +49,12 @@ export const BookingConfirmation: React.FC = () => {
       // Format date for API
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
-      // Create booking request
+      // Create booking request with multi-service support
       const bookingRequest: BookingRequest = {
         customer_name: customerDetails.name,
         customer_phone: customerDetails.phone,
-        service_id: selectedServices[0].id, // For now, just use the first service
+        // Send all service IDs as comma-separated string
+        service_id: selectedServices.map(service => service.id).join(','),
         staff_id: selectedStaffId,
         date: formattedDate,
         time: selectedTime,
@@ -150,12 +151,23 @@ export const BookingConfirmation: React.FC = () => {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Time:</span>
               <span className="font-medium">
-                {bookingResponse?.appointment?.display_time || formatDisplayTime(selectedTime!)}
+                {bookingResponse?.appointment?.display_time || bookingResponse?.appointment?.displayTime || formatDisplayTime(selectedTime!)}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Service:</span>
-              <span className="font-medium">{selectedServices[0].name}</span>
+            <div className="flex flex-col">
+              <span className="text-muted-foreground mb-1">Services:</span>
+              {selectedServices.map((service) => (
+                <div key={service.id} className="flex justify-between pl-2 mb-0.5">
+                  <span className="font-medium">{service.name}</span>
+                  <span>{formatCurrency(service.price)}</span>
+                </div>
+              ))}
+              {selectedServices.length > 1 && (
+                <div className="flex justify-between border-t mt-1 pt-1 font-semibold">
+                  <span>Total:</span>
+                  <span>{formatCurrency(totalPrice)}</span>
+                </div>
+              )}
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Staff:</span>

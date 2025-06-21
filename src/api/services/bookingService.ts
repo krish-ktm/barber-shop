@@ -28,7 +28,7 @@ export interface BookingRequest {
   customer_name: string;
   customer_email?: string;
   customer_phone: string;
-  service_id: string;
+  service_id: string; // Can be a single ID or comma-separated list of IDs
   staff_id: string;
   date: string;
   time: string;
@@ -70,11 +70,13 @@ export interface BookingResponse {
     date: string;
     time: string;
     display_time?: string;
+    displayTime?: string;
     staff_name: string;
     service_name: string;
     timezone?: string;
     client_timezone?: string;
   };
+  message?: string;
 }
 
 /**
@@ -87,10 +89,12 @@ export const getBookingServices = async (): Promise<ServicesResponse> => {
 /**
  * Get all staff available for booking
  */
-export const getBookingStaff = async (serviceId?: string): Promise<StaffResponse> => {
+export const getBookingStaff = async (serviceId?: string | string[]): Promise<StaffResponse> => {
   let url = '/booking/staff';
   if (serviceId) {
-    url += `?serviceId=${serviceId}`;
+    // Handle both single string and array of service IDs
+    const serviceParam = Array.isArray(serviceId) ? serviceId.join(',') : serviceId;
+    url += `?serviceId=${serviceParam}`;
   }
   return get<StaffResponse>(url);
 };
@@ -108,12 +112,16 @@ export const getStaffDetails = async (staffId: string): Promise<StaffDetailsResp
 export const getBookingSlots = async (
   date: string,
   staffId: string,
-  serviceId: string
+  serviceId: string | string[]
 ): Promise<SlotsResponse> => {
   // Include client timezone in the request
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  // Handle multiple service IDs
+  const serviceParam = Array.isArray(serviceId) ? serviceId.join(',') : serviceId;
+  
   return get<SlotsResponse>(
-    `/booking/slots?date=${date}&staff_id=${staffId}&service_id=${serviceId}&timezone=${encodeURIComponent(timezone)}`
+    `/booking/slots?date=${date}&staff_id=${staffId}&service_id=${serviceParam}&timezone=${encodeURIComponent(timezone)}`
   );
 };
 

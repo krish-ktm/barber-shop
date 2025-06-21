@@ -38,9 +38,9 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
       setError(null);
       
       try {
-        // If we're in service-first flow and have selected services, pass the first service ID
+        // If we're in service-first flow and have selected services, pass all service IDs
         const serviceId = bookingFlow === 'service-first' && selectedServices.length > 0 
-          ? selectedServices[0].id 
+          ? selectedServices.map(service => service.id)
           : undefined;
           
         const response = await getBookingStaff(serviceId);
