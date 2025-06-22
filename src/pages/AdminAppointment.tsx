@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { format, parse, startOfDay, endOfDay, isWithinInterval, isAfter, addDays, startOfWeek, endOfWeek } from 'date-fns';
+import { format, addDays, startOfWeek, endOfWeek } from 'date-fns';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Filter,
   Search,
-  Loader2
+  Loader2,
+  Sliders
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
@@ -55,7 +56,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Sliders } from 'lucide-react';
 import {
   RadioGroup,
   RadioGroupItem,
@@ -443,31 +443,12 @@ export const AdminAppointment: React.FC = () => {
       const isServiceMatch = serviceFilter === 'all' || 
         appointmentServices.some(service => service.service_id === serviceFilter);
       
-      // Basic date filtering (if not using advanced filters)
-      let isDateMatch = true;
-      if (!useAdvancedFilters) {
-        isDateMatch = appointment.date === format(selectedDate, 'yyyy-MM-dd');
-      }
-      
+      // Date filtering - IMPORTANT:
+      // We rely on the API to filter by date range correctly
+      // No date filtering needed here
+            
       // Advanced filtering
       if (useAdvancedFilters) {
-        // Date range filtering
-        if (dateRange?.from) {
-          const appointmentDate = parse(appointment.date, 'yyyy-MM-dd', new Date());
-          
-          if (dateRange.to) {
-            // We have both from and to dates
-            isDateMatch = isWithinInterval(appointmentDate, {
-              start: startOfDay(dateRange.from),
-              end: endOfDay(dateRange.to)
-            });
-          } else {
-            // We only have the from date
-            isDateMatch = isAfter(appointmentDate, startOfDay(dateRange.from)) || 
-                          format(appointmentDate, 'yyyy-MM-dd') === format(dateRange.from, 'yyyy-MM-dd');
-          }
-        }
-        
         // Time range filtering
         const isTimeMatch = isTimeInRange(appointment.time, timeRange);
         
@@ -479,11 +460,11 @@ export const AdminAppointment: React.FC = () => {
         const isDurationMatch = isDurationInRange(totalDuration, durationRange);
         
         return isStatusMatch && isStaffMatch && 
-               isServiceMatch && isDateMatch && isTimeMatch && 
+               isServiceMatch && isTimeMatch && 
                isPriceMatch && isDurationMatch;
       }
       
-      return isStatusMatch && isStaffMatch && isServiceMatch && isDateMatch;
+      return isStatusMatch && isStaffMatch && isServiceMatch;
     })
     .sort((a, b) => {
       const timeA = a.time.split(':').map(Number);
@@ -656,6 +637,8 @@ export const AdminAppointment: React.FC = () => {
 
   // Search is now performed via API instead of locally filtering
   const handleSearch = () => {
+    // When searching, always use the full date range from dateRange
+    // This ensures we send the right dates to the API
     const startDateString = format(dateRange.start, 'yyyy-MM-dd');
     const endDateString = format(dateRange.end, 'yyyy-MM-dd');
     
