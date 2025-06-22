@@ -1,12 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { format, subDays, subMonths } from "date-fns";
+import { format, subDays } from "date-fns";
 import {
   BarChart3,
-  Calendar as CalendarIcon,
-  Download,
-  Filter,
   RefreshCcw,
-  X,
   Users,
   Scissors,
   Clock,
@@ -14,13 +10,8 @@ import {
   Star,
   TrendingUp,
   ChevronDown,
-  Check as CheckIcon,
-  UserPlus,
-  Info,
   Loader2,
-  TrendingDown,
   Coins,
-  CreditCard,
   PercentCircle,
   DollarSign as DollarSignIcon,
 } from "lucide-react";
@@ -98,10 +89,12 @@ import {
   getServicesReport,
   getStaffReport,
   getTipsDiscountsReport,
+  getRevenueByDayOfWeek,
   RevenueData,
   ServicePerformance,
   StaffPerformance,
   TipsDiscountsData,
+  DayOfWeekRevenue,
 } from "@/api/services/reportService";
 import { getAllStaff } from "@/api/services/staffService";
 import { getAllServices } from "@/api/services/serviceService";
@@ -173,6 +166,13 @@ export const Reports: React.FC = () => {
   } = useApi(getTipsDiscountsReport);
 
   const {
+    data: dayOfWeekData,
+    loading: dayOfWeekLoading,
+    error: dayOfWeekError,
+    execute: fetchDayOfWeekReport,
+  } = useApi(getRevenueByDayOfWeek);
+
+  const {
     data: staffListData,
     loading: staffListLoading,
     error: staffListError,
@@ -228,9 +228,9 @@ export const Reports: React.FC = () => {
     fetchInitialData();
   }, []);
 
-  // Add effect to refetch data when report type changes
+  // Add effect to refetch data when report type or date changes
   useEffect(() => {
-    // Don't run on initial render
+    // Only refetch if we have previously loaded data (don't duplicate initial load)
     if (revenueData || servicesData || staffData || tipsDiscountsData) {
       // Format dates for API calls
       const dateFrom = format(fromDate, 'yyyy-MM-dd');
@@ -244,19 +244,18 @@ export const Reports: React.FC = () => {
       fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
       fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
       fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
+      fetchDayOfWeekReport(dateFrom, dateTo);
     }
   }, [
     reportType, 
     fromDate, 
-    toDate, 
+    toDate,
     fetchRevenueReport, 
     fetchServicesReport, 
     fetchStaffReport, 
-    fetchTipsDiscountsReport, 
-    revenueData, 
-    servicesData, 
-    staffData, 
-    tipsDiscountsData
+    fetchTipsDiscountsReport,
+    fetchDayOfWeekReport
+    // Remove data dependencies that cause infinite loop
   ]);
 
   // Handle API errors
@@ -268,6 +267,7 @@ export const Reports: React.FC = () => {
       { error: staffListError, source: "staff list" },
       { error: servicesListError, source: "services list" },
       { error: tipsDiscountsError, source: "tips and discounts" },
+      { error: dayOfWeekError, source: "revenue by day" },
     ];
 
     errors.forEach(({ error, source }) => {
@@ -286,6 +286,7 @@ export const Reports: React.FC = () => {
     staffListError,
     servicesListError,
     tipsDiscountsError,
+    dayOfWeekError,
     toast,
   ]);
 
@@ -306,6 +307,7 @@ export const Reports: React.FC = () => {
     fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
     fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
     fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
+    fetchDayOfWeekReport(dateFrom, dateTo);
     
     // Fetch staff and services lists for filters
     fetchStaffList();
@@ -364,6 +366,7 @@ export const Reports: React.FC = () => {
     fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
     fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
     fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
+    fetchDayOfWeekReport(dateFrom, dateTo);
     
     // Close filters if open
     setShowFilters(false);
@@ -888,45 +891,57 @@ export const Reports: React.FC = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {[
-                          "Monday",
-                          "Tuesday",
-                          "Wednesday",
-                          "Thursday",
-                          "Friday",
-                          "Saturday",
-                          "Sunday",
-                        ].map((day) => {
-                          const value = 1000 + Math.floor(Math.random() * 2000);
-                          const transactions =
-                            10 + Math.floor(Math.random() * 30);
-                          const change = -10 + Math.floor(Math.random() * 30);
-
-                          return (
-                            <TableRow key={day}>
-                              <TableCell className="font-medium">
-                                {day}
-                              </TableCell>
-                              <TableCell>${value.toLocaleString()}</TableCell>
-                              <TableCell>{transactions}</TableCell>
-                              <TableCell>
-                                ${(value / transactions).toFixed(2)}
-                              </TableCell>
-                              <TableCell>
-                                <span
-                                  className={
-                                    change > 0
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }
-                                >
-                                  {change > 0 ? "+" : ""}
-                                  {change}%
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                        {dayOfWeekLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-4">
+                              <Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />
+                              Loading data...
+                            </TableCell>
+                          </TableRow>
+                        ) : dayOfWeekError ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-destructive py-4">
+                              Error loading data. Please try again.
+                            </TableCell>
+                          </TableRow>
+                        ) : !dayOfWeekData || !dayOfWeekData.data || dayOfWeekData.data.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
+                              No revenue data available for the selected period.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          dayOfWeekData.data.map((dayData) => {
+                            const revenue = parseFloat(String(dayData.revenue)) || 0;
+                            const transactions = parseInt(String(dayData.transactions)) || 0;
+                            const avgTransaction = parseFloat(String(dayData.avg_transaction)) || 0;
+                            
+                            return (
+                              <TableRow key={dayData.day_of_week}>
+                                <TableCell className="font-medium">
+                                  {dayData.day_name}
+                                </TableCell>
+                                <TableCell>${revenue.toLocaleString()}</TableCell>
+                                <TableCell>{transactions}</TableCell>
+                                <TableCell>
+                                  ${avgTransaction.toFixed(2)}
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className={
+                                      dayData.change_percentage > 0
+                                        ? "text-green-600"
+                                        : "text-red-600"
+                                    }
+                                  >
+                                    {dayData.change_percentage > 0 ? "+" : ""}
+                                    {dayData.change_percentage}%
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
                       </TableBody>
                     </Table>
                   </CardContent>
@@ -1916,7 +1931,7 @@ export const Reports: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${parseFloat(tipsDiscountsData.data.summary.totalTips).toFixed(2)}
+                        ${parseFloat(tipsDiscountsData.data.summary.totalTips as string).toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {tipsDiscountsData.data.summary.invoicesWithTip} invoices with tips
@@ -1924,7 +1939,7 @@ export const Reports: React.FC = () => {
                       <div className="mt-2 text-sm">
                         <span className="text-muted-foreground">Average:</span>{" "}
                         <span className="font-medium">
-                          {parseFloat(tipsDiscountsData.data.summary.avgTipPercentage).toFixed(1)}%
+                          {parseFloat(tipsDiscountsData.data.summary.avgTipPercentage as string).toFixed(1)}%
                         </span>
                       </div>
                     </CardContent>
@@ -1936,7 +1951,7 @@ export const Reports: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${parseFloat(tipsDiscountsData.data.summary.totalDiscounts).toFixed(2)}
+                        ${parseFloat(tipsDiscountsData.data.summary.totalDiscounts as string).toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {tipsDiscountsData.data.summary.invoicesWithDiscount} invoices with discounts
@@ -1944,7 +1959,7 @@ export const Reports: React.FC = () => {
                       <div className="mt-2 text-sm">
                         <span className="text-muted-foreground">Average:</span>{" "}
                         <span className="font-medium">
-                          {parseFloat(tipsDiscountsData.data.summary.avgDiscountPercentage).toFixed(1)}%
+                          {parseFloat(tipsDiscountsData.data.summary.avgDiscountPercentage as string).toFixed(1)}%
                         </span>
                       </div>
                     </CardContent>
@@ -1956,21 +1971,21 @@ export const Reports: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${parseFloat(tipsDiscountsData.data.summary.totalSales).toFixed(2)}
+                        ${parseFloat(tipsDiscountsData.data.summary.totalSales as string).toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {tipsDiscountsData.data.summary.totalInvoices} total invoices
                       </p>
                       <Progress 
                         value={
-                          (parseFloat(tipsDiscountsData.data.summary.invoicesWithTip) / 
-                          parseFloat(tipsDiscountsData.data.summary.totalInvoices)) * 100
+                          (parseFloat(tipsDiscountsData.data.summary.invoicesWithTip as string) / 
+                          parseFloat(tipsDiscountsData.data.summary.totalInvoices as string)) * 100
                         } 
                         className="h-2 mt-2"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {Math.round((parseFloat(tipsDiscountsData.data.summary.invoicesWithTip) / 
-                        parseFloat(tipsDiscountsData.data.summary.totalInvoices)) * 100)}% of invoices include tips
+                        {Math.round((parseFloat(tipsDiscountsData.data.summary.invoicesWithTip as string) / 
+                        parseFloat(tipsDiscountsData.data.summary.totalInvoices as string)) * 100)}% of invoices include tips
                       </p>
                     </CardContent>
                   </Card>
@@ -1987,7 +2002,7 @@ export const Reports: React.FC = () => {
                               {type.discount_type || 'No type'} ({type.count})
                             </span>
                             <span className="text-sm font-medium">
-                              ${parseFloat(type.totalDiscount).toFixed(2)}
+                              ${parseFloat(type.totalDiscount as string).toFixed(2)}
                             </span>
                           </div>
                         ))}
@@ -2040,11 +2055,11 @@ export const Reports: React.FC = () => {
                         {tipsDiscountsData.data.staffBreakdown.map((staff) => (
                           <TableRow key={staff.staff_id}>
                             <TableCell>{staff.staff_name}</TableCell>
-                            <TableCell>${parseFloat(staff.totalTips).toFixed(2)}</TableCell>
-                            <TableCell>{parseFloat(staff.tipPercentage).toFixed(1)}%</TableCell>
-                            <TableCell>${parseFloat(staff.totalDiscounts).toFixed(2)}</TableCell>
-                            <TableCell>{parseFloat(staff.discountPercentage).toFixed(1)}%</TableCell>
-                            <TableCell>${parseFloat(staff.totalSales).toFixed(2)}</TableCell>
+                            <TableCell>${parseFloat(staff.totalTips as string).toFixed(2)}</TableCell>
+                            <TableCell>{parseFloat(staff.tipPercentage as string).toFixed(1)}%</TableCell>
+                            <TableCell>${parseFloat(staff.totalDiscounts as string).toFixed(2)}</TableCell>
+                            <TableCell>{parseFloat(staff.discountPercentage as string).toFixed(1)}%</TableCell>
+                            <TableCell>${parseFloat(staff.totalSales as string).toFixed(2)}</TableCell>
                             <TableCell>{staff.invoiceCount}</TableCell>
                           </TableRow>
                         ))}

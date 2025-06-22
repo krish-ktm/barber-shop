@@ -107,6 +107,16 @@ export interface TipsDiscountsData {
   }>;
 }
 
+export interface DayOfWeekRevenue {
+  day_of_week: string;
+  numeric_day_of_week: number;
+  day_name: string;
+  revenue: string | number;
+  transactions: string | number;
+  avg_transaction: string | number;
+  change_percentage: number;
+}
+
 // Response interfaces
 interface DashboardResponse {
   success: boolean;
@@ -131,6 +141,11 @@ interface StaffReportResponse {
 interface TipsDiscountsResponse {
   success: boolean;
   data: TipsDiscountsData;
+}
+
+interface DayOfWeekRevenueResponse {
+  success: boolean;
+  data: DayOfWeekRevenue[];
 }
 
 /**
@@ -195,4 +210,16 @@ export const getTipsDiscountsReport = async (
   }
   
   return get<TipsDiscountsResponse>(url);
+};
+
+/**
+ * Get revenue breakdown by day of week
+ */
+export const getRevenueByDayOfWeek = async (
+  dateFrom: string,
+  dateTo: string
+): Promise<DayOfWeekRevenueResponse> => {
+  return get<DayOfWeekRevenueResponse>(
+    `/reports/revenue-by-day?dateFrom=${dateFrom}&dateTo=${dateTo}`
+  );
 }; 
