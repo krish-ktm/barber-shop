@@ -117,6 +117,67 @@ export interface DayOfWeekRevenue {
   change_percentage: number;
 }
 
+// New interfaces for advanced metrics
+export interface AdvancedRevenueMetrics {
+  current: {
+    monthly: {
+      total: number;
+      percentChange: number;
+      projection: number;
+    };
+    daily: {
+      average: number;
+      percentChange: number;
+    };
+    revenuePerVisit: number;
+  };
+  previous: {
+    monthly: {
+      total: number;
+    };
+    daily: {
+      average: number;
+    };
+  };
+}
+
+export interface AdvancedStaffMetrics {
+  staff_id: string;
+  name: string;
+  position: string;
+  bio: string;
+  image: string | null;
+  appointments: number;
+  revenue: number;
+  commissionPercentage: number;
+  commissionEarned: number;
+  utilization: number;
+  topServices: Array<{
+    service_id: string;
+    name: string;
+    count: number;
+  }>;
+  averageServiceTime: number;
+  rebookRate: number;
+  busyDays: string[];
+}
+
+export interface AdvancedServiceMetrics {
+  service_id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  category: string;
+  bookings: number;
+  revenue: number;
+  averageRevenue: number;
+  estimatedCost: number;
+  profitMargin: number;
+  growthRate: string;
+  preferredByStaff: string[];
+}
+
 // Response interfaces
 interface DashboardResponse {
   success: boolean;
@@ -146,6 +207,22 @@ interface TipsDiscountsResponse {
 interface DayOfWeekRevenueResponse {
   success: boolean;
   data: DayOfWeekRevenue[];
+}
+
+// New response interfaces for advanced metrics
+interface AdvancedRevenueResponse {
+  success: boolean;
+  data: AdvancedRevenueMetrics;
+}
+
+interface AdvancedStaffResponse {
+  success: boolean;
+  data: AdvancedStaffMetrics[];
+}
+
+interface AdvancedServiceResponse {
+  success: boolean;
+  data: AdvancedServiceMetrics[];
 }
 
 /**
@@ -222,4 +299,55 @@ export const getRevenueByDayOfWeek = async (
   return get<DayOfWeekRevenueResponse>(
     `/reports/revenue-by-day?dateFrom=${dateFrom}&dateTo=${dateTo}`
   );
+};
+
+/**
+ * Get advanced revenue metrics (total, daily avg, monthly projection, etc)
+ */
+export const getAdvancedRevenueMetrics = async (): Promise<AdvancedRevenueResponse> => {
+  return get<AdvancedRevenueResponse>('/reports/advanced-revenue');
+};
+
+/**
+ * Get advanced staff metrics (utilization, satisfaction, etc)
+ */
+export const getAdvancedStaffMetrics = async (
+  dateFrom?: string,
+  dateTo?: string,
+  staffId?: string
+): Promise<AdvancedStaffResponse> => {
+  let url = '/reports/advanced-staff';
+  
+  if (dateFrom && dateTo) {
+    url += `?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+    if (staffId) {
+      url += `&staffId=${staffId}`;
+    }
+  } else if (staffId) {
+    url += `?staffId=${staffId}`;
+  }
+  
+  return get<AdvancedStaffResponse>(url);
+};
+
+/**
+ * Get advanced service metrics (detailed analysis, profitability, etc)
+ */
+export const getAdvancedServiceMetrics = async (
+  dateFrom?: string,
+  dateTo?: string,
+  serviceId?: string
+): Promise<AdvancedServiceResponse> => {
+  let url = '/reports/advanced-services';
+  
+  if (dateFrom && dateTo) {
+    url += `?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+    if (serviceId) {
+      url += `&serviceId=${serviceId}`;
+    }
+  } else if (serviceId) {
+    url += `?serviceId=${serviceId}`;
+  }
+  
+  return get<AdvancedServiceResponse>(url);
 }; 
