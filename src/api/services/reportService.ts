@@ -2,74 +2,108 @@ import { get } from '../apiClient';
 
 // Type definitions
 export interface DashboardStats {
-  todaySales: number;
-  todayAppointments: number;
-  weeklyRevenue: number;
-  monthlyRevenue: number;
-  pendingAppointments: number;
-  recentInvoices: any[]; // Simplified for brevity
+  appointmentStats: Array<{
+    date: string;
+    count: number;
+  }>;
+  revenueStats: Array<{
+    date: string;
+    revenue: number;
+    tips: number;
+    discounts: number;
+  }>;
+  customerCount: number;
+  topServices: Array<{
+    service_id: string;
+    service_name: string;
+    bookings: number;
+    revenue: number;
+  }>;
+  topStaff: Array<{
+    staff_id: string;
+    staff_name: string;
+    appointments: number;
+    revenue: number;
+  }>;
   upcomingAppointments: any[]; // Simplified for brevity
-  revenueByDay: { date: string; revenue: number }[];
-  topServices: { name: string; count: number }[];
-  topStaff: { name: string; revenue: number }[];
+  tipsDiscountsSummary: {
+    totalTips: number;
+    totalDiscounts: number;
+    avgTipPercentage: number;
+    invoicesWithTip: number;
+    invoicesWithDiscount: number;
+  };
 }
 
 export interface RevenueData {
-  date: string;
-  revenue: number;
+  revenue: Array<{
+    date: string;
+    subtotal: string | number;
+    discounts: string | number;
+    taxes: string | number;
+    tips: string | number;
+    total: string | number;
+  }>;
+  paymentMethods: Array<{
+    payment_method: string;
+    amount: string | number;
+    count: string | number;
+  }>;
 }
 
 export interface ServicePerformance {
-  serviceId: string;
-  name: string;
-  bookings: number;
-  revenue: number;
+  service_id: string;
+  service_name: string;
+  bookings: string | number;
+  revenue: string | number;
+  avgPrice?: string | number;
 }
 
 export interface StaffPerformance {
-  staffId: string;
-  name: string;
-  appointments: number;
-  revenue: number;
-  commission: number;
+  staff_id: string;
+  staff_name: string;
+  appointments: string | number;
+  revenue: string | number;
+  commission: string | number;
+  commissionPercentage?: string | number;
 }
 
 export interface TipsDiscountsData {
   summary: {
-    totalTips: number;
-    totalDiscounts: number;
-    totalSubtotal: number;
-    totalSales: number;
-    avgTipPercentage: number;
-    avgDiscountPercentage: number;
-    totalInvoices: number;
-    invoicesWithTip: number;
-    invoicesWithDiscount: number;
+    totalTips: string | number;
+    totalDiscounts: string | number;
+    totalSubtotal: string | number;
+    totalSales: string | number;
+    avgTipPercentage: string | number;
+    avgDiscountPercentage: string | number;
+    totalInvoices: string | number;
+    invoicesWithTip: string | number;
+    invoicesWithDiscount: string | number;
   };
   timeSeriesData: Array<{
     date: string;
-    tips: number;
-    discounts: number;
-    totalSales: number;
-    tipPercentage: number;
-    discountPercentage: number;
-    invoiceCount: number;
+    tips: string | number;
+    discounts: string | number;
+    totalSales: string | number;
+    tipPercentage: string | number;
+    discountPercentage: string | number;
+    invoiceCount: string | number;
   }>;
   staffBreakdown: Array<{
     staff_id: string;
     staff_name: string;
-    totalTips: number;
-    totalDiscounts: number;
-    totalSales: number;
-    tipPercentage: number;
-    discountPercentage: number;
-    invoiceCount: number;
+    totalTips: string | number;
+    totalDiscounts: string | number;
+    totalSales: string | number;
+    tipPercentage: string | number;
+    discountPercentage: string | number;
+    invoiceCount: string | number;
   }>;
   discountTypeBreakdown: Array<{
     discount_type: string;
-    totalDiscount: number;
-    count: number;
-    avgDiscountValue: number;
+    totalDiscount: string | number;
+    count: string | number;
+    avgDiscountValue: string | number;
   }>;
 }
 
@@ -81,7 +115,7 @@ interface DashboardResponse {
 
 interface RevenueResponse {
   success: boolean;
-  data: RevenueData[];
+  data: RevenueData;
 }
 
 interface ServicesReportResponse {

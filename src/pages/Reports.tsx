@@ -80,8 +80,8 @@ import { PieChartCard } from "@/components/dashboard/PieChartCard";
 import { StaffDetailAnalytics } from "@/components/dashboard/StaffDetailAnalytics";
 import { cn } from "@/lib/utils";
 import {
-  staffData,
-  serviceData,
+  staffData as mockStaffData,
+  serviceData as mockServiceData,
   revenueComparisonData,
   advancedRevenueMetrics,
   appointmentMetrics,
@@ -228,6 +228,37 @@ export const Reports: React.FC = () => {
     fetchInitialData();
   }, []);
 
+  // Add effect to refetch data when report type changes
+  useEffect(() => {
+    // Don't run on initial render
+    if (revenueData || servicesData || staffData || tipsDiscountsData) {
+      // Format dates for API calls
+      const dateFrom = format(fromDate, 'yyyy-MM-dd');
+      const dateTo = format(toDate, 'yyyy-MM-dd');
+      
+      // Define groupBy based on report type
+      const groupBy = reportType === 'yearly' ? 'month' : reportType === 'monthly' ? 'week' : 'day';
+
+      // Refresh data with current filters
+      fetchRevenueReport(dateFrom, dateTo, groupBy);
+      fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
+      fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
+      fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
+    }
+  }, [
+    reportType, 
+    fromDate, 
+    toDate, 
+    fetchRevenueReport, 
+    fetchServicesReport, 
+    fetchStaffReport, 
+    fetchTipsDiscountsReport, 
+    revenueData, 
+    servicesData, 
+    staffData, 
+    tipsDiscountsData
+  ]);
+
   // Handle API errors
   useEffect(() => {
     const errors = [
@@ -260,67 +291,91 @@ export const Reports: React.FC = () => {
 
   // Fetch data based on selected filters
   const fetchInitialData = () => {
+    // Get default dates based on selected preset
+    const { fromDate: startDate, toDate: endDate } = getDateRangeForPreset(dateRange);
+
     // Format dates for API calls
-    const fromDateStr = format(fromDate, "yyyy-MM-dd");
-    const toDateStr = format(toDate, "yyyy-MM-dd");
+    const dateFrom = format(startDate, 'yyyy-MM-dd');
+    const dateTo = format(endDate, 'yyyy-MM-dd');
+    
+    // Define groupBy based on report type
+    const groupBy = reportType === 'yearly' ? 'month' : reportType === 'monthly' ? 'week' : 'day';
 
-    // Fetch reports with current filters
-    fetchRevenueReport(
-      fromDateStr,
-      toDateStr,
-      reportType === "daily" ? "day" : reportType,
-    );
-    fetchServicesReport(fromDateStr, toDateStr, "revenue_desc");
-    fetchStaffReport(fromDateStr, toDateStr, "revenue_desc");
-    fetchTipsDiscountsReport(fromDateStr, toDateStr, reportType);
-
-    // Also fetch staff and services lists for filters
+    // Fetch all report data
+    fetchRevenueReport(dateFrom, dateTo, groupBy);
+    fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
+    fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
+    fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
+    
+    // Fetch staff and services lists for filters
     fetchStaffList();
     fetchServicesList();
   };
 
-  // Refetch data when filters change
-  useEffect(() => {
-    if (activeTab && !showFilters) {
-      const fromDateStr = format(fromDate, "yyyy-MM-dd");
-      const toDateStr = format(toDate, "yyyy-MM-dd");
-
-      // Only fetch the data needed for the active tab
-      switch (activeTab) {
-        case "revenue":
-          fetchRevenueReport(
-            fromDateStr,
-            toDateStr,
-            reportType === "daily" ? "day" : reportType,
-          );
-          break;
-        case "services":
-          fetchServicesReport(fromDateStr, toDateStr, "revenue_desc");
-          break;
-        case "staff":
-          fetchStaffReport(fromDateStr, toDateStr, "revenue_desc");
-          break;
-        case "tips-discounts":
-          fetchTipsDiscountsReport(fromDateStr, toDateStr, reportType);
-          break;
+  // Get date range based on preset
+  const getDateRangeForPreset = (preset: string) => {
+    const today = new Date();
+    let fromDate = new Date();
+    let toDate = new Date();
+    
+    switch(preset) {
+      case 'today':
+        // fromDate and toDate are already today
+        break;
+      case 'yesterday': {
+        const yesterday = subDays(today, 1);
+        fromDate = yesterday;
+        toDate = yesterday;
+        break;
       }
+      case 'last7days':
+        fromDate = subDays(today, 7);
+        break;
+      case 'last30days':
+        fromDate = subDays(today, 30);
+        break;
+      case 'thisMonth':
+        fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        break;
+      case 'lastMonth':
+        fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      case 'custom':
+        // Use the fromDate and toDate from state
+        fromDate = fromDate;
+        toDate = toDate;
+        break;
     }
-  }, [
-    activeTab,
-    reportType,
-    fromDate,
-    toDate,
-    showFilters,
-    fetchRevenueReport,
-    fetchServicesReport,
-    fetchStaffReport,
-    fetchTipsDiscountsReport,
-  ]);
+    
+    return { fromDate, toDate };
+  };
 
-  // Apply filters
   const applyFilters = () => {
+    // Format dates for API calls
+    const dateFrom = format(fromDate, 'yyyy-MM-dd');
+    const dateTo = format(toDate, 'yyyy-MM-dd');
+    
+    // Define groupBy based on report type
+    const groupBy = reportType === 'yearly' ? 'month' : reportType === 'monthly' ? 'week' : 'day';
+
+    // Refresh data with current filters
+    fetchRevenueReport(dateFrom, dateTo, groupBy);
+    fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
+    fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
+    fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
+    
+    // Close filters if open
     setShowFilters(false);
-    fetchInitialData();
+  };
+
+  const handleDateRangeChange = (preset: string) => {
+    setDateRange(preset as any);
+    
+    // Get date range based on preset
+    const { fromDate: newFromDate, toDate: newToDate } = getDateRangeForPreset(preset);
+    setFromDate(newFromDate);
+    setToDate(newToDate);
   };
 
   // Extract data from API responses
@@ -334,43 +389,6 @@ export const Reports: React.FC = () => {
   const serviceCategories = Array.from(
     new Set(servicesList.map((service) => service.category)),
   );
-
-  // Handle date range changes
-  const handleDateRangeChange = (preset: string) => {
-    setDateRange(preset as any);
-    const today = new Date();
-
-    switch (preset) {
-      case "today":
-        setFromDate(today);
-        setToDate(today);
-        break;
-      case "yesterday":
-        const yesterday = subDays(today, 1);
-        setFromDate(yesterday);
-        setToDate(yesterday);
-        break;
-      case "last7days":
-        setFromDate(subDays(today, 7));
-        setToDate(today);
-        break;
-      case "last30days":
-        setFromDate(subDays(today, 30));
-        setToDate(today);
-        break;
-      case "thisMonth":
-        setFromDate(new Date(today.getFullYear(), today.getMonth(), 1));
-        setToDate(today);
-        break;
-      case "lastMonth":
-        setFromDate(new Date(today.getFullYear(), today.getMonth() - 1, 1));
-        setToDate(new Date(today.getFullYear(), today.getMonth(), 0));
-        break;
-      case "custom":
-        // Keep current selection
-        break;
-    }
-  };
 
   // Toggle selections
   const toggleStaffSelection = (staffId: string) => {
@@ -459,7 +477,7 @@ export const Reports: React.FC = () => {
 
   // Service category distribution data
   const serviceCategoryData = serviceCategories.map((category) => {
-    const servicesInCategory = serviceData.filter(
+    const servicesInCategory = mockServiceData.filter(
       (service) => service.category === category,
     );
     const totalRevenue = servicesInCategory.reduce(
@@ -480,14 +498,218 @@ export const Reports: React.FC = () => {
 
   // Handle staff selection
   const handleStaffRowClick = (staffId: string) => {
-    setSelectedStaffMember(staffId);
-    setShowStaffDialog(true);
+    const selectedStaff = staffData?.data?.find(staff => staff.staff_id === staffId);
+    if (selectedStaff) {
+      setSelectedStaffMember(staffId);
+      setShowStaffDialog(true);
+    }
   };
 
   // Handle service selection
   const handleServiceRowClick = (serviceId: string) => {
-    setSelectedService(serviceId);
-    setShowServiceDialog(true);
+    const selectedService = servicesData?.data?.find(service => service.service_id === serviceId);
+    if (selectedService) {
+      setSelectedService(serviceId);
+      setShowServiceDialog(true);
+    }
+  };
+
+  // Update the render section to use API data instead of mocks
+  // Example for rendering revenue data
+  const renderRevenueChart = () => {
+    if (revenueLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    
+    if (revenueError) return (
+      <div className="text-center p-8 text-destructive">
+        <p>Error loading revenue data. Please try again.</p>
+      </div>
+    );
+    
+    if (!revenueData || !revenueData.data || !revenueData.data.revenue || revenueData.data.revenue.length === 0) return (
+      <div className="text-center p-8 text-muted-foreground">
+        <p>No revenue data available for the selected period.</p>
+      </div>
+    );
+    
+    // Format data for chart - transform to match ComparisonChart component's expected format
+    const chartData = revenueData.data.revenue.map(item => ({
+      date: item.date,
+      current: parseFloat(item.total as string) || 0,
+      previous: parseFloat(item.subtotal as string) || 0
+    }));
+    
+    return (
+      <div className="h-full">
+        {chartData.length > 0 ? (
+          <ComparisonChart 
+            data={chartData}
+            title=""
+            showLegend={true}
+            currentLabel="Revenue"
+            previousLabel="Cost"
+            className="h-full"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            No revenue data available for the selected period
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Example for rendering services data
+  const renderServicesTable = () => {
+    if (servicesLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    
+    if (servicesError) return (
+      <div className="text-center p-8 text-destructive">
+        <p>Error loading services data. Please try again.</p>
+      </div>
+    );
+    
+    if (!servicesData || !servicesData.data || servicesData.data.length === 0) return (
+      <div className="text-center p-8 text-muted-foreground">
+        <p>No services data available for the selected period.</p>
+      </div>
+    );
+    
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Service</TableHead>
+            <TableHead className="text-right">Bookings</TableHead>
+            <TableHead className="text-right">Revenue</TableHead>
+            <TableHead className="text-right">Avg. Price</TableHead>
+            <TableHead></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {servicesData.data.map((service) => {
+            // Ensure numbers are properly parsed
+            const revenue = parseFloat(String(service.revenue)) || 0;
+            const bookings = parseInt(String(service.bookings)) || 0;
+            const avgPrice = bookings > 0 ? revenue / bookings : 0;
+            
+            return (
+              <TableRow key={service.service_id} onClick={() => handleServiceRowClick(service.service_id)}>
+                <TableCell>{service.service_name}</TableCell>
+                <TableCell className="text-right">{bookings}</TableCell>
+                <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                <TableCell className="text-right">${avgPrice.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="icon" onClick={(e) => {
+                    e.stopPropagation();
+                    handleServiceRowClick(service.service_id);
+                  }}>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    );
+  };
+
+  // Example for rendering staff data
+  const renderStaffTable = () => {
+    if (staffLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    
+    if (staffError) return (
+      <div className="text-center p-8 text-destructive">
+        <p>Error loading staff data. Please try again.</p>
+      </div>
+    );
+    
+    if (!staffData || !staffData.data || staffData.data.length === 0) return (
+      <div className="text-center p-8 text-muted-foreground">
+        <p>No staff performance data available for the selected period.</p>
+      </div>
+    );
+    
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Staff Member</TableHead>
+            <TableHead className="text-right">Appointments</TableHead>
+            <TableHead className="text-right">Revenue</TableHead>
+            <TableHead className="text-right">Commission</TableHead>
+            <TableHead></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {staffData.data.map((staff) => {
+            const revenue = parseFloat(String(staff.revenue)) || 0;
+            const commission = parseFloat(String(staff.commission)) || 0;
+            const appointments = parseInt(String(staff.appointments)) || 0;
+            
+            return (
+              <TableRow key={staff.staff_id} onClick={() => handleStaffRowClick(staff.staff_id)}>
+                <TableCell>{staff.staff_name}</TableCell>
+                <TableCell className="text-right">{appointments}</TableCell>
+                <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                <TableCell className="text-right">${commission.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="icon" onClick={(e) => {
+                    e.stopPropagation();
+                    handleStaffRowClick(staff.staff_id);
+                  }}>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    );
+  };
+
+  // Example for rendering tips/discounts data
+  const renderTipsDiscountsChart = () => {
+    if (tipsDiscountsLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    
+    if (tipsDiscountsError) return (
+      <div className="text-center p-8 text-destructive">
+        <p>Error loading tips and discounts data. Please try again.</p>
+      </div>
+    );
+    
+    if (!tipsDiscountsData || !tipsDiscountsData.data) return (
+      <div className="text-center p-8 text-muted-foreground">
+        <p>No tips and discounts data available for the selected period.</p>
+      </div>
+    );
+    
+    // Format data for chart to match ComparisonChart component's expected format
+    const chartData = tipsDiscountsData.data.timeSeriesData.map(item => ({
+      date: item.date,
+      current: parseFloat(item.tips as string) || 0,
+      previous: parseFloat(item.discounts as string) || 0
+    }));
+    
+    return (
+      <div className="h-full">
+        {chartData.length > 0 ? (
+          <ComparisonChart 
+            data={chartData}
+            title=""
+            showLegend={true}
+            currentLabel="Tips"
+            previousLabel="Discounts"
+            className="h-full"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            No tips and discounts data available for the selected period
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -496,16 +718,25 @@ export const Reports: React.FC = () => {
         <PageHeader
           title="Reports & Analytics"
           description="View and analyze your business performance"
-          action={{
-            label: "Export Data",
-            onClick: () => handleExport("csv"),
-            icon: <Download className="h-4 w-4 mr-2" />,
-            menuItems: EXPORT_FORMATS.map((format) => ({
-              label: `Export as ${format.label}`,
-              onClick: () => handleExport(format.value),
-            })),
-          }}
         />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">View by:</span>
+          <Select
+            defaultValue={reportType}
+            onValueChange={setReportType}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="View by" />
+            </SelectTrigger>
+            <SelectContent>
+              {REPORT_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -631,33 +862,10 @@ export const Reports: React.FC = () => {
                             ` vs ${COMPARISON_OPTIONS.find((c) => c.value === compareWith)?.label}`}
                         </CardDescription>
                       </div>
-                      <Select
-                        defaultValue={reportType}
-                        onValueChange={setReportType}
-                      >
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="View by" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {REPORT_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
                   </CardHeader>
-                  <CardContent className="pb-6 mb-6">
-                    <div className="w-full h-[350px]">
-                      <ComparisonChart
-                        data={revenueComparisonData}
-                        title=""
-                        showLegend
-                        currentLabel="Current Period"
-                        previousLabel="Previous Period"
-                      />
-                    </div>
+                  <CardContent className="h-80 overflow-hidden p-4">
+                    {renderRevenueChart()}
                   </CardContent>
                 </Card>
 
@@ -849,7 +1057,7 @@ export const Reports: React.FC = () => {
                         </TableHeader>
                         <TableBody>
                           {serviceCategories.map((category) => {
-                            const servicesInCategory = serviceData.filter(
+                            const servicesInCategory = mockServiceData.filter(
                               (service) => service.category === category,
                             );
                             const totalRevenue = servicesInCategory.reduce(
@@ -908,7 +1116,7 @@ export const Reports: React.FC = () => {
                   <Scissors className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{serviceData.length}</div>
+                  <div className="text-2xl font-bold">{mockServiceData.length}</div>
                   <p className="text-xs text-muted-foreground">
                     Available services
                   </p>
@@ -926,10 +1134,10 @@ export const Reports: React.FC = () => {
                   <div className="text-2xl font-bold">
                     $
                     {(
-                      serviceData.reduce(
+                      mockServiceData.reduce(
                         (sum, service) => sum + service.price,
                         0,
-                      ) / serviceData.length
+                      ) / mockServiceData.length
                     ).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">Per service</p>
@@ -972,66 +1180,17 @@ export const Reports: React.FC = () => {
             {/* Service Performance Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Service Performance</CardTitle>
-                <CardDescription>
-                  Click on a row to view detailed service metrics
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Service Performance</CardTitle>
+                    <CardDescription>
+                      {getDisplayDateRange()} • {REPORT_TYPES.find(type => type.value === reportType)?.label} View
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Service</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Bookings</TableHead>
-                      <TableHead>Revenue</TableHead>
-                      <TableHead>Growth</TableHead>
-                      <TableHead>Satisfaction</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {advancedServicePerformance.map((service, index) => {
-                      const serviceInfo = serviceData.find(
-                        (s) => s.name === service.name,
-                      );
-                      return (
-                        <TableRow
-                          key={index}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() =>
-                            handleServiceRowClick(
-                              serviceInfo?.id || `service-${index}`,
-                            )
-                          }
-                        >
-                          <TableCell className="font-medium">
-                            {service.name}
-                          </TableCell>
-                          <TableCell>{serviceInfo?.category || "-"}</TableCell>
-                          <TableCell>{service.bookings}</TableCell>
-                          <TableCell>
-                            ${service.revenue.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={
-                                parseInt(service.growthRate) > 0
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }
-                            >
-                              {parseInt(service.growthRate) > 0 ? "+" : ""}
-                              {service.growthRate}%
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {service.customerSatisfaction}/5.0
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                {renderServicesTable()}
               </CardContent>
             </Card>
 
@@ -1051,7 +1210,7 @@ export const Reports: React.FC = () => {
                   <div className="mt-4 space-y-6">
                     {advancedServicePerformance
                       .filter((service, index) => {
-                        const serviceInfo = serviceData.find(
+                        const serviceInfo = mockServiceData.find(
                           (s) => s.id === selectedService,
                         );
                         // Only match one record, either by name or by index
@@ -1066,7 +1225,7 @@ export const Reports: React.FC = () => {
                       })
                       .slice(0, 1) // Ensure only one record is displayed
                       .map((service, index) => {
-                        const serviceInfo = serviceData.find(
+                        const serviceInfo = mockServiceData.find(
                           (s) => s.name === service.name,
                         );
                         return (
@@ -1344,7 +1503,7 @@ export const Reports: React.FC = () => {
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{staffData.length}</div>
+                  <div className="text-2xl font-bold">{mockStaffData.length}</div>
                   <p className="text-xs text-muted-foreground">
                     Active staff members
                   </p>
@@ -1365,7 +1524,7 @@ export const Reports: React.FC = () => {
                       advancedStaffPerformance.reduce(
                         (sum, staff) => sum + staff.commissionEarned,
                         0,
-                      ) / staffData.length
+                      ) / mockStaffData.length
                     ).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -1387,7 +1546,7 @@ export const Reports: React.FC = () => {
                       advancedStaffPerformance.reduce(
                         (sum, staff) => sum + staff.utilization,
                         0,
-                      ) / staffData.length,
+                      ) / mockStaffData.length,
                     )}
                     %
                   </div>
@@ -1411,7 +1570,7 @@ export const Reports: React.FC = () => {
                         (sum, staff) =>
                           sum + Number(staff.customerSatisfaction),
                         0,
-                      ) / staffData.length
+                      ) / mockStaffData.length
                     ).toFixed(1)}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -1424,55 +1583,17 @@ export const Reports: React.FC = () => {
             {/* Staff Performance Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Staff Performance</CardTitle>
-                <CardDescription>
-                  Click on a row to view detailed performance metrics
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Staff Performance</CardTitle>
+                    <CardDescription>
+                      {getDisplayDateRange()} • {REPORT_TYPES.find(type => type.value === reportType)?.label} View
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Staff Member</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Appointments</TableHead>
-                      <TableHead>Revenue</TableHead>
-                      <TableHead>Satisfaction</TableHead>
-                      <TableHead>Utilization</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {advancedStaffPerformance.map((staff, index) => {
-                      const staffInfo = staffData.find(
-                        (s) => s.name === staff.name,
-                      );
-                      return (
-                        <TableRow
-                          key={index}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() =>
-                            handleStaffRowClick(
-                              staffInfo?.id || `staff-${index}`,
-                            )
-                          }
-                        >
-                          <TableCell className="font-medium">
-                            {staff.name}
-                          </TableCell>
-                          <TableCell>{staffInfo?.position || "-"}</TableCell>
-                          <TableCell>{staff.appointments}</TableCell>
-                          <TableCell>
-                            ${staff.revenue.toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            {staff.customerSatisfaction}/5.0
-                          </TableCell>
-                          <TableCell>{staff.utilization}%</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                {renderStaffTable()}
               </CardContent>
             </Card>
 
@@ -1489,7 +1610,7 @@ export const Reports: React.FC = () => {
                   <div className="mt-4">
                     {advancedStaffPerformance
                       .filter((staff, index) => {
-                        const staffInfo = staffData.find(
+                        const staffInfo = mockStaffData.find(
                           (s) => s.id === selectedStaffMember,
                         );
                         // Only match one record, either by name or by index
@@ -1504,7 +1625,7 @@ export const Reports: React.FC = () => {
                       })
                       .slice(0, 1) // Ensure only one record is displayed
                       .map((staff, index) => {
-                        const staffInfo = staffData.find(
+                        const staffInfo = mockStaffData.find(
                           (s) => s.name === staff.name,
                         );
                         return (
@@ -1527,9 +1648,9 @@ export const Reports: React.FC = () => {
                                 <h2 className="text-xl font-bold">
                                   {staff.name}
                                 </h2>
-                                <p className="text-muted-foreground">
-                                  {staffInfo?.position || "Staff Member"}
-                                </p>
+                                <div className="text-muted-foreground text-sm">
+                                  {staffInfo?.role || "Staff Member"}
+                                </div>
                               </div>
                             </div>
 
@@ -1795,7 +1916,7 @@ export const Reports: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${tipsDiscountsData.data.summary.totalTips.toFixed(2)}
+                        ${parseFloat(tipsDiscountsData.data.summary.totalTips).toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {tipsDiscountsData.data.summary.invoicesWithTip} invoices with tips
@@ -1803,7 +1924,7 @@ export const Reports: React.FC = () => {
                       <div className="mt-2 text-sm">
                         <span className="text-muted-foreground">Average:</span>{" "}
                         <span className="font-medium">
-                          {tipsDiscountsData.data.summary.avgTipPercentage.toFixed(1)}%
+                          {parseFloat(tipsDiscountsData.data.summary.avgTipPercentage).toFixed(1)}%
                         </span>
                       </div>
                     </CardContent>
@@ -1815,7 +1936,7 @@ export const Reports: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${tipsDiscountsData.data.summary.totalDiscounts.toFixed(2)}
+                        ${parseFloat(tipsDiscountsData.data.summary.totalDiscounts).toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {tipsDiscountsData.data.summary.invoicesWithDiscount} invoices with discounts
@@ -1823,7 +1944,7 @@ export const Reports: React.FC = () => {
                       <div className="mt-2 text-sm">
                         <span className="text-muted-foreground">Average:</span>{" "}
                         <span className="font-medium">
-                          {tipsDiscountsData.data.summary.avgDiscountPercentage.toFixed(1)}%
+                          {parseFloat(tipsDiscountsData.data.summary.avgDiscountPercentage).toFixed(1)}%
                         </span>
                       </div>
                     </CardContent>
@@ -1835,21 +1956,21 @@ export const Reports: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${tipsDiscountsData.data.summary.totalSales.toFixed(2)}
+                        ${parseFloat(tipsDiscountsData.data.summary.totalSales).toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         {tipsDiscountsData.data.summary.totalInvoices} total invoices
                       </p>
                       <Progress 
                         value={
-                          (tipsDiscountsData.data.summary.invoicesWithTip / 
-                          tipsDiscountsData.data.summary.totalInvoices) * 100
+                          (parseFloat(tipsDiscountsData.data.summary.invoicesWithTip) / 
+                          parseFloat(tipsDiscountsData.data.summary.totalInvoices)) * 100
                         } 
                         className="h-2 mt-2"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {Math.round((tipsDiscountsData.data.summary.invoicesWithTip / 
-                        tipsDiscountsData.data.summary.totalInvoices) * 100)}% of invoices include tips
+                        {Math.round((parseFloat(tipsDiscountsData.data.summary.invoicesWithTip) / 
+                        parseFloat(tipsDiscountsData.data.summary.totalInvoices)) * 100)}% of invoices include tips
                       </p>
                     </CardContent>
                   </Card>
@@ -1866,7 +1987,7 @@ export const Reports: React.FC = () => {
                               {type.discount_type || 'No type'} ({type.count})
                             </span>
                             <span className="text-sm font-medium">
-                              ${type.totalDiscount.toFixed(2)}
+                              ${parseFloat(type.totalDiscount).toFixed(2)}
                             </span>
                           </div>
                         ))}
@@ -1878,42 +1999,18 @@ export const Reports: React.FC = () => {
                 {/* Time Series Chart */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Tips & Discounts Over Time</CardTitle>
-                    <CardDescription>
-                      Trends for the selected period ({getDisplayDateRange()})
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-2">
-                    <div className="h-[300px]">
-                      {/* In a real app, render a chart component here using the timeSeriesData */}
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Tips</TableHead>
-                              <TableHead>Tip %</TableHead>
-                              <TableHead>Discounts</TableHead>
-                              <TableHead>Discount %</TableHead>
-                              <TableHead>Sales</TableHead>
-                              <TableHead>Invoices</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {tipsDiscountsData.data.timeSeriesData.map((item) => (
-                              <TableRow key={item.date}>
-                                <TableCell>{item.date}</TableCell>
-                                <TableCell>${item.tips.toFixed(2)}</TableCell>
-                                <TableCell>{item.tipPercentage.toFixed(1)}%</TableCell>
-                                <TableCell>${item.discounts.toFixed(2)}</TableCell>
-                                <TableCell>{item.discountPercentage.toFixed(1)}%</TableCell>
-                                <TableCell>${item.totalSales.toFixed(2)}</TableCell>
-                                <TableCell>{item.invoiceCount}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Tips & Discounts Over Time</CardTitle>
+                        <CardDescription>
+                          {getDisplayDateRange()} • {REPORT_TYPES.find(type => type.value === reportType)?.label} View
+                        </CardDescription>
                       </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-4 py-4 h-80 overflow-hidden">
+                    <div className="h-full">
+                      {renderTipsDiscountsChart()}
                     </div>
                   </CardContent>
                 </Card>
@@ -1943,11 +2040,11 @@ export const Reports: React.FC = () => {
                         {tipsDiscountsData.data.staffBreakdown.map((staff) => (
                           <TableRow key={staff.staff_id}>
                             <TableCell>{staff.staff_name}</TableCell>
-                            <TableCell>${staff.totalTips.toFixed(2)}</TableCell>
-                            <TableCell>{staff.tipPercentage.toFixed(1)}%</TableCell>
-                            <TableCell>${staff.totalDiscounts.toFixed(2)}</TableCell>
-                            <TableCell>{staff.discountPercentage.toFixed(1)}%</TableCell>
-                            <TableCell>${staff.totalSales.toFixed(2)}</TableCell>
+                            <TableCell>${parseFloat(staff.totalTips).toFixed(2)}</TableCell>
+                            <TableCell>{parseFloat(staff.tipPercentage).toFixed(1)}%</TableCell>
+                            <TableCell>${parseFloat(staff.totalDiscounts).toFixed(2)}</TableCell>
+                            <TableCell>{parseFloat(staff.discountPercentage).toFixed(1)}%</TableCell>
+                            <TableCell>${parseFloat(staff.totalSales).toFixed(2)}</TableCell>
                             <TableCell>{staff.invoiceCount}</TableCell>
                           </TableRow>
                         ))}

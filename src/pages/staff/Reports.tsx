@@ -1,21 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, subDays } from 'date-fns';
 import { 
   Calendar as CalendarIcon,
   Download, 
   RefreshCcw,
   Scissors,
-  Clock,
   DollarSign,
-  Star,
   TrendingUp,
   Users,
-  Check as CheckIcon
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
   Popover,
@@ -32,13 +29,15 @@ import {
 } from "@/components/ui/table";
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { 
-  staffData, 
-  appointmentData,
-  serviceData,
-  advancedStaffPerformance
-} from '@/mocks';
 import { formatCurrency } from '@/utils';
+import { useApi } from '@/hooks/useApi';
+import { useAuth } from '@/lib/auth';
+import { 
+  getStaffReport,
+  getRevenueReport,
+  getServicesReport
+} from '@/api/services/reportService';
+import { useToast } from '@/hooks/use-toast';
 
 // Date range presets
 const DATE_PRESETS = [
@@ -51,43 +50,54 @@ const DATE_PRESETS = [
 ];
 
 export const StaffReports: React.FC = () => {
-  // Mock staff ID - in real app would come from auth context
-  const staffId = 'staff-1';
-  const staff = staffData.find(s => s.id === staffId);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const staffId = user?.id;
+
+  // API hooks
+  const {
+    loading: revenueLoading,
+    error: revenueError,
+    execute: fetchRevenueReport,
+  } = useApi(getRevenueReport);
+
+  const {
+    data: staffData,
+    loading: staffLoading,
+    error: staffError,
+    execute: fetchStaffReport,
+  } = useApi(getStaffReport);
+
+  const {
+    data: servicesData,
+    loading: servicesLoading,
+    error: servicesError,
+    execute: fetchServicesReport,
+  } = useApi(getServicesReport);
 
   // State for date selection
   const [dateRange, setDateRange] = useState<string>('last7days');
   const [fromDate, setFromDate] = useState<Date>(subDays(new Date(), 7));
   const [toDate, setToDate] = useState<Date>(new Date());
 
-  if (!staff) return null;
+  // Load data on component mount
+  useEffect(() => {
+    if (staffId) {
+      fetchInitialData();
+    }
+  }, [staffId]);
 
-  // Get the staff performance data by matching the staff name
-  const staffPerformance = advancedStaffPerformance.find(s => s.name === staff.name);
-
-  if (!staffPerformance) return null;
-
-  // Filter appointments for this staff member within the selected date range
-  const staffAppointments = appointmentData.filter(appointment => 
-    appointment.staffId === staffId
-  );
-
-  // Count appointments by status
-  const completedAppointments = staffAppointments.filter(a => a.status === 'completed').length;
-  const scheduledAppointments = staffAppointments.filter(a => a.status === 'scheduled').length;
-  const cancelledAppointments = staffAppointments.filter(a => a.status === 'cancelled').length;
-  
-  // Calculate revenue
-  const totalRevenue = staffAppointments
-    .filter(a => a.status === 'completed')
-    .reduce((sum, appointment) => sum + appointment.totalAmount, 0);
-  
-  // Calculate commission
-  const commission = totalRevenue * (staff.commissionPercentage / 100);
-
-  // Service counts
-  const serviceIds = staff.services;
-  const servicesData = serviceData.filter(service => serviceIds.includes(service.id));
+  // Fetch initial data
+  const fetchInitialData = () => {
+    // Format dates for API calls
+    const dateFrom = format(fromDate, 'yyyy-MM-dd');
+    const dateTo = format(toDate, 'yyyy-MM-dd');
+    
+    // Fetch all report data
+    fetchRevenueReport(dateFrom, dateTo, 'day');
+    fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
+    fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
+  };
 
   // Handle date range changes
   const handleDateRangeChange = (preset: string) => {
@@ -122,6 +132,11 @@ export const StaffReports: React.FC = () => {
         setToDate(new Date(today.getFullYear(), today.getMonth(), 0));
         break;
     }
+    
+    // Refresh data when date range changes
+    setTimeout(() => {
+      fetchInitialData();
+    }, 0);
   };
 
   // Format date range for display
@@ -131,6 +146,45 @@ export const StaffReports: React.FC = () => {
     }
     return `${format(fromDate, 'MMM dd, yyyy')} - ${format(toDate, 'MMM dd, yyyy')}`;
   };
+
+  // Handle errors
+  useEffect(() => {
+    if (revenueError) {
+      toast({
+        title: 'Error loading revenue data',
+        description: revenueError.message,
+        variant: 'destructive'
+      });
+    }
+    
+    if (staffError) {
+      toast({
+        title: 'Error loading staff data',
+        description: staffError.message,
+        variant: 'destructive'
+      });
+    }
+    
+    if (servicesError) {
+      toast({
+        title: 'Error loading services data',
+        description: servicesError.message,
+        variant: 'destructive'
+      });
+    }
+  }, [revenueError, staffError, servicesError, toast]);
+
+  // Get current staff data from API
+  const currentStaffData = staffData?.data?.find(staff => staff.staffId === staffId);
+  
+  // If still loading or no staff ID
+  if (!staffId || staffLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -189,7 +243,13 @@ export const StaffReports: React.FC = () => {
         </Popover>
         
         <div className="ml-auto flex gap-2">
-          <Button variant="outline" size="sm" className="h-9">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-9"
+            onClick={fetchInitialData}
+            disabled={staffLoading || revenueLoading || servicesLoading}
+          >
             <RefreshCcw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
@@ -210,50 +270,14 @@ export const StaffReports: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{staff.totalAppointments}</div>
+              <div className="text-2xl font-bold">{currentStaffData?.appointments || 0}</div>
               <Users className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              Total lifetime appointments
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-              <div className="flex flex-col">
-                <span className="font-medium text-green-600">{completedAppointments}</span>
-                <span className="text-muted-foreground">Completed</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-medium text-blue-600">{scheduledAppointments}</span>
-                <span className="text-muted-foreground">Scheduled</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-medium text-red-600">{cancelledAppointments}</span>
-                <span className="text-muted-foreground">Cancelled</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Commission Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{staff.commissionPercentage}%</div>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Your current commission rate
+              During selected period
             </div>
             <div className="mt-4">
-              <Progress value={staff.commissionPercentage} className="h-2" />
-              <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                <span>0%</span>
-                <span>50%</span>
-                <span>100%</span>
-              </div>
+              <Progress value={currentStaffData?.appointments ? Math.min(currentStaffData.appointments / 100 * 100, 100) : 0} className="h-1" />
             </div>
           </CardContent>
         </Card>
@@ -266,17 +290,14 @@ export const StaffReports: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(currentStaffData?.revenue || 0)}</div>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              Total revenue from your appointments
+              During selected period
             </div>
-            <div className="mt-4 text-sm">
-              <div className="flex justify-between">
-                <span>Your Commission:</span>
-                <span className="font-medium">{formatCurrency(commission)}</span>
-              </div>
+            <div className="mt-4">
+              <Progress value={currentStaffData?.revenue ? Math.min(currentStaffData.revenue / 5000 * 100, 100) : 0} className="h-1" />
             </div>
           </CardContent>
         </Card>
@@ -284,214 +305,92 @@ export const StaffReports: React.FC = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Customer Satisfaction
+              Commission Earned
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{staffPerformance.customerSatisfaction}</div>
-              <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+              <div className="text-2xl font-bold">{formatCurrency(currentStaffData?.commission || 0)}</div>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              Average rating from customers
+              During selected period
             </div>
             <div className="mt-4">
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={cn(
-                      "h-4 w-4",
-                      parseFloat(staffPerformance.customerSatisfaction) >= star
-                        ? "text-yellow-400 fill-yellow-400"
-                        : "text-gray-300"
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Service Performance</CardTitle>
-            <CardDescription>
-              Your top performing services and statistics
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {staffPerformance.topServices.map((service, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Scissors className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{service.name}</span>
-                    </div>
-                    <Badge variant="outline">{service.count} appointments</Badge>
-                  </div>
-                  <Progress value={service.count * 5} className="h-2" />
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6">
-              <h4 className="text-sm font-medium mb-2">Service Efficiency</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Avg. Duration</TableHead>
-                    <TableHead className="text-right">Popularity</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {servicesData.slice(0, 5).map((service) => (
-                    <TableRow key={service.id}>
-                      <TableCell className="font-medium">{service.name}</TableCell>
-                      <TableCell>{service.duration} mins</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          High
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Progress value={currentStaffData?.commission ? Math.min(currentStaffData.commission / 1000 * 100, 100) : 0} className="h-1" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Time Utilization</CardTitle>
-            <CardDescription>
-              How efficiently you're using your working hours
-            </CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Average Per Appointment
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>Overall Utilization</span>
-                  </div>
-                  <span className="font-medium">{staffPerformance.utilization}%</span>
-                </div>
-                <Progress value={staffPerformance.utilization} className="h-2" />
+            <div className="flex items-center justify-between">
+              <div className="text-2xl font-bold">
+                {formatCurrency(
+                  currentStaffData && currentStaffData.appointments > 0
+                    ? currentStaffData.revenue / currentStaffData.appointments
+                    : 0
+                )}
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <CheckIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>Appointment Completion Rate</span>
-                  </div>
-                  <span className="font-medium">{staffPerformance.appointmentCompletionRate}%</span>
-                </div>
-                <Progress value={staffPerformance.appointmentCompletionRate} className="h-2" />
-              </div>
-              
-              <div className="mt-6">
-                <h4 className="text-sm font-medium mb-2">Time Distribution</h4>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Service Time</span>
-                        <span className="font-medium">75%</span>
-                      </div>
-                      <Progress value={75} className="h-2" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Prep Time</span>
-                        <span className="font-medium">15%</span>
-                      </div>
-                      <Progress value={15} className="h-2" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Breaks</span>
-                        <span className="font-medium">5%</span>
-                      </div>
-                      <Progress value={5} className="h-2" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Unassigned</span>
-                        <span className="font-medium">5%</span>
-                      </div>
-                      <Progress value={5} className="h-2" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <Scissors className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Average revenue per appointment
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Appointments */}
-      <Card>
+      {/* Services Table */}
+      <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Recent Appointments</CardTitle>
+          <CardTitle>My Services Performance</CardTitle>
           <CardDescription>
-            Your recent appointment history and earnings
+            Services provided during the selected period
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Service</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">Your Commission</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {staffAppointments.slice(0, 5).map((appointment) => (
-                <TableRow key={appointment.id}>
-                  <TableCell>
-                    {format(new Date(appointment.date), 'MMM dd, yyyy')} {appointment.time}
-                  </TableCell>
-                  <TableCell>{appointment.customerName}</TableCell>
-                  <TableCell>
-                    {appointment.services.length > 1 
-                      ? `${appointment.services[0].serviceName} +${appointment.services.length - 1} more` 
-                      : appointment.services[0].serviceName}
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        appointment.status === 'completed' && "bg-green-50 text-green-700 border-green-200",
-                        appointment.status === 'scheduled' && "bg-blue-50 text-blue-700 border-blue-200",
-                        appointment.status === 'cancelled' && "bg-red-50 text-red-700 border-red-200",
-                      )}
-                    >
-                      {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{formatCurrency(appointment.totalAmount)}</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(appointment.totalAmount * (staff.commissionPercentage / 100))}
-                  </TableCell>
+          {servicesLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : servicesError ? (
+            <div className="text-center py-8 text-destructive">
+              <p>Error loading services data</p>
+            </div>
+          ) : servicesData?.data && servicesData.data.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Service</TableHead>
+                  <TableHead className="text-right">Bookings</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">Avg. Price</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {servicesData.data.map((service) => (
+                  <TableRow key={service.serviceId}>
+                    <TableCell className="font-medium">{service.name}</TableCell>
+                    <TableCell className="text-right">{service.bookings}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(service.revenue)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(service.bookings > 0 ? service.revenue / service.bookings : 0)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No services data available for the selected period</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
