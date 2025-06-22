@@ -26,6 +26,8 @@ export interface Staff {
   user?: User;
   workingHours?: WorkingHour[];
   breaks?: Break[];
+  totalAppointments?: number;
+  totalEarnings?: number;
 }
 
 export interface WorkingHour {

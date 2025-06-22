@@ -162,7 +162,7 @@ export const StaffList: React.FC<StaffListProps> = ({
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-semibold">
-                    {formatCurrency(member.totalEarnings || 0).replace('$', '')}
+                    {formatCurrency(member.totalEarnings || 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">Earnings</p>
                 </div>

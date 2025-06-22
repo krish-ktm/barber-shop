@@ -57,8 +57,8 @@ const mapApiStaffToInternal = (apiStaff: ApiStaff): Staff => {
     commissionPercentage: parseFloat(apiStaff.commission_percentage?.toString() || '0'),
     isAvailable: apiStaff.is_available ?? true,
     image: apiStaff.user?.image || '/placeholder.jpg',
-    totalEarnings: 0, // These would need to come from a separate API call
-    totalAppointments: 0,
+    totalEarnings: apiStaff.totalEarnings ? parseFloat(apiStaff.totalEarnings.toString()) : 0,
+    totalAppointments: apiStaff.totalAppointments ? parseInt(apiStaff.totalAppointments.toString(), 10) : 0,
     breaks: apiStaff.breaks || [],
     workingHours: {
       monday: [],
