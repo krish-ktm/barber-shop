@@ -1399,8 +1399,7 @@ export const Reports: React.FC = () => {
                                   {service.name}
                                 </h2>
                                 <p className="text-muted-foreground">
-                                  {serviceInfo?.category || "General"} •{" "}
-                                  {service.avgDuration || "N/A"} minutes
+                                  {serviceInfo?.category || service.category || "General"} • {service.duration || service.avgDuration || "N/A"} minutes
                                 </p>
                               </div>
                               <Badge
