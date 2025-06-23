@@ -46,27 +46,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ComparisonChart } from "@/components/dashboard/ComparisonChart";
 import { PieChartCard } from "@/components/dashboard/PieChartCard";
-import { StaffDetailAnalytics } from "@/components/dashboard/StaffDetailAnalytics";
-import { cn } from "@/lib/utils";
-import {
-  staffData as mockStaffData,
-  serviceData as mockServiceData,
-  revenueComparisonData,
-  advancedRevenueMetrics,
-  appointmentMetrics,
-  customerMetrics,
-  advancedStaffPerformance,
-  advancedServicePerformance,
-  paymentMethodAnalytics,
-} from "@/mocks";
 
 // API imports
 import { useApi } from "@/hooks/useApi";
@@ -79,14 +60,6 @@ import {
   getAdvancedRevenueMetrics,
   getAdvancedStaffMetrics,
   getAdvancedServiceMetrics,
-  RevenueData,
-  ServicePerformance,
-  StaffPerformance,
-  TipsDiscountsData,
-  DayOfWeekRevenue,
-  AdvancedRevenueMetrics,
-  AdvancedStaffMetrics,
-  AdvancedServiceMetrics
 } from "@/api/services/reportService";
 import { getAllStaff } from "@/api/services/staffService";
 import { getAllServices } from "@/api/services/serviceService";
@@ -118,12 +91,7 @@ const COMPARISON_OPTIONS = [
   { value: "samePeroidLastYear", label: "Same period last year" },
 ];
 
-// Export formats
-const EXPORT_FORMATS = [
-  { value: "csv", label: "CSV" },
-  { value: "pdf", label: "PDF" },
-  { value: "excel", label: "Excel" },
-];
+
 
 export const Reports: React.FC = () => {
   const { toast } = useToast();
@@ -214,7 +182,6 @@ export const Reports: React.FC = () => {
   const [fromDate, setFromDate] = useState<Date>(subDays(new Date(), 7));
   const [toDate, setToDate] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState("revenue");
-  const [showFilters, setShowFilters] = useState(false);
   const [compareWith, setCompareWith] = useState("none");
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -226,7 +193,6 @@ export const Reports: React.FC = () => {
   const [selectedServiceCategories, setSelectedServiceCategories] = useState<
     string[]
   >([]);
-  const [showAdvancedMetrics, setShowAdvancedMetrics] = useState(false);
 
   // Dialog state
   const [selectedStaffMember, setSelectedStaffMember] = useState<string | null>(
@@ -372,38 +338,7 @@ export const Reports: React.FC = () => {
     return { fromDate, toDate };
   };
 
-  const applyFilters = () => {
-    // Format dates for API calls
-    const dateFrom = format(fromDate, 'yyyy-MM-dd');
-    const dateTo = format(toDate, 'yyyy-MM-dd');
-    
-    // Define groupBy based on report type
-    const groupBy = reportType === 'yearly' ? 'month' : reportType === 'monthly' ? 'week' : 'day';
 
-    // Refresh data with current filters
-    fetchRevenueReport(dateFrom, dateTo, groupBy);
-    fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
-    fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
-    fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
-    fetchDayOfWeekReport(dateFrom, dateTo);
-    
-    // Also refresh advanced metrics with new date range
-    fetchAdvancedRevenue();
-    fetchAdvancedStaff(dateFrom, dateTo);
-    fetchAdvancedService(dateFrom, dateTo);
-    
-    // Close filters if open
-    setShowFilters(false);
-  };
-
-  const handleDateRangeChange = (preset: string) => {
-    setDateRange(preset as any);
-    
-    // Get date range based on preset
-    const { fromDate: newFromDate, toDate: newToDate } = getDateRangeForPreset(preset);
-    setFromDate(newFromDate);
-    setToDate(newToDate);
-  };
 
   // Extract data from API responses
   const staffList = staffListData?.staff || [];
