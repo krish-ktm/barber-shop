@@ -201,6 +201,8 @@ export const Reports: React.FC = () => {
   const [showStaffDialog, setShowStaffDialog] = useState(false);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [showServiceDialog, setShowServiceDialog] = useState(false);
+  // Add new state for selected staff details
+  const [selectedStaffDetails, setSelectedStaffDetails] = useState<any | null>(null);
 
   // Load data on component mount
   useEffect(() => {
@@ -495,15 +497,42 @@ export const Reports: React.FC = () => {
     const dateFrom = format(fromDate, 'yyyy-MM-dd');
     const dateTo = format(toDate, 'yyyy-MM-dd');
     
-    // Fetch the data - dialog will show loading state while this happens
-    fetchAdvancedStaff(dateFrom, dateTo, staffId)
-      .catch((error) => {
-        toast({
-          title: "Error",
-          description: "Failed to fetch staff details",
-          variant: "destructive"
+    // Find the staff in the existing data if possible
+    if (advancedStaffData?.data) {
+      const existingStaff = advancedStaffData.data.find(staff => staff.staff_id === staffId);
+      if (existingStaff) {
+        setSelectedStaffDetails(existingStaff);
+        return;
+      }
+    }
+    
+    // Make a separate API call to get staff details without affecting the main list
+    try {
+      const fetchSelectedStaffDetails = async () => {
+        const baseUrl = '/reports/advanced-staff';
+        const params = new URLSearchParams({ 
+          dateFrom, 
+          dateTo, 
+          staffId 
         });
+        
+        const response = await fetch(`${baseUrl}?${params}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data && data.data.length > 0) {
+            setSelectedStaffDetails(data.data[0]);
+          }
+        }
+      };
+      
+      fetchSelectedStaffDetails();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch staff details",
+        variant: "destructive"
       });
+    }
   };
 
   // Handle service selection
@@ -1817,7 +1846,13 @@ export const Reports: React.FC = () => {
             </Card>
 
             {/* Staff Detail Dialog */}
-            <Dialog open={showStaffDialog} onOpenChange={setShowStaffDialog}>
+            <Dialog 
+              open={showStaffDialog} 
+              onOpenChange={(open) => {
+                setShowStaffDialog(open);
+                if (!open) setSelectedStaffDetails(null);
+              }}
+            >
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Staff Performance Analysis</DialogTitle>
@@ -2103,9 +2138,261 @@ export const Reports: React.FC = () => {
                         })}
                     </div>
                   ) : (
-                    <div className="py-8 text-center text-muted-foreground">
-                      No detailed metrics available for this staff member
-                    </div>
+                    selectedStaffDetails ? (
+                      <div className="space-y-4">
+                        <div key={selectedStaffDetails.staff_id} className="space-y-6">
+                          <div className="flex items-center space-x-4">
+                            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                              {selectedStaffDetails.image ? (
+                                <img
+                                  src={selectedStaffDetails.image}
+                                  alt={selectedStaffDetails.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xl font-semibold">
+                                  {selectedStaffDetails.name.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <h2 className="text-xl font-bold">
+                                {selectedStaffDetails.name}
+                              </h2>
+                              <div className="text-muted-foreground text-sm">
+                                {selectedStaffDetails.position || "Staff Member"}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Card className="overflow-hidden">
+                              <CardHeader className="p-3">
+                                <CardTitle className="text-sm">
+                                  Appointments
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3 pt-0">
+                                <p className="text-2xl font-bold">
+                                  {selectedStaffDetails.appointments}
+                                </p>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="overflow-hidden">
+                              <CardHeader className="p-3">
+                                <CardTitle className="text-sm">
+                                  Revenue
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3 pt-0">
+                                <p className="text-2xl font-bold">
+                                  ${selectedStaffDetails.revenue.toLocaleString()}
+                                </p>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="overflow-hidden">
+                              <CardHeader className="p-3">
+                                <CardTitle className="text-sm">
+                                  Commission
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3 pt-0">
+                                <p className="text-2xl font-bold">
+                                  ${selectedStaffDetails.commissionEarned.toLocaleString()}
+                                </p>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="overflow-hidden">
+                              <CardHeader className="p-3">
+                                <CardTitle className="text-sm">
+                                  Utilization
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3 pt-0">
+                                <p className="text-2xl font-bold">
+                                  {selectedStaffDetails.utilization}%
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </div>
+
+                          <Tabs defaultValue="metrics" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                              <TabsTrigger value="metrics">
+                                Performance Metrics
+                              </TabsTrigger>
+                              <TabsTrigger value="services">
+                                Top Services
+                              </TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent
+                              value="metrics"
+                              className="space-y-4 pt-4"
+                            >
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Metric</TableHead>
+                                    <TableHead>Value</TableHead>
+                                    <TableHead>Status</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  <TableRow>
+                                    <TableCell>
+                                      Appointment Completion
+                                    </TableCell>
+                                    <TableCell>
+                                      {selectedStaffDetails.utilization}%
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant={
+                                          selectedStaffDetails.utilization > 90
+                                            ? "default"
+                                            : selectedStaffDetails.utilization > 75
+                                              ? "secondary"
+                                            : "outline"
+                                        }
+                                      >
+                                        {selectedStaffDetails.utilization > 90
+                                          ? "Excellent"
+                                          : selectedStaffDetails.utilization > 75
+                                            ? "Good"
+                                            : "Needs Improvement"}
+                                      </Badge>
+                                    </TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell>
+                                      Rebook Rate
+                                    </TableCell>
+                                    <TableCell>
+                                      {selectedStaffDetails.rebookRate}%
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant={
+                                          selectedStaffDetails.rebookRate > 70
+                                            ? "default"
+                                            : selectedStaffDetails.rebookRate > 50
+                                              ? "secondary"
+                                            : "outline"
+                                        }
+                                      >
+                                        {selectedStaffDetails.rebookRate > 70
+                                          ? "Excellent"
+                                          : selectedStaffDetails.rebookRate > 50
+                                            ? "Good"
+                                            : "Needs Improvement"}
+                                      </Badge>
+                                    </TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell>Utilization Rate</TableCell>
+                                    <TableCell>
+                                      {selectedStaffDetails.utilization}%
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant={
+                                          selectedStaffDetails.utilization > 85
+                                            ? "default"
+                                            : selectedStaffDetails.utilization > 70
+                                              ? "secondary"
+                                            : "outline"
+                                        }
+                                      >
+                                        {selectedStaffDetails.utilization > 85
+                                          ? "High"
+                                          : selectedStaffDetails.utilization > 70
+                                            ? "Good"
+                                            : "Low"}
+                                      </Badge>
+                                    </TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell>
+                                      Services Per Appointment
+                                    </TableCell>
+                                    <TableCell>
+                                      {selectedStaffDetails.averageServiceTime.toFixed(1)}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant={
+                                          Number(
+                                            selectedStaffDetails.averageServiceTime,
+                                          ) > 1.5
+                                            ? "default"
+                                            : "secondary"
+                                        }
+                                      >
+                                        {Number(
+                                          selectedStaffDetails.averageServiceTime,
+                                        ) > 1.5
+                                          ? "High"
+                                          : "Average"}
+                                      </Badge>
+                                    </TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </TabsContent>
+
+                            <TabsContent
+                              value="services"
+                              className="space-y-4 pt-4"
+                            >
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead>Bookings</TableHead>
+                                    <TableHead>Performance</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {selectedStaffDetails.topServices && Array.isArray(selectedStaffDetails.topServices) ? 
+                                    selectedStaffDetails.topServices.map((topService, idx) => (
+                                      <TableRow key={idx}>
+                                        <TableCell className="font-medium">
+                                          {topService.name}
+                                        </TableCell>
+                                        <TableCell>{topService.count}</TableCell>
+                                        <TableCell>
+                                          <Badge variant="secondary">
+                                            {idx === 0
+                                              ? "Most Popular"
+                                              : idx === 1
+                                                ? "Popular"
+                                                : "Regular"}
+                                          </Badge>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  : (
+                                    <TableRow>
+                                      <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                                        No detailed service data available
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center text-muted-foreground">
+                        No detailed metrics available for this staff member
+                      </div>
+                    )
                   )
                 )}
               </DialogContent>
