@@ -176,6 +176,15 @@ export interface AdvancedServiceMetrics {
   profitMargin: number;
   growthRate: string;
   preferredByStaff: string[];
+  avgDuration?: number;
+  appointmentCompletionRate?: number;
+  utilization?: number;
+  customerSatisfaction?: string;
+  averageServiceTime?: number;
+  topServices?: Array<{
+    name: string;
+    count: number;
+  }>;
 }
 
 // Response interfaces

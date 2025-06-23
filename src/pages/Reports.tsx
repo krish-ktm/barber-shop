@@ -544,43 +544,22 @@ export const Reports: React.FC = () => {
     // Set the selected staff member
     setSelectedStaffMember(staffId);
     
+    // Show dialog immediately with loading state
+    setShowStaffDialog(true);
+    
     // Format dates for API calls
     const dateFrom = format(fromDate, 'yyyy-MM-dd');
     const dateTo = format(toDate, 'yyyy-MM-dd');
     
-    // Make sure we have advancedStaffData before showing the dialog
-    if (advancedStaffData?.data) {
-      // First fetch details for this staff
-      fetchAdvancedStaff(dateFrom, dateTo, staffId)
-        .then(() => {
-          setShowStaffDialog(true);
-        })
-        .catch((error) => {
-          toast({
-            title: "Error",
-            description: "Failed to fetch staff details",
-            variant: "destructive"
-          });
+    // Fetch the data - dialog will show loading state while this happens
+    fetchAdvancedStaff(dateFrom, dateTo, staffId)
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: "Failed to fetch staff details",
+          variant: "destructive"
         });
-    } else {
-      toast({
-        title: "Loading",
-        description: "Loading staff performance data...",
-        variant: "default"
       });
-      
-      fetchAdvancedStaff(dateFrom, dateTo, staffId)
-        .then(() => {
-          setShowStaffDialog(true);
-        })
-        .catch((error) => {
-          toast({
-            title: "Error",
-            description: "Failed to fetch staff details",
-            variant: "destructive"
-          });
-        });
-    }
   };
 
   // Handle service selection
@@ -588,43 +567,22 @@ export const Reports: React.FC = () => {
     // Set the selected service
     setSelectedService(serviceId);
     
+    // Show dialog immediately with loading state
+    setShowServiceDialog(true);
+    
     // Format dates for API calls
     const dateFrom = format(fromDate, 'yyyy-MM-dd');
     const dateTo = format(toDate, 'yyyy-MM-dd');
     
-    // Make sure we have advancedServiceData before showing the dialog
-    if (advancedServiceData?.data) {
-      // First fetch details for this service
-      fetchAdvancedService(dateFrom, dateTo, serviceId)
-        .then(() => {
-          setShowServiceDialog(true);
-        })
-        .catch((error) => {
-          toast({
-            title: "Error",
-            description: "Failed to fetch service details",
-            variant: "destructive"
-          });
+    // Fetch the data - dialog will show loading state while this happens
+    fetchAdvancedService(dateFrom, dateTo, serviceId)
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: "Failed to fetch service details",
+          variant: "destructive"
         });
-    } else {
-      toast({
-        title: "Loading",
-        description: "Loading service performance data...",
-        variant: "default"
       });
-      
-      fetchAdvancedService(dateFrom, dateTo, serviceId)
-        .then(() => {
-          setShowServiceDialog(true);
-        })
-        .catch((error) => {
-          toast({
-            title: "Error",
-            description: "Failed to fetch service details",
-            variant: "destructive"
-          });
-        });
-    }
   };
 
   // Update the render section to use API data instead of mocks
@@ -1454,7 +1412,29 @@ export const Reports: React.FC = () => {
                     Detailed service performance metrics
                   </DialogDescription>
                 </DialogHeader>
-                {selectedService && advancedServiceData?.data ? (
+                {advancedServiceLoading ? (
+                  <div className="flex justify-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="ml-2">Loading service details...</span>
+                  </div>
+                ) : advancedServiceError ? (
+                  <div className="text-center p-8 text-destructive">
+                    <p>Error loading service details. Please try again.</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4"
+                      onClick={() => {
+                        const dateFrom = format(fromDate, 'yyyy-MM-dd');
+                        const dateTo = format(toDate, 'yyyy-MM-dd');
+                        if (selectedService) {
+                          fetchAdvancedService(dateFrom, dateTo, selectedService);
+                        }
+                      }}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : selectedService && advancedServiceData?.data ? (
                   <div className="mt-4 space-y-6">
                     {advancedServiceData.data
                       .filter((service, index) => {
@@ -1485,18 +1465,18 @@ export const Reports: React.FC = () => {
                                 </h2>
                                 <p className="text-muted-foreground">
                                   {serviceInfo?.category || "General"} •{" "}
-                                  {service.avgDuration} minutes
+                                  {service.avgDuration || "N/A"} minutes
                                 </p>
                               </div>
                               <Badge
                                 variant={
-                                  parseInt(service.growthRate) > 0
+                                  service.growthRate && parseFloat(service.growthRate) > 0
                                     ? "default"
                                     : "secondary"
                                 }
                               >
-                                {parseInt(service.growthRate) > 0 ? "+" : ""}
-                                {service.growthRate}% growth
+                                {service.growthRate && parseFloat(service.growthRate) > 0 ? "+" : ""}
+                                {service.growthRate || "0"}% growth
                               </Badge>
                             </div>
 
@@ -1509,7 +1489,7 @@ export const Reports: React.FC = () => {
                                 </CardHeader>
                                 <CardContent className="p-3 pt-0">
                                   <p className="text-2xl font-bold">
-                                    {service.bookings}
+                                    {service.bookings || 0}
                                   </p>
                                 </CardContent>
                               </Card>
@@ -1522,7 +1502,7 @@ export const Reports: React.FC = () => {
                                 </CardHeader>
                                 <CardContent className="p-3 pt-0">
                                   <p className="text-2xl font-bold">
-                                    ${service.revenue.toLocaleString()}
+                                    ${(service.revenue || 0).toLocaleString()}
                                   </p>
                                 </CardContent>
                               </Card>
@@ -1535,7 +1515,7 @@ export const Reports: React.FC = () => {
                                 </CardHeader>
                                 <CardContent className="p-3 pt-0">
                                   <p className="text-2xl font-bold">
-                                    {service.growthRate}%
+                                    {service.growthRate || "0"}%
                                   </p>
                                 </CardContent>
                               </Card>
@@ -1548,7 +1528,7 @@ export const Reports: React.FC = () => {
                                 </CardHeader>
                                 <CardContent className="p-3 pt-0">
                                   <p className="text-2xl font-bold">
-                                    ${service.averageRevenue.toFixed(2)}
+                                    ${service.averageRevenue ? service.averageRevenue.toFixed(2) : '0.00'}
                                   </p>
                                 </CardContent>
                               </Card>
@@ -1582,23 +1562,21 @@ export const Reports: React.FC = () => {
                                         Appointment Completion
                                       </TableCell>
                                       <TableCell>
-                                        {service.appointmentCompletionRate}%
+                                        {service.appointmentCompletionRate ?? 'N/A'}%
                                       </TableCell>
                                       <TableCell>
                                         <Badge
                                           variant={
-                                            service.appointmentCompletionRate > 90
+                                            (service.appointmentCompletionRate ?? 0) > 90
                                               ? "default"
-                                              : service.appointmentCompletionRate >
-                                                  75
+                                              : (service.appointmentCompletionRate ?? 0) > 75
                                                 ? "secondary"
                                                 : "outline"
                                           }
                                         >
-                                          {service.appointmentCompletionRate > 90
+                                          {(service.appointmentCompletionRate ?? 0) > 90
                                             ? "Excellent"
-                                            : service.appointmentCompletionRate >
-                                                75
+                                            : (service.appointmentCompletionRate ?? 0) > 75
                                               ? "Good"
                                               : "Needs Improvement"}
                                         </Badge>
@@ -1632,21 +1610,21 @@ export const Reports: React.FC = () => {
                                     <TableRow>
                                       <TableCell>Utilization Rate</TableCell>
                                       <TableCell>
-                                        {service.utilization}%
+                                        {service.utilization ?? 'N/A'}%
                                       </TableCell>
                                       <TableCell>
                                         <Badge
                                           variant={
-                                            service.utilization > 85
+                                            (service.utilization ?? 0) > 85
                                               ? "default"
-                                              : service.utilization > 70
+                                              : (service.utilization ?? 0) > 70
                                                 ? "secondary"
                                                 : "outline"
                                           }
                                         >
-                                          {service.utilization > 85
+                                          {(service.utilization ?? 0) > 85
                                             ? "High"
-                                            : service.utilization > 70
+                                            : (service.utilization ?? 0) > 70
                                               ? "Good"
                                               : "Low"}
                                         </Badge>
@@ -1657,20 +1635,20 @@ export const Reports: React.FC = () => {
                                         Services Per Appointment
                                       </TableCell>
                                       <TableCell>
-                                        {service.averageServiceTime.toFixed(1)}
+                                        {service.averageServiceTime ? service.averageServiceTime.toFixed(1) : 'N/A'}
                                       </TableCell>
                                       <TableCell>
                                         <Badge
                                           variant={
                                             Number(
-                                              service.averageServiceTime,
+                                              service.averageServiceTime || 0
                                             ) > 1.5
                                               ? "default"
                                               : "secondary"
                                           }
                                         >
                                           {Number(
-                                            service.averageServiceTime,
+                                            service.averageServiceTime || 0
                                           ) > 1.5
                                             ? "High"
                                             : "Average"}
@@ -1694,23 +1672,31 @@ export const Reports: React.FC = () => {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {service.topServices.map((service, idx) => (
-                                      <TableRow key={idx}>
-                                        <TableCell className="font-medium">
-                                          {service.name}
-                                        </TableCell>
-                                        <TableCell>{service.count}</TableCell>
-                                        <TableCell>
-                                          <Badge variant="secondary">
-                                            {idx === 0
-                                              ? "Most Popular"
-                                              : idx === 1
-                                                ? "Popular"
-                                                : "Regular"}
-                                          </Badge>
+                                    {service.topServices && Array.isArray(service.topServices) ? 
+                                      service.topServices.map((topService, idx) => (
+                                        <TableRow key={idx}>
+                                          <TableCell className="font-medium">
+                                            {topService.name}
+                                          </TableCell>
+                                          <TableCell>{topService.count}</TableCell>
+                                          <TableCell>
+                                            <Badge variant="secondary">
+                                              {idx === 0
+                                                ? "Most Popular"
+                                                : idx === 1
+                                                  ? "Popular"
+                                                  : "Regular"}
+                                            </Badge>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))
+                                    : (
+                                      <TableRow>
+                                        <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                                          No detailed service data available
                                         </TableCell>
                                       </TableRow>
-                                    ))}
+                                    )}
                                   </TableBody>
                                 </Table>
                               </TabsContent>
@@ -1844,12 +1830,26 @@ export const Reports: React.FC = () => {
                   <DialogDescription>Detailed metrics for selected staff member</DialogDescription>
                 </DialogHeader>
                 {advancedStaffLoading ? (
-                  <div className="flex justify-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="flex flex-col items-center justify-center p-8 space-y-2">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="text-muted-foreground">Loading staff performance details...</p>
                   </div>
                 ) : advancedStaffError ? (
                   <div className="text-center p-8 text-destructive">
                     <p>Error loading staff details. Please try again.</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4"
+                      onClick={() => {
+                        const dateFrom = format(fromDate, 'yyyy-MM-dd');
+                        const dateTo = format(toDate, 'yyyy-MM-dd');
+                        if (selectedStaffMember) {
+                          fetchAdvancedStaff(dateFrom, dateTo, selectedStaffMember);
+                        }
+                      }}
+                    >
+                      Retry
+                    </Button>
                   </div>
                 ) : (
                   advancedStaffData?.data && advancedStaffData.data.length > 0 ? (
@@ -1974,7 +1974,7 @@ export const Reports: React.FC = () => {
                                                 ? "default"
                                                 : staff.utilization > 75
                                                   ? "secondary"
-                                                  : "outline"
+                                                : "outline"
                                             }
                                           >
                                             {staff.utilization > 90
@@ -2075,23 +2075,31 @@ export const Reports: React.FC = () => {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {staff.topServices.map((service, idx) => (
-                                        <TableRow key={idx}>
-                                          <TableCell className="font-medium">
-                                            {service.name}
-                                          </TableCell>
-                                          <TableCell>{service.count}</TableCell>
-                                          <TableCell>
-                                            <Badge variant="secondary">
-                                              {idx === 0
-                                                ? "Most Popular"
-                                                : idx === 1
-                                                  ? "Popular"
-                                                  : "Regular"}
-                                            </Badge>
+                                      {staff.topServices && Array.isArray(staff.topServices) ? 
+                                        staff.topServices.map((topService, idx) => (
+                                          <TableRow key={idx}>
+                                            <TableCell className="font-medium">
+                                              {topService.name}
+                                            </TableCell>
+                                            <TableCell>{topService.count}</TableCell>
+                                            <TableCell>
+                                              <Badge variant="secondary">
+                                                {idx === 0
+                                                  ? "Most Popular"
+                                                  : idx === 1
+                                                    ? "Popular"
+                                                    : "Regular"}
+                                              </Badge>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))
+                                      : (
+                                        <TableRow>
+                                          <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                                            No detailed service data available
                                           </TableCell>
                                         </TableRow>
-                                      ))}
+                                      )}
                                     </TableBody>
                                   </Table>
                                 </TabsContent>
