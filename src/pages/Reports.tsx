@@ -13,6 +13,7 @@ import {
   Star,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout";
 import {
@@ -177,6 +178,10 @@ const reportType = "daily";
   >("last7days");
   const [fromDate, setFromDate] = useState<Date>(subDays(new Date(), 7));
   const [toDate, setToDate] = useState<Date>(new Date());
+  // New state for temporary date values and calendar open state
+  const [tempFromDate, setTempFromDate] = useState<Date>(subDays(new Date(), 7));
+  const [tempToDate, setTempToDate] = useState<Date>(new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState("revenue");
   const [compareWith, setCompareWith] = useState("none");
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
@@ -285,7 +290,7 @@ const reportType = "daily";
   };
 
   // Handle date range changes
-  const handleDateRangeChange = (preset: string) => {
+  const handleDateRangeChange = (preset: "today" | "yesterday" | "last7days" | "last30days" | "thisMonth" | "lastMonth" | "custom") => {
     setDateRange(preset);
     const today = new Date();
     
@@ -293,32 +298,58 @@ const reportType = "daily";
       case 'today':
         setFromDate(today);
         setToDate(today);
+        setTempFromDate(today);
+        setTempToDate(today);
         break;
       case 'yesterday': {
         const yesterday = subDays(today, 1);
         setFromDate(yesterday);
         setToDate(yesterday);
+        setTempFromDate(yesterday);
+        setTempToDate(yesterday);
         break;
       }
       case 'last7days':
         setFromDate(subDays(today, 7));
         setToDate(today);
+        setTempFromDate(subDays(today, 7));
+        setTempToDate(today);
         break;
       case 'last30days':
         setFromDate(subDays(today, 30));
         setToDate(today);
+        setTempFromDate(subDays(today, 30));
+        setTempToDate(today);
         break;
       case 'thisMonth':
         setFromDate(new Date(today.getFullYear(), today.getMonth(), 1));
         setToDate(today);
+        setTempFromDate(new Date(today.getFullYear(), today.getMonth(), 1));
+        setTempToDate(today);
         break;
       case 'lastMonth':
         setFromDate(new Date(today.getFullYear(), today.getMonth() - 1, 1));
         setToDate(new Date(today.getFullYear(), today.getMonth(), 0));
+        setTempFromDate(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+        setTempToDate(new Date(today.getFullYear(), today.getMonth(), 0));
         break;
     }
     
+    // Close the popover for preset buttons
+    if (preset !== 'custom') {
+      setIsCalendarOpen(false);
+    }
     // Refresh data will happen via the useEffect
+  };
+
+  // New function to apply date range from calendar
+  const applyDateRange = () => {
+    if (tempFromDate && tempToDate) {
+      setFromDate(tempFromDate);
+      setToDate(tempToDate);
+      setDateRange('custom');
+      setIsCalendarOpen(false);
+    }
   };
 
   // Extract data from API responses
@@ -371,6 +402,8 @@ const reportType = "daily";
     setDateRange("last7days");
     setFromDate(subDays(new Date(), 7));
     setToDate(new Date());
+    setTempFromDate(subDays(new Date(), 7));
+    setTempToDate(new Date());
     setSelectedStaff([]);
     setSelectedServices([]);
     setSelectedServiceCategories([]);
@@ -782,7 +815,7 @@ const reportType = "daily";
           title="Reports"
           description="View business performance and analytics"
         />
-        <Popover>
+        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -796,6 +829,17 @@ const reportType = "daily";
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-3 border-b flex items-center justify-between">
+              <div className="font-medium">Date Range</div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsCalendarOpen(false)}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="p-3 border-b">
               <div className="grid grid-cols-2 gap-2">
                 {DATE_PRESETS.map((preset) => (
@@ -813,20 +857,24 @@ const reportType = "daily";
             <Calendar
               mode="range"
               selected={{
-                from: fromDate,
-                to: toDate,
+                from: tempFromDate,
+                to: tempToDate,
               }}
               onSelect={(range) => {
                 if (range?.from) {
-                  setFromDate(range.from);
-                  setDateRange('custom');
+                  setTempFromDate(range.from);
                 }
                 if (range?.to) {
-                  setToDate(range.to);
+                  setTempToDate(range.to);
                 }
               }}
               initialFocus
             />
+            <div className="p-3 border-t flex justify-end">
+              <Button onClick={applyDateRange}>
+                Apply
+              </Button>
+            </div>
           </PopoverContent>
         </Popover>
       </div>
