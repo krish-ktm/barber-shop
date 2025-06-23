@@ -269,6 +269,15 @@ export const Reports: React.FC = () => {
     dayOfWeekError,
     toast,
   ]);
+  
+  // Special effect for staff tab to ensure advanced staff metrics are loaded
+  useEffect(() => {
+    if (activeTab === 'staff') {
+      const dateFrom = format(fromDate, 'yyyy-MM-dd');
+      const dateTo = format(toDate, 'yyyy-MM-dd');
+      fetchAdvancedStaff(dateFrom, dateTo);
+    }
+  }, [activeTab, fromDate, toDate, fetchAdvancedStaff]);
 
   // Fetch data based on selected filters
   const fetchInitialData = () => {
@@ -620,22 +629,72 @@ export const Reports: React.FC = () => {
     );
   };
 
-  // Example for rendering staff data
+  // Staff data table renderer - prioritizes advanced staff metrics for accurate commission display
   const renderStaffTable = () => {
-    if (staffLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    // If advanced data is available, use it as the primary data source
+    if (advancedStaffData?.data?.length > 0) {
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Staff Member</TableHead>
+              <TableHead className="text-right">Appointments</TableHead>
+              <TableHead className="text-right">Revenue</TableHead>
+              <TableHead className="text-right">Commission</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {advancedStaffData.data.map((staff) => {
+              const revenue = parseFloat(String(staff.revenue)) || 0;
+              // Use commissionEarned from advanced metrics data
+              const commission = parseFloat(String(staff.commissionEarned)) || 0;
+              
+              return (
+                <TableRow key={staff.staff_id} onClick={() => handleStaffRowClick(staff.staff_id)}>
+                  <TableCell>{staff.name}</TableCell>
+                  <TableCell className="text-right">{staff.appointments}</TableCell>
+                  <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${commission.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={(e) => {
+                      e.stopPropagation();
+                      handleStaffRowClick(staff.staff_id);
+                    }}>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      );
+    }
     
-    if (staffError) return (
-      <div className="text-center p-8 text-destructive">
-        <p>Error loading staff data. Please try again.</p>
-      </div>
-    );
+    // Fallback to basic staff data if advanced data isn't available
+    if (staffLoading || advancedStaffLoading) {
+      return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    }
     
-    if (!staffData || !staffData.data || staffData.data.length === 0) return (
-      <div className="text-center p-8 text-muted-foreground">
-        <p>No staff performance data available for the selected period.</p>
-      </div>
-    );
+    if (staffError || advancedStaffError) {
+      return (
+        <div className="text-center p-8 text-destructive">
+          <p>Error loading staff data. Please try again.</p>
+        </div>
+      );
+    }
     
+    if ((!staffData || !staffData.data || staffData.data.length === 0) && 
+        (!advancedStaffData || !advancedStaffData.data || advancedStaffData.data.length === 0)) {
+      return (
+        <div className="text-center p-8 text-muted-foreground">
+          <p>No staff performance data available for the selected period.</p>
+        </div>
+      );
+    }
+    
+    // Use basic staff data as a fallback
     return (
       <Table>
         <TableHeader>
@@ -650,12 +709,13 @@ export const Reports: React.FC = () => {
         <TableBody>
           {staffData.data.map((staff) => {
             const revenue = parseFloat(String(staff.revenue)) || 0;
+            // Use commission from standard metrics as fallback
             const commission = parseFloat(String(staff.commission)) || 0;
             const appointments = parseInt(String(staff.appointments)) || 0;
             
             return (
               <TableRow key={staff.staff_id} onClick={() => handleStaffRowClick(staff.staff_id)}>
-                <TableCell>{staff.staff_name}</TableCell>
+                <TableCell>{staff.staff_name || staff.name}</TableCell>
                 <TableCell className="text-right">{appointments}</TableCell>
                 <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
                 <TableCell className="text-right">${commission.toFixed(2)}</TableCell>

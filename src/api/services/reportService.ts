@@ -66,6 +66,7 @@ export interface StaffPerformance {
   revenue: string | number;
   commission: string | number;
   commissionPercentage?: string | number;
+  commissionEarned?: string | number; // Add support for the advanced metrics field name
 }
 
 export interface TipsDiscountsData {
