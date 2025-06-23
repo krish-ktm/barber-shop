@@ -188,6 +188,24 @@ export interface AdvancedServiceMetrics {
   }>;
 }
 
+// Define interface for staff performance metrics
+export interface StaffPerformanceMetrics {
+  appointments: number;
+  revenue: number;
+  commission: number;
+  commissionPercentage: number;
+  services: Array<{
+    service_id: string;
+    service_name: string;
+    bookings: number;
+    revenue: number;
+  }>;
+  dateRange: {
+    from: string;
+    to: string;
+  };
+}
+
 // Response interfaces
 interface DashboardResponse {
   success: boolean;
@@ -233,6 +251,11 @@ interface AdvancedStaffResponse {
 interface AdvancedServiceResponse {
   success: boolean;
   data: AdvancedServiceMetrics[];
+}
+
+interface StaffPerformanceMetricsResponse {
+  success: boolean;
+  data: StaffPerformanceMetrics;
 }
 
 /**
@@ -360,4 +383,17 @@ export const getAdvancedServiceMetrics = async (
   }
   
   return get<AdvancedServiceResponse>(url);
+};
+
+/**
+ * Get staff performance metrics for the specified staff member
+ */
+export const getStaffPerformanceMetrics = async (
+  dateFrom: string,
+  dateTo: string,
+  staffId: string
+): Promise<StaffPerformanceMetricsResponse> => {
+  return get<StaffPerformanceMetricsResponse>(
+    `/reports/staff-performance-metrics?dateFrom=${dateFrom}&dateTo=${dateTo}&staffId=${staffId}`
+  );
 }; 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format, subDays } from 'date-fns';
 import { 
   Calendar as CalendarIcon,
@@ -35,7 +35,9 @@ import { useAuth } from '@/lib/auth';
 import { 
   getStaffReport,
   getRevenueReport,
-  getServicesReport
+  getServicesReport,
+  getAdvancedStaffMetrics,
+  getStaffPerformanceMetrics
 } from '@/api/services/reportService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -49,12 +51,28 @@ const DATE_PRESETS = [
   { value: 'lastMonth', label: 'Last month' },
 ];
 
+// Combined service interface for display
+interface DisplayService {
+  id: string;
+  name: string;
+  bookings: number;
+  revenue: number;
+}
+
 export const StaffReports: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const staffId = user?.id;
 
-  // API hooks
+  // API hooks for the new staff performance metrics endpoint
+  const {
+    data: staffPerformanceData,
+    loading: staffPerformanceLoading,
+    error: staffPerformanceError,
+    execute: fetchStaffPerformanceMetrics,
+  } = useApi(getStaffPerformanceMetrics);
+
+  // Other API hooks (kept for backward compatibility)
   const {
     loading: revenueLoading,
     error: revenueError,
@@ -75,29 +93,52 @@ export const StaffReports: React.FC = () => {
     execute: fetchServicesReport,
   } = useApi(getServicesReport);
 
+  const {
+    data: advancedStaffData,
+    loading: advancedStaffLoading,
+    error: advancedStaffError,
+    execute: fetchAdvancedStaffMetrics,
+  } = useApi(getAdvancedStaffMetrics);
+
   // State for date selection
   const [dateRange, setDateRange] = useState<string>('last7days');
   const [fromDate, setFromDate] = useState<Date>(subDays(new Date(), 7));
   const [toDate, setToDate] = useState<Date>(new Date());
+
+  // Fetch initial data - memoized to avoid dependency cycles
+  const fetchInitialData = useCallback(() => {
+    if (!staffId) return;
+
+    // Format dates for API calls
+    const dateFrom = format(fromDate, 'yyyy-MM-dd');
+    const dateTo = format(toDate, 'yyyy-MM-dd');
+    
+    // Fetch staff performance metrics from our new endpoint
+    // The endpoint will extract staffId from JWT token if needed
+    fetchStaffPerformanceMetrics(dateFrom, dateTo, user?.staff?.id || staffId);
+    
+    // Keep these calls for backward compatibility and additional data
+    fetchRevenueReport(dateFrom, dateTo, 'day');
+    fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
+    fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
+    fetchAdvancedStaffMetrics(dateFrom, dateTo, staffId);
+  }, [
+    fromDate, 
+    toDate, 
+    staffId, 
+    fetchStaffPerformanceMetrics,
+    fetchRevenueReport, 
+    fetchStaffReport, 
+    fetchServicesReport, 
+    fetchAdvancedStaffMetrics
+  ]);
 
   // Load data on component mount
   useEffect(() => {
     if (staffId) {
       fetchInitialData();
     }
-  }, [staffId]);
-
-  // Fetch initial data
-  const fetchInitialData = () => {
-    // Format dates for API calls
-    const dateFrom = format(fromDate, 'yyyy-MM-dd');
-    const dateTo = format(toDate, 'yyyy-MM-dd');
-    
-    // Fetch all report data
-    fetchRevenueReport(dateFrom, dateTo, 'day');
-    fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
-    fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
-  };
+  }, [staffId, fetchInitialData]);
 
   // Handle date range changes
   const handleDateRangeChange = (preset: string) => {
@@ -172,19 +213,146 @@ export const StaffReports: React.FC = () => {
         variant: 'destructive'
       });
     }
-  }, [revenueError, staffError, servicesError, toast]);
 
-  // Get current staff data from API
-  const currentStaffData = staffData?.data?.find(staff => staff.staffId === staffId);
+    if (advancedStaffError) {
+      toast({
+        title: 'Error loading advanced staff metrics',
+        description: advancedStaffError.message,
+        variant: 'destructive'
+      });
+    }
+
+    if (staffPerformanceError) {
+      toast({
+        title: 'Error loading staff performance metrics',
+        description: staffPerformanceError.message,
+        variant: 'destructive'
+      });
+    }
+  }, [
+    revenueError, 
+    staffError, 
+    servicesError, 
+    advancedStaffError,
+    staffPerformanceError, 
+    toast
+  ]);
+
+  // Get data for the UI
+  // First try to get data from the new endpoint, fall back to other sources if needed
+  const performanceData = staffPerformanceData?.data;
+  const currentStaffData = staffData?.data?.find(staff => staff.staff_id === staffId);
+  const currentAdvancedStaffData = advancedStaffData?.data?.find(staff => staff.staff_id === staffId);
   
+  // Appointments count
+  const appointmentCount = performanceData?.appointments ?? 
+    (typeof currentStaffData?.appointments === 'number' 
+    ? currentStaffData.appointments 
+    : typeof currentStaffData?.appointments === 'string' 
+      ? parseInt(currentStaffData.appointments, 10) || 0 
+      : currentAdvancedStaffData?.appointments || 0);
+
+  // Revenue
+  const revenue = performanceData?.revenue ??
+    (typeof currentStaffData?.revenue === 'number' 
+    ? currentStaffData.revenue 
+    : typeof currentStaffData?.revenue === 'string' 
+      ? parseFloat(currentStaffData.revenue) || 0 
+      : currentAdvancedStaffData?.revenue || 0);
+
+  // Commission
+  const commission = performanceData?.commission ??
+    (typeof currentStaffData?.commission === 'number' 
+    ? currentStaffData.commission 
+    : typeof currentStaffData?.commission === 'string' 
+      ? parseFloat(currentStaffData.commission) || 0 
+      : typeof currentStaffData?.commissionEarned === 'number'
+        ? currentStaffData.commissionEarned
+        : typeof currentStaffData?.commissionEarned === 'string'
+          ? parseFloat(currentStaffData.commissionEarned) || 0
+          : currentAdvancedStaffData?.commissionEarned || 0);
+
+  // Commission percentage
+  const commissionPercentage = performanceData?.commissionPercentage ??
+    (typeof currentStaffData?.commissionPercentage === 'number'
+    ? currentStaffData.commissionPercentage
+    : typeof currentStaffData?.commissionPercentage === 'string'
+      ? parseFloat(currentStaffData.commissionPercentage) || 0
+      : currentAdvancedStaffData?.commissionPercentage || 0);
+
   // If still loading or no staff ID
-  if (!staffId || staffLoading) {
+  if (!staffId || ((staffLoading || staffPerformanceLoading) && !performanceData)) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+
+  // Prepare services list for display
+  const displayServices: DisplayService[] = (() => {
+    // First try to get from the new performance metrics endpoint
+    if (performanceData?.services && performanceData.services.length > 0) {
+      return performanceData.services.map(service => ({
+        id: service.service_id,
+        name: service.service_name,
+        bookings: service.bookings,
+        revenue: service.revenue
+      }));
+    }
+    
+    // If we have advanced staff data with top services
+    if (currentAdvancedStaffData?.topServices && currentAdvancedStaffData.topServices.length > 0) {
+      return currentAdvancedStaffData.topServices.map(service => {
+        // Try to find revenue data for this service
+        const serviceData = servicesData?.data?.find(
+          s => s.service_id === service.service_id
+        );
+        
+        const serviceRevenue = serviceData ? (
+          typeof serviceData.revenue === 'number' 
+            ? serviceData.revenue 
+            : typeof serviceData.revenue === 'string'
+              ? parseFloat(serviceData.revenue) || 0
+              : 0
+        ) : 0;
+        
+        return {
+          id: service.service_id,
+          name: service.name,
+          bookings: service.count,
+          revenue: serviceRevenue
+        };
+      });
+    }
+    
+    // Or use all services data if available
+    if (servicesData?.data && servicesData.data.length > 0) {
+      return servicesData.data.map(service => {
+        const bookings = typeof service.bookings === 'number' 
+          ? service.bookings 
+          : typeof service.bookings === 'string'
+            ? parseInt(service.bookings, 10) || 0
+            : 0;
+            
+        const serviceRevenue = typeof service.revenue === 'number' 
+          ? service.revenue 
+          : typeof service.revenue === 'string'
+            ? parseFloat(service.revenue) || 0
+            : 0;
+            
+        return {
+          id: service.service_id,
+          name: service.service_name,
+          bookings: bookings,
+          revenue: serviceRevenue
+        };
+      });
+    }
+    
+    // Default to empty array if no data
+    return [];
+  })();
 
   return (
     <div className="space-y-6">
@@ -248,7 +416,7 @@ export const StaffReports: React.FC = () => {
             size="sm" 
             className="h-9"
             onClick={fetchInitialData}
-            disabled={staffLoading || revenueLoading || servicesLoading}
+            disabled={staffLoading || revenueLoading || servicesLoading || advancedStaffLoading || staffPerformanceLoading}
           >
             <RefreshCcw className="mr-2 h-4 w-4" />
             Refresh
@@ -270,14 +438,17 @@ export const StaffReports: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{currentStaffData?.appointments || 0}</div>
+              <div className="text-2xl font-bold">{appointmentCount}</div>
               <Users className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               During selected period
             </div>
             <div className="mt-4">
-              <Progress value={currentStaffData?.appointments ? Math.min(currentStaffData.appointments / 100 * 100, 100) : 0} className="h-1" />
+              <Progress 
+                value={Math.min((appointmentCount / 100) * 100, 100)} 
+                className="h-1" 
+              />
             </div>
           </CardContent>
         </Card>
@@ -290,14 +461,19 @@ export const StaffReports: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{formatCurrency(currentStaffData?.revenue || 0)}</div>
+              <div className="text-2xl font-bold">
+                {formatCurrency(revenue)}
+              </div>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               During selected period
             </div>
             <div className="mt-4">
-              <Progress value={currentStaffData?.revenue ? Math.min(currentStaffData.revenue / 5000 * 100, 100) : 0} className="h-1" />
+              <Progress 
+                value={Math.min((revenue / 5000) * 100, 100)} 
+                className="h-1" 
+              />
             </div>
           </CardContent>
         </Card>
@@ -310,14 +486,19 @@ export const StaffReports: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{formatCurrency(currentStaffData?.commission || 0)}</div>
+              <div className="text-2xl font-bold">
+                {formatCurrency(commission)}
+              </div>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              During selected period
+              {commissionPercentage}% commission rate
             </div>
             <div className="mt-4">
-              <Progress value={currentStaffData?.commission ? Math.min(currentStaffData.commission / 1000 * 100, 100) : 0} className="h-1" />
+              <Progress 
+                value={Math.min((commission / 1000) * 100, 100)} 
+                className="h-1" 
+              />
             </div>
           </CardContent>
         </Card>
@@ -325,23 +506,32 @@ export const StaffReports: React.FC = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Average Per Appointment
+              {currentAdvancedStaffData ? "Utilization Rate" : "Average Per Appointment"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">
-                {formatCurrency(
-                  currentStaffData && currentStaffData.appointments > 0
-                    ? currentStaffData.revenue / currentStaffData.appointments
-                    : 0
-                )}
-              </div>
+              {currentAdvancedStaffData ? (
+                <div className="text-2xl font-bold">{currentAdvancedStaffData.utilization || 0}%</div>
+              ) : (
+                <div className="text-2xl font-bold">
+                  {formatCurrency(
+                    appointmentCount > 0
+                      ? revenue / appointmentCount
+                      : 0
+                  )}
+                </div>
+              )}
               <Scissors className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              Average revenue per appointment
+              {currentAdvancedStaffData ? "Working hours utilization" : "Average revenue per appointment"}
             </div>
+            {currentAdvancedStaffData && (
+              <div className="mt-4">
+                <Progress value={currentAdvancedStaffData.utilization || 0} className="h-1" />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -355,15 +545,15 @@ export const StaffReports: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {servicesLoading ? (
+          {staffPerformanceLoading || servicesLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : servicesError ? (
+          ) : staffPerformanceError || servicesError ? (
             <div className="text-center py-8 text-destructive">
               <p>Error loading services data</p>
             </div>
-          ) : servicesData?.data && servicesData.data.length > 0 ? (
+          ) : displayServices.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -374,8 +564,8 @@ export const StaffReports: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {servicesData.data.map((service) => (
-                  <TableRow key={service.serviceId}>
+                {displayServices.map((service) => (
+                  <TableRow key={service.id}>
                     <TableCell className="font-medium">{service.name}</TableCell>
                     <TableCell className="text-right">{service.bookings}</TableCell>
                     <TableCell className="text-right">{formatCurrency(service.revenue)}</TableCell>
@@ -393,6 +583,40 @@ export const StaffReports: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Additional metrics from advanced staff data */}
+      {currentAdvancedStaffData && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Additional Performance Metrics</CardTitle>
+            <CardDescription>
+              Advanced insights into your performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="overflow-hidden rounded-lg bg-muted px-4 py-5 shadow sm:p-6">
+                <dt className="truncate text-sm font-medium text-muted-foreground">Average Service Time</dt>
+                <dd className="mt-1 text-2xl font-semibold tracking-tight">
+                  {currentAdvancedStaffData.averageServiceTime} minutes
+                </dd>
+              </div>
+              <div className="overflow-hidden rounded-lg bg-muted px-4 py-5 shadow sm:p-6">
+                <dt className="truncate text-sm font-medium text-muted-foreground">Rebook Rate</dt>
+                <dd className="mt-1 text-2xl font-semibold tracking-tight">
+                  {currentAdvancedStaffData.rebookRate}%
+                </dd>
+              </div>
+              <div className="overflow-hidden rounded-lg bg-muted px-4 py-5 shadow sm:p-6">
+                <dt className="truncate text-sm font-medium text-muted-foreground">Busiest Days</dt>
+                <dd className="mt-1 text-lg font-semibold tracking-tight">
+                  {currentAdvancedStaffData.busyDays.join(', ')}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
