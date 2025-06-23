@@ -1551,7 +1551,7 @@ export const Reports: React.FC = () => {
                                 </CardHeader>
                                 <CardContent className="p-3 pt-0">
                                   <p className="text-2xl font-bold">
-                                    ${service.averageRevenue ? service.averageRevenue.toFixed(2) : '0.00'}
+                                    ${typeof service.averageRevenue === 'number' ? service.averageRevenue.toFixed(2) : '0.00'}
                                   </p>
                                 </CardContent>
                               </Card>
