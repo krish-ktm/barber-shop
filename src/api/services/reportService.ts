@@ -25,7 +25,7 @@ export interface DashboardStats {
     appointments: number;
     revenue: number;
   }>;
-  upcomingAppointments: any[]; // Simplified for brevity
+  upcomingAppointments: Array<Record<string, unknown>>; // Simplified for brevity
   tipsDiscountsSummary: {
     totalTips: number;
     totalDiscounts: number;
@@ -337,8 +337,17 @@ export const getRevenueByDayOfWeek = async (
 /**
  * Get advanced revenue metrics (total, daily avg, monthly projection, etc)
  */
-export const getAdvancedRevenueMetrics = async (): Promise<AdvancedRevenueResponse> => {
-  return get<AdvancedRevenueResponse>('/reports/advanced-revenue');
+export const getAdvancedRevenueMetrics = async (
+  dateFrom?: string,
+  dateTo?: string
+): Promise<AdvancedRevenueResponse> => {
+  let url = '/reports/advanced-revenue';
+  
+  if (dateFrom && dateTo) {
+    url += `?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+  }
+  
+  return get<AdvancedRevenueResponse>(url);
 };
 
 /**

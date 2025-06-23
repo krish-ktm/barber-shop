@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
 import {
   BarChart3,
+  Calendar as CalendarIcon,
   ChevronDown,
   Clock,
   Coins,
@@ -23,13 +24,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Select imports removed as they're no longer needed
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -46,6 +41,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { ComparisonChart } from "@/components/dashboard/ComparisonChart";
 import { PieChartCard } from "@/components/dashboard/PieChartCard";
 
@@ -73,16 +75,9 @@ const DATE_PRESETS = [
   { value: "last30days", label: "Last 30 days" },
   { value: "thisMonth", label: "This month" },
   { value: "lastMonth", label: "Last month" },
-  { value: "custom", label: "Custom range" },
 ];
 
-// Report types
-const REPORT_TYPES = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
-  { value: "yearly", label: "Yearly" },
-];
+  // Report type is fixed to daily since we removed the dropdown
 
 // Comparison options
 const COMPARISON_OPTIONS = [
@@ -91,7 +86,7 @@ const COMPARISON_OPTIONS = [
   { value: "samePeroidLastYear", label: "Same period last year" },
 ];
 
-
+// Report type is fixed to daily since we removed the dropdown
 
 export const Reports: React.FC = () => {
   const { toast } = useToast();
@@ -169,7 +164,8 @@ export const Reports: React.FC = () => {
   } = useApi(getAdvancedServiceMetrics);
 
   // State management
-  const [reportType, setReportType] = useState("daily");
+  // Fixed report type since dropdown was removed
+const reportType = "daily";
   const [dateRange, setDateRange] = useState<
     | "today"
     | "yesterday"
@@ -210,33 +206,16 @@ export const Reports: React.FC = () => {
     fetchInitialData();
   }, []);
 
-  // Add effect to refetch data when report type or date changes
+  // Add effect to refetch data when date or report type changes
   useEffect(() => {
     // Only refetch if we have previously loaded data (don't duplicate initial load)
     if (revenueData || servicesData || staffData || tipsDiscountsData) {
-      // Format dates for API calls
-      const dateFrom = format(fromDate, 'yyyy-MM-dd');
-      const dateTo = format(toDate, 'yyyy-MM-dd');
-      
-      // Define groupBy based on report type
-      const groupBy = reportType === 'yearly' ? 'month' : reportType === 'monthly' ? 'week' : 'day';
-
-      // Refresh data with current filters
-      fetchRevenueReport(dateFrom, dateTo, groupBy);
-      fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
-      fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
-      fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
-      fetchDayOfWeekReport(dateFrom, dateTo);
+      fetchReportsData();
     }
   }, [
     reportType, 
     fromDate, 
     toDate,
-    fetchRevenueReport, 
-    fetchServicesReport, 
-    fetchStaffReport, 
-    fetchTipsDiscountsReport,
-    fetchDayOfWeekReport
     // Remove data dependencies that cause infinite loop
   ]);
 
@@ -249,7 +228,10 @@ export const Reports: React.FC = () => {
       { error: staffListError, source: "staff list" },
       { error: servicesListError, source: "services list" },
       { error: tipsDiscountsError, source: "tips and discounts" },
-      { error: dayOfWeekError, source: "revenue by day" },
+      { error: dayOfWeekError, source: "day of week" },
+      { error: advancedRevenueError, source: "advanced revenue" },
+      { error: advancedStaffError, source: "advanced staff" },
+      { error: advancedServiceError, source: "advanced service" }
     ];
 
     errors.forEach(({ error, source }) => {
@@ -269,87 +251,75 @@ export const Reports: React.FC = () => {
     servicesListError,
     tipsDiscountsError,
     dayOfWeekError,
+    advancedRevenueError,
+    advancedStaffError,
+    advancedServiceError,
     toast,
   ]);
   
-  // Special effect for staff tab to ensure advanced staff metrics are loaded
-  useEffect(() => {
-    if (activeTab === 'staff') {
-      const dateFrom = format(fromDate, 'yyyy-MM-dd');
-      const dateTo = format(toDate, 'yyyy-MM-dd');
-      fetchAdvancedStaff(dateFrom, dateTo);
-    }
-  }, [activeTab, fromDate, toDate, fetchAdvancedStaff]);
-
-  // Fetch data based on selected filters
   const fetchInitialData = () => {
-    // Get default dates based on selected preset
-    const { fromDate: startDate, toDate: endDate } = getDateRangeForPreset(dateRange);
+    // Fetch staff and service listings (not date-dependent)
+    fetchStaffList();
+    fetchServicesList();
 
+    // Fetch date-dependent reports
+    fetchReportsData();
+  };
+
+  const fetchReportsData = () => {
     // Format dates for API calls
-    const dateFrom = format(startDate, 'yyyy-MM-dd');
-    const dateTo = format(endDate, 'yyyy-MM-dd');
+    const dateFrom = format(fromDate, 'yyyy-MM-dd');
+    const dateTo = format(toDate, 'yyyy-MM-dd');
     
     // Define groupBy based on report type
     const groupBy = reportType === 'yearly' ? 'month' : reportType === 'monthly' ? 'week' : 'day';
 
-    // Fetch all report data
+    // Fetch all reports with the same date range
     fetchRevenueReport(dateFrom, dateTo, groupBy);
     fetchServicesReport(dateFrom, dateTo, 'revenue_desc');
     fetchStaffReport(dateFrom, dateTo, 'revenue_desc');
     fetchTipsDiscountsReport(dateFrom, dateTo, groupBy);
     fetchDayOfWeekReport(dateFrom, dateTo);
-    
-    // Fetch staff and services lists for filters
-    fetchStaffList();
-    fetchServicesList();
-    
-    // Fetch advanced metrics
-    fetchAdvancedRevenue();
+    fetchAdvancedRevenue(dateFrom, dateTo);
     fetchAdvancedStaff(dateFrom, dateTo);
-    fetchAdvancedService(dateFrom, dateTo);
   };
 
-  // Get date range based on preset
-  const getDateRangeForPreset = (preset: string) => {
+  // Handle date range changes
+  const handleDateRangeChange = (preset: string) => {
+    setDateRange(preset);
     const today = new Date();
-    let fromDate = new Date();
-    let toDate = new Date();
     
     switch(preset) {
       case 'today':
-        // fromDate and toDate are already today
+        setFromDate(today);
+        setToDate(today);
         break;
       case 'yesterday': {
         const yesterday = subDays(today, 1);
-        fromDate = yesterday;
-        toDate = yesterday;
+        setFromDate(yesterday);
+        setToDate(yesterday);
         break;
       }
       case 'last7days':
-        fromDate = subDays(today, 7);
+        setFromDate(subDays(today, 7));
+        setToDate(today);
         break;
       case 'last30days':
-        fromDate = subDays(today, 30);
+        setFromDate(subDays(today, 30));
+        setToDate(today);
         break;
       case 'thisMonth':
-        fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        setFromDate(new Date(today.getFullYear(), today.getMonth(), 1));
+        setToDate(today);
         break;
       case 'lastMonth':
-        fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        toDate = new Date(today.getFullYear(), today.getMonth(), 0);
-        break;
-      case 'custom':
-        // Use the fromDate and toDate from state
-        fromDate = fromDate;
-        toDate = toDate;
+        setFromDate(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+        setToDate(new Date(today.getFullYear(), today.getMonth(), 0));
         break;
     }
     
-    return { fromDate, toDate };
+    // Refresh data will happen via the useEffect
   };
-
-
 
   // Extract data from API responses
   const staffList = staffListData?.staff || [];
@@ -415,12 +385,10 @@ export const Reports: React.FC = () => {
 
   // Format date range for display
   const getDisplayDateRange = () => {
-    if (dateRange !== "custom") {
-      return (
-        DATE_PRESETS.find((preset) => preset.value === dateRange)?.label || ""
-      );
+    if (dateRange !== 'custom') {
+      return DATE_PRESETS.find(preset => preset.value === dateRange)?.label || '';
     }
-    return `${format(fromDate, "MMM dd, yyyy")} - ${format(toDate, "MMM dd, yyyy")}`;
+    return `${format(fromDate, 'MMM dd, yyyy')} - ${format(toDate, 'MMM dd, yyyy')}`;
   };
 
   // Get active filters count
@@ -808,31 +776,62 @@ export const Reports: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <PageHeader
-          title="Reports & Analytics"
-          description="View and analyze your business performance"
+          title="Reports"
+          description="View business performance and analytics"
         />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">View by:</span>
-          <Select
-            defaultValue={reportType}
-            onValueChange={setReportType}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="View by" />
-            </SelectTrigger>
-            <SelectContent>
-              {REPORT_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'justify-start text-left',
+                !fromDate && 'text-muted-foreground'
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {getDisplayDateRange()}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-3 border-b">
+              <div className="grid grid-cols-2 gap-2">
+                {DATE_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.value}
+                    variant={dateRange === preset.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleDateRangeChange(preset.value as "today" | "yesterday" | "last7days" | "last30days" | "thisMonth" | "lastMonth" | "custom")}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Calendar
+              mode="range"
+              selected={{
+                from: fromDate,
+                to: toDate,
+              }}
+              onSelect={(range) => {
+                if (range?.from) {
+                  setFromDate(range.from);
+                  setDateRange('custom');
+                }
+                if (range?.to) {
+                  setToDate(range.to);
+                }
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       </div>
+
+      <div className="flex-1 space-y-4 pt-6">
 
       <div className="space-y-4">
         <Tabs
@@ -1414,7 +1413,7 @@ export const Reports: React.FC = () => {
                   <div>
                     <CardTitle>Service Performance</CardTitle>
                     <CardDescription>
-                      {getDisplayDateRange()} • {REPORT_TYPES.find(type => type.value === reportType)?.label} View
+                      {getDisplayDateRange()}
                     </CardDescription>
                   </div>
                 </div>
@@ -1551,7 +1550,7 @@ export const Reports: React.FC = () => {
                                 </CardHeader>
                                 <CardContent className="p-3 pt-0">
                                   <p className="text-2xl font-bold">
-                                    ${typeof service.averageRevenue === 'number' ? service.averageRevenue.toFixed(2) : '0.00'}
+                                      ${typeof service.averageRevenue === 'number' ? service.averageRevenue.toFixed(2) : '0.00'}
                                   </p>
                                 </CardContent>
                               </Card>
@@ -1835,7 +1834,7 @@ export const Reports: React.FC = () => {
                   <div>
                     <CardTitle>Staff Performance</CardTitle>
                     <CardDescription>
-                      {getDisplayDateRange()} • {REPORT_TYPES.find(type => type.value === reportType)?.label} View
+                      {getDisplayDateRange()}
                     </CardDescription>
                   </div>
                 </div>
@@ -2480,6 +2479,7 @@ export const Reports: React.FC = () => {
             )}
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );
