@@ -108,7 +108,7 @@ export const AppointmentDetailsModalMobile: React.FC<AppointmentDetailsModalMobi
                   <div key={service.serviceId} className="flex justify-between text-sm">
                     <span>{service.serviceName}</span>
                     <div>
-                      <span className="text-muted-foreground">${service.price.toFixed(2)}</span>
+                      <span className="text-muted-foreground">${Number(service.price).toFixed(2)}</span>
                       <span className="text-muted-foreground mx-2">·</span>
                       <span className="text-muted-foreground">{service.duration} min</span>
                     </div>
@@ -119,7 +119,7 @@ export const AppointmentDetailsModalMobile: React.FC<AppointmentDetailsModalMobi
                   <div className="flex justify-between font-medium">
                     <span>Total</span>
                     <div>
-                      <span>${appointment.totalAmount.toFixed(2)}</span>
+                      <span>${Number(appointment.totalAmount).toFixed(2)}</span>
                       <span className="text-muted-foreground mx-2">·</span>
                       <span className="text-muted-foreground">{getTotalServiceDuration(appointment)} min</span>
                     </div>

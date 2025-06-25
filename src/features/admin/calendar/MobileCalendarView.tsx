@@ -37,7 +37,7 @@ type CalendarView = 'month' | 'week' | 'day' | 'list';
 interface MobileCalendarViewProps {
   appointments: Appointment[];
   onSelectDate?: (date: Date) => void;
-  onViewAppointment: (appointmentId: string) => void;
+  onViewAppointment?: (appointmentId: string) => void; // not used to avoid duplicate dialogs
 }
 
 /**
@@ -50,7 +50,6 @@ interface MobileCalendarViewProps {
 export const MobileCalendarView = ({
   appointments,
   onSelectDate,
-  onViewAppointment: parentOnViewAppointment,
 }: MobileCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -104,8 +103,6 @@ export const MobileCalendarView = ({
   const handleViewAppointment = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
     setShowAppointmentDetails(true);
-    // Also call the parent handler to maintain compatibility
-    parentOnViewAppointment(appointmentId);
   };
 
   // Navigation functions
