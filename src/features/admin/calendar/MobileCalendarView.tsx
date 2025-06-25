@@ -367,10 +367,15 @@ export const MobileCalendarView = ({
               <div 
                 key={format(day, 'yyyy-MM-dd')} 
                 className={cn(
-                  "flex flex-col items-center justify-center py-1 rounded-md transition-all duration-200",
+                  "flex flex-col items-center justify-center py-1 rounded-md transition-all duration-200 cursor-pointer",
                   isToday && "bg-primary/10",
                   isSelected && "ring-1 ring-primary"
                 )}
+                onClick={() => {
+                  setSelectedDate(day);
+                  setCurrentDate(day);
+                  onSelectDate?.(day);
+                }}
               >
                 <span className="text-xs text-muted-foreground">{format(day, 'EEE')}</span>
                 <span className={cn(

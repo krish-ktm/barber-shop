@@ -349,6 +349,11 @@ export const DesktopCalendarView = ({
                   isToday && "bg-primary/5",
                   "border-l"
                 )}
+                onClick={() => {
+                  setCurrentDate(day);
+                  setView('day');
+                  onSelectDate?.(day);
+                }}
               >
                 <span className="text-sm font-medium">{format(day, 'EEE')}</span>
                 <span className={cn(
