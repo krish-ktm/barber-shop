@@ -36,7 +36,7 @@ type CalendarView = 'month' | 'week' | 'day' | 'list';
 
 interface MobileCalendarViewProps {
   appointments: Appointment[];
-  onSelectDate: (date: Date) => void;
+  onSelectDate?: (date: Date) => void;
   onViewAppointment: (appointmentId: string) => void;
 }
 
@@ -49,7 +49,6 @@ interface MobileCalendarViewProps {
  */
 export const MobileCalendarView = ({
   appointments,
-  onSelectDate,
   onViewAppointment: parentOnViewAppointment,
 }: MobileCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -146,13 +145,6 @@ export const MobileCalendarView = ({
   const goToToday = () => {
     setCurrentDate(new Date());
     setSelectedDate(new Date());
-  };
-
-  const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
-    setCurrentDate(date);
-    onSelectDate(date);
-    setView('day');
   };
 
   // Get title based on current view
@@ -287,12 +279,11 @@ export const MobileCalendarView = ({
           <div
             key={dateStr}
             className={cn(
-              "border h-12 p-1.5 relative transition-all duration-200 hover:bg-muted/20",
+              "border h-12 p-1.5 relative transition-all duration-200",
               isToday && "bg-primary/5 border-primary",
               // Add rounded corners and additional styling
-              "rounded-md active:scale-95 shadow-sm"
+              "rounded-md shadow-sm"
             )}
-            onClick={() => handleDateClick(date)}
           >
             <div className="flex justify-between items-center mb-1">
                 <span
@@ -366,12 +357,10 @@ export const MobileCalendarView = ({
               <div 
                 key={format(day, 'yyyy-MM-dd')} 
                 className={cn(
-                  "flex flex-col items-center justify-center py-1 rounded-md cursor-pointer transition-all duration-200",
+                  "flex flex-col items-center justify-center py-1 rounded-md transition-all duration-200",
                   isToday && "bg-primary/10",
-                  isSelected && "ring-1 ring-primary",
-                  "hover:bg-muted/20 active:scale-95"
+                  isSelected && "ring-1 ring-primary"
                 )}
-                onClick={() => handleDateClick(day)}
               >
                 <span className="text-xs text-muted-foreground">{format(day, 'EEE')}</span>
                 <span className={cn(
