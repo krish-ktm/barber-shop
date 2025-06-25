@@ -34,13 +34,12 @@ type CalendarView = 'month' | 'week' | 'day' | 'list';
 
 interface DesktopCalendarViewProps {
   appointments: Appointment[];
-  onSelectDate: (date: Date) => void;
+  onSelectDate?: (date: Date) => void;
   onViewAppointment: (appointmentId: string) => void;
 }
 
 export const DesktopCalendarView = ({
   appointments,
-  onSelectDate,
   onViewAppointment,
 }: DesktopCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -107,11 +106,6 @@ export const DesktopCalendarView = ({
   
   const goToToday = () => {
     setCurrentDate(new Date());
-  };
-  
-  // Handle date click
-  const handleDateClick = (date: Date) => {
-    onSelectDate(date);
   };
 
   // Get title based on current view
@@ -251,7 +245,6 @@ export const DesktopCalendarView = ({
                 isToday && "bg-primary/5 border-primary",
                 "rounded-lg shadow-sm"
               )}
-              onClick={() => handleDateClick(cloneDay)}
             >
               <div className="flex justify-between">
                 <span
@@ -342,7 +335,6 @@ export const DesktopCalendarView = ({
                   isToday && "bg-primary/5",
                   "border-l"
                 )}
-                onClick={() => handleDateClick(day)}
               >
                 <span className="text-sm font-medium">{format(day, 'EEE')}</span>
                 <span className={cn(
