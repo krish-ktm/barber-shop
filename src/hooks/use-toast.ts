@@ -2,8 +2,8 @@ import * as React from 'react';
 
 import type { ToastActionElement, ToastProps } from '@/components/ui/toast';
 
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+const AUTO_DISMISS_DELAY = 2000; // Toast auto-dismiss duration via Radix `duration` prop
+const TOAST_REMOVE_DELAY = AUTO_DISMISS_DELAY + 500; // buffer before removal
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -12,6 +12,7 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const actionTypes = {
   ADD_TOAST: 'ADD_TOAST',
   UPDATE_TOAST: 'UPDATE_TOAST',
@@ -73,7 +74,7 @@ export const reducer = (state: State, action: Action): State => {
     case 'ADD_TOAST':
       return {
         ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+        toasts: [action.toast, ...state.toasts].slice(0, getToastLimit()),
       };
 
     case 'UPDATE_TOAST':
@@ -183,6 +184,13 @@ function useToast() {
     toast,
     dismiss: (toastId?: string) => dispatch({ type: 'DISMISS_TOAST', toastId }),
   };
+}
+
+function getToastLimit() {
+  if (typeof window !== 'undefined') {
+    return window.innerWidth >= 640 ? 3 : 1; // sm breakpoint
+  }
+  return 3;
 }
 
 export { useToast, toast };
