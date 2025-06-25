@@ -454,7 +454,7 @@ export const MobileCalendarView = ({
           <div className="text-base font-bold">{format(currentDate, 'MMMM d, yyyy')}</div>
         </div>
         
-        <div className="border rounded-lg shadow-sm divide-y overflow-hidden custom-scrollbar overflow-y-auto max-h-[70vh]">
+        <div className="border rounded-lg shadow-sm divide-y overflow-hidden">
           {hours.map((hour) => {
             const hourAppointments = dayAppointments.filter(appointment => {
               const appointmentHour = parseInt(appointment.time.split(':')[0], 10);
@@ -474,7 +474,7 @@ export const MobileCalendarView = ({
                       {hourAppointments.map((appointment) => (
                 <div
                   key={appointment.id}
-                          className="p-1.5 rounded-md bg-primary/10 border border-primary/20 text-xs cursor-pointer hover:bg-primary/20 transition-colors active:bg-primary/30 shadow-sm"
+                          className="p-1.5 rounded-md bg-primary/10 border border-primary/20 text-xs cursor-pointer hover:bg-primary/20 transition-colors active:bg-primary/30 shadow-sm w-full max-w-full"
                   onClick={() => handleViewAppointment(appointment.id)}
                 >
                   <div className="flex items-center justify-between">
@@ -495,7 +495,7 @@ export const MobileCalendarView = ({
                           <div className="font-medium mt-1 truncate">
                             {appointment.customerName}
                           </div>
-                          <div className="text-[10px] text-muted-foreground truncate">
+                          <div className="text-[10px] text-muted-foreground break-words whitespace-normal">
                             {getServiceNames(appointment)}
                           </div>
                         </div>
