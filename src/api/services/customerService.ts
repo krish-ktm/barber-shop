@@ -56,7 +56,9 @@ export const getAllCustomers = async (
   sort = 'name_asc',
   search?: string,
   dateRange?: { from: string; to: string },
-  spendingRange?: { min: number; max: number }
+  spendingRange?: { min: number; max: number },
+  customerSince?: string,
+  minVisits?: number
 ): Promise<CustomerListResponse> => {
   console.log('getAllCustomers called with sort:', sort);
   
@@ -72,6 +74,14 @@ export const getAllCustomers = async (
   
   if (spendingRange?.min !== undefined && spendingRange?.max !== undefined) {
     url += `&minSpent=${spendingRange.min}&maxSpent=${spendingRange.max}`;
+  }
+  
+  if (customerSince) {
+    url += `&customerSince=${customerSince}`;
+  }
+  
+  if (minVisits !== undefined && minVisits > 0) {
+    url += `&minVisits=${minVisits}`;
   }
   
   console.log('Requesting URL:', url);

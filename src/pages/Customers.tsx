@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { format, parseISO, isAfter } from 'date-fns';
+import { format } from 'date-fns';
 import {
   Filter,
   Plus,
@@ -74,6 +74,7 @@ export const Customers: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('last_visit');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -90,6 +91,7 @@ export const Customers: React.FC = () => {
   // Pending filter state (for the filter sheet)
   const [pendingFilters, setPendingFilters] = useState({
     sortBy: 'last_visit',
+    sortDirection: 'desc',
     spendingRange: [0, 5000] as [number, number],
     dateRange: undefined as DateRange | undefined,
     customerSince: undefined as Date | undefined,
@@ -119,24 +121,8 @@ export const Customers: React.FC = () => {
 
   // Function to fetch customers with current filters
   const loadCustomers = useCallback(() => {
-    // Convert sort state to API parameter format
-    let sortParam = '';
-    switch (sortBy) {
-      case 'name':
-        sortParam = 'name_asc';
-        break;
-      case 'visit_count':
-        sortParam = 'visit_count_desc';
-        break;
-      case 'total_spent':
-        sortParam = 'total_spent_desc';
-        break;
-      case 'last_visit':
-        sortParam = 'last_visit_desc';
-        break;
-      default:
-        sortParam = 'last_visit_desc';
-    }
+    // Construct sort parameter
+    const sortParam = `${sortBy}_${sortDirection}`;
     
     // Prepare API parameters
     const dateRangeParam = dateRange?.from && dateRange?.to
@@ -151,17 +137,21 @@ export const Customers: React.FC = () => {
       max: spendingRange[1]
     };
     
+    const customerSinceParam = customerSince ? format(customerSince, 'yyyy-MM-dd') : undefined;
+
     console.log('Fetching customers with params:', {
       page,
       limit,
       sort: sortParam,
       search: searchQuery || undefined,
       dateRange: dateRangeParam,
-      spendingRange: spendingRangeParam
+      spendingRange: spendingRangeParam,
+      customerSince: customerSinceParam,
+      minVisits
     });
     
-    fetchCustomers(page, limit, sortParam, searchQuery || undefined, dateRangeParam, spendingRangeParam);
-  }, [fetchCustomers, page, limit, sortBy, dateRange, spendingRange, searchQuery]);
+    fetchCustomers(page, limit, sortParam, searchQuery || undefined, dateRangeParam, spendingRangeParam, customerSinceParam, minVisits);
+  }, [fetchCustomers, page, limit, sortBy, sortDirection, dateRange, spendingRange, searchQuery, customerSince, minVisits]);
 
   // Load customers on initial mount
   useEffect(() => {
@@ -191,6 +181,7 @@ export const Customers: React.FC = () => {
     // Update pending filters
     setPendingFilters({
       sortBy: 'last_visit',
+      sortDirection: 'desc',
       spendingRange: [0, maxSpending] as [number, number],
       dateRange: undefined,
       customerSince: undefined,
@@ -199,6 +190,7 @@ export const Customers: React.FC = () => {
     
     // Also update the actual filters
     setSortBy('last_visit');
+    setSortDirection('desc');
     setSpendingRange([0, maxSpending]);
     setDateRange(undefined);
     setCustomerSince(undefined);
@@ -218,6 +210,7 @@ export const Customers: React.FC = () => {
   const handleApplyFilters = () => {
     // Apply pending filters to actual state
     setSortBy(pendingFilters.sortBy);
+    setSortDirection(pendingFilters.sortDirection as 'asc' | 'desc');
     setSpendingRange(pendingFilters.spendingRange);
     setDateRange(pendingFilters.dateRange);
     setCustomerSince(pendingFilters.customerSince);
@@ -305,24 +298,8 @@ export const Customers: React.FC = () => {
     return count;
   };
 
-  // Filter customers if needed for client-side filtering
-  const filteredCustomers = customers
-    .filter(customer => {
-      // Customer since filter (client-side)
-      if (customerSince && customer.created_at) {
-        const customerDate = parseISO(customer.created_at);
-        if (isAfter(customerDate, customerSince)) {
-          return false;
-        }
-      }
-      
-      // Minimum visits filter (client-side)
-      if (minVisits > 0 && (customer.visit_count || 0) < minVisits) {
-        return false;
-      }
-      
-      return true;
-    });
+  // No additional client-side filtering; rely on API response
+  const filteredCustomers = customers;
 
   // Initialize pending filters when opening the filter sheet
   const handleOpenFilters = (open: boolean) => {
@@ -330,6 +307,7 @@ export const Customers: React.FC = () => {
       // Copy current filters to pending
       setPendingFilters({
         sortBy,
+        sortDirection,
         spendingRange,
         dateRange,
         customerSince,
@@ -367,15 +345,16 @@ export const Customers: React.FC = () => {
           <Button 
             variant="default" 
             size="sm" 
-            className="ml-2" 
+            className="ml-2 flex items-center" 
             onClick={handleSearch}
+            disabled={isLoading}
           >
-            Search
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
           </Button>
         </div>
         <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch gap-2">
-          {/* Filter & Sort group (row on all screens) */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Filter & Sort group (single-line with horizontal scroll on small) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto whitespace-nowrap">
             <Button
               variant="outline"
               size="sm"
@@ -398,7 +377,7 @@ export const Customers: React.FC = () => {
               setSortBy(value);
               loadCustomers();
             }}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[110px] sm:w-[160px]">
                 <SortAsc className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -407,6 +386,20 @@ export const Customers: React.FC = () => {
                 <SelectItem value="last_visit">Last Visit</SelectItem>
                 <SelectItem value="visit_count">Visit Count</SelectItem>
                 <SelectItem value="total_spent">Total Spent</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={sortDirection} onValueChange={(value) => {
+              setSortDirection(value as 'asc' | 'desc');
+              loadCustomers();
+            }}>
+              <SelectTrigger className="w-[72px] sm:w-[120px]">
+                <SortAsc className="h-4 w-4 mr-2 rotate-90" />
+                <SelectValue placeholder="Dir" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">Asc</SelectItem>
+                <SelectItem value="desc">Desc</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -660,6 +653,22 @@ export const Customers: React.FC = () => {
                 }
               />
             </div>
+
+            {/* Sort direction (compact) */}
+            <Select 
+              value={pendingFilters.sortDirection}
+              onValueChange={(value) => 
+                setPendingFilters({...pendingFilters, sortDirection: value as 'asc' | 'desc'})
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Direction" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">Asc</SelectItem>
+                <SelectItem value="desc">Desc</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <SheetFooter className="flex flex-row justify-between items-center sm:justify-between mt-2">
             <Button variant="ghost" onClick={() => {
@@ -669,7 +678,8 @@ export const Customers: React.FC = () => {
               <X className="h-4 w-4 mr-2" />
               Reset Filters
             </Button>
-            <Button onClick={handleApplyFilters}>
+            <Button onClick={handleApplyFilters} disabled={isLoading} className="flex items-center">
+              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Apply Filters
             </Button>
           </SheetFooter>
