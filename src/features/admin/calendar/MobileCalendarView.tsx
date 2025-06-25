@@ -305,12 +305,12 @@ export const MobileCalendarView = ({
                 {day}
                 </span>
               {dayAppointments.length > 0 && (
-                <Badge variant="outline" className="h-4 text-[10px] px-1 py-0 rounded-full">
+                <span className="absolute top-0.5 right-0.5 text-[9px] font-medium text-muted-foreground">
                   {dayAppointments.length}
-                  </Badge>
-                )}
-              </div>
-              
+                </span>
+              )}
+            </div>
+            
             {/* Show a small indicator if there are appointments */}
             {dayAppointments.length > 0 && (
               <div className="absolute bottom-1 left-0 right-0 flex justify-center">
