@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatCurrency, formatPhoneNumber } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -118,12 +117,14 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
-        <DialogHeader className="pb-2">
-          <DialogTitle>Customer Details</DialogTitle>
+      <DialogContent className="max-w-[95%] w-full sm:max-w-2xl p-0 max-h-[90vh] overflow-y-auto rounded-xl mx-auto flex flex-col">
+        {/* Sticky header */}
+        <DialogHeader className="px-5 py-4 border-b sticky top-0 z-10 bg-card rounded-t-xl text-center">
+          <DialogTitle className="text-base font-semibold">Customer Details</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        {/* Body */}
+        <div className="flex-1 px-5 py-4 overflow-y-auto thin-scrollbar">
           <div className="space-y-6">
             {/* Customer Information */}
             <div className="space-y-4">
@@ -256,9 +257,10 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
-        <div className="flex justify-between pt-4 mt-4 border-t">
+        {/* Footer */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-between pt-4 mt-4 border-t px-5 pb-5">
           <Button variant="outline" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
             Export

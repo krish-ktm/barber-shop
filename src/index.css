@@ -83,3 +83,20 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Thin scrollbar utility */
+@layer utilities {
+  .thin-scrollbar {
+    scrollbar-width: thin; /* Firefox */
+  }
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground));
+    border-radius: 3px;
+  }
+}
