@@ -218,22 +218,22 @@ export const MobileCalendarView = ({
             onValueChange={(value) => setView(value as CalendarView)} 
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-4 shadow-sm">
-              <TabsTrigger value="month" className="text-xs px-0">
-                <CalendarDays className="h-3 w-3 sm:mr-1" />
-                <span className="hidden xs:inline">Month</span>
+            <TabsList className="grid w-full grid-cols-4 shadow-sm h-12 rounded-md bg-muted/20">
+              <TabsTrigger value="month" className="flex flex-col items-center justify-center gap-0.5 h-full text-[11px]">
+                <CalendarDays className="h-4 w-4" />
+                <span>Month</span>
               </TabsTrigger>
-              <TabsTrigger value="week" className="text-xs px-0">
-                <LayoutGrid className="h-3 w-3 sm:mr-1" />
-                <span className="hidden xs:inline">Week</span>
+              <TabsTrigger value="week" className="flex flex-col items-center justify-center gap-0.5 h-full text-[11px]">
+                <LayoutGrid className="h-4 w-4" />
+                <span>Week</span>
               </TabsTrigger>
-              <TabsTrigger value="day" className="text-xs px-0">
-                <Clock className="h-3 w-3 sm:mr-1" />
-                <span className="hidden xs:inline">Day</span>
+              <TabsTrigger value="day" className="flex flex-col items-center justify-center gap-0.5 h-full text-[11px]">
+                <Clock className="h-4 w-4" />
+                <span>Day</span>
               </TabsTrigger>
-              <TabsTrigger value="list" className="text-xs px-0">
-                <LayoutList className="h-3 w-3 sm:mr-1" />
-                <span className="hidden xs:inline">List</span>
+              <TabsTrigger value="list" className="flex flex-col items-center justify-center gap-0.5 h-full text-[11px]">
+                <LayoutList className="h-4 w-4" />
+                <span>List</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
