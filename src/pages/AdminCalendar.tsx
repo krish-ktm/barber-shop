@@ -17,12 +17,20 @@ export const AdminCalendar: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+  // simple cache: monthKey -> appointments array
+  const [appointmentsCache, setAppointmentsCache] = useState<Record<string, Appointment[]>>({});
 
   // Memoized key representing the viewed month (YYYY-MM). When this changes we refetch.
   const monthKey = format(currentDate, 'yyyy-MM');
 
   // Fetch appointments for the current month
   const fetchAppointments = async () => {
+    // if we already have data cached for this month, use it immediately
+    if (appointmentsCache[monthKey]) {
+      setAppointments(appointmentsCache[monthKey]);
+      return; // optionally still fetch in background to refresh later
+    }
+
     setIsLoading(true);
     setError(null);
     
@@ -60,6 +68,8 @@ export const AdminCalendar: React.FC = () => {
       }));
       
       setAppointments(formattedAppointments);
+      // store in cache
+      setAppointmentsCache(prev => ({ ...prev, [monthKey]: formattedAppointments }));
       
       toast({
         title: "Appointments loaded",
@@ -118,12 +128,7 @@ export const AdminCalendar: React.FC = () => {
         description="View and manage all appointments in a calendar view"
       />
       
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-card rounded-xl shadow-sm">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <span className="text-muted-foreground">Loading appointments...</span>
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="bg-destructive/10 p-6 rounded-xl shadow-sm">
           <p className="text-destructive font-medium mb-3">{error}</p>
           <Button 
@@ -135,12 +140,21 @@ export const AdminCalendar: React.FC = () => {
           </Button>
         </div>
       ) : (
-        <div className="mb-6">
+        <div className="mb-6 relative">
+          {/* Calendar */}
           <CalendarLayout 
             appointments={appointments}
             onSelectDate={handleSelectDate}
             onViewAppointment={handleViewAppointment}
           />
+
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-background/60 flex flex-col items-center justify-center z-10 rounded-xl">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+              <span className="text-xs text-muted-foreground">Loading…</span>
+            </div>
+          )}
         </div>
       )}
       

@@ -94,8 +94,10 @@ export const TabletCalendarView = ({
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
-    setSelectedDate(new Date());
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today);
+    onSelectDate(today);
   };
 
   const handleDateClick = (date: Date) => {

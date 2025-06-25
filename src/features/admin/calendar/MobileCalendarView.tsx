@@ -144,8 +144,10 @@ export const MobileCalendarView = ({
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
-    setSelectedDate(new Date());
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today);
+    onSelectDate?.(today);
   };
 
   // Get title based on current view
