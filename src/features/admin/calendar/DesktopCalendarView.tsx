@@ -40,6 +40,7 @@ interface DesktopCalendarViewProps {
 
 export const DesktopCalendarView = ({
   appointments,
+  onSelectDate,
   onViewAppointment,
 }: DesktopCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -85,23 +86,29 @@ export const DesktopCalendarView = ({
   
   // Navigation functions
   const goToPrevious = () => {
+    let newDate: Date;
     if (view === 'month') {
-      setCurrentDate(subMonths(currentDate, 1));
+      newDate = subMonths(currentDate, 1);
     } else if (view === 'week') {
-      setCurrentDate(subWeeks(currentDate, 1));
-    } else if (view === 'day') {
-      setCurrentDate(subDays(currentDate, 1));
+      newDate = subWeeks(currentDate, 1);
+    } else {
+      newDate = subDays(currentDate, 1);
     }
+    setCurrentDate(newDate);
+    onSelectDate?.(newDate);
   };
   
   const goToNext = () => {
+    let newDate: Date;
     if (view === 'month') {
-      setCurrentDate(addMonths(currentDate, 1));
+      newDate = addMonths(currentDate, 1);
     } else if (view === 'week') {
-      setCurrentDate(addWeeks(currentDate, 1));
-    } else if (view === 'day') {
-      setCurrentDate(addDays(currentDate, 1));
+      newDate = addWeeks(currentDate, 1);
+    } else {
+      newDate = addDays(currentDate, 1);
     }
+    setCurrentDate(newDate);
+    onSelectDate?.(newDate);
   };
   
   const goToToday = () => {
@@ -164,7 +171,7 @@ export const DesktopCalendarView = ({
           
           <div className="flex items-center gap-3">
             <div className="flex items-center mr-4">
-              <Tabs defaultValue={view} onValueChange={(value) => setView(value as CalendarView)} className="w-auto">
+              <Tabs value={view} onValueChange={(value) => setView(value as CalendarView)} className="w-auto">
                 <TabsList className="shadow-sm">
                   <TabsTrigger value="month" className="flex items-center gap-1">
                     <CalendarDays className="h-4 w-4" />
@@ -243,8 +250,15 @@ export const DesktopCalendarView = ({
                 "border p-1.5 h-32 relative transition-all duration-200 hover:bg-muted/20",
                 !isCurrentMonth && "bg-background-alt opacity-50",
                 isToday && "bg-primary/5 border-primary",
-                "rounded-lg shadow-sm"
+                "rounded-lg shadow-sm cursor-pointer"
               )}
+              onClick={() => {
+                // Notify parent about date selection (if provided)
+                onSelectDate?.(cloneDay);
+                // Switch to the clicked day
+                setCurrentDate(cloneDay);
+                setView('day');
+              }}
             >
               <div className="flex justify-between">
                 <span

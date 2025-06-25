@@ -50,37 +50,47 @@ export const TabletCalendarView = ({
 
   // Navigation functions
   const goToPrevious = () => {
+    let newDate: Date;
     switch (view) {
       case 'month':
-        setCurrentDate(subMonths(currentDate, 1));
+        newDate = subMonths(currentDate, 1);
         break;
       case 'week':
-        setCurrentDate(subWeeks(currentDate, 1));
+        newDate = subWeeks(currentDate, 1);
         break;
       case 'day':
-        setCurrentDate(subDays(currentDate, 1));
+        newDate = subDays(currentDate, 1);
         break;
       case 'list':
-        setCurrentDate(subWeeks(currentDate, 2));
+        newDate = subWeeks(currentDate, 2);
         break;
+      default:
+        newDate = currentDate;
     }
+    setCurrentDate(newDate);
+    onSelectDate(newDate);
   };
 
   const goToNext = () => {
+    let newDate: Date;
     switch (view) {
       case 'month':
-        setCurrentDate(addMonths(currentDate, 1));
+        newDate = addMonths(currentDate, 1);
         break;
       case 'week':
-        setCurrentDate(addWeeks(currentDate, 1));
+        newDate = addWeeks(currentDate, 1);
         break;
       case 'day':
-        setCurrentDate(addDays(currentDate, 1));
+        newDate = addDays(currentDate, 1);
         break;
       case 'list':
-        setCurrentDate(addWeeks(currentDate, 2));
+        newDate = addWeeks(currentDate, 2);
         break;
+      default:
+        newDate = currentDate;
     }
+    setCurrentDate(newDate);
+    onSelectDate(newDate);
   };
 
   const goToToday = () => {
@@ -90,7 +100,9 @@ export const TabletCalendarView = ({
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
+    setCurrentDate(date);
     onSelectDate(date);
+    setView('day');
   };
 
   // Get title based on current view
@@ -161,7 +173,7 @@ export const TabletCalendarView = ({
         </div>
         
         <div className="flex justify-center">
-          <Tabs defaultValue={view} onValueChange={(value) => setView(value as CalendarView)} className="w-auto">
+          <Tabs value={view} onValueChange={(value) => setView(value as CalendarView)} className="w-auto">
             <TabsList className="grid grid-cols-4 w-full max-w-md">
               <TabsTrigger value="month" className="flex items-center gap-1">
                 <CalendarDays className="h-3.5 w-3.5" />

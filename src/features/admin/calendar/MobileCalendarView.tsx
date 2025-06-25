@@ -49,6 +49,7 @@ interface MobileCalendarViewProps {
  */
 export const MobileCalendarView = ({
   appointments,
+  onSelectDate,
   onViewAppointment: parentOnViewAppointment,
 }: MobileCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -181,6 +182,14 @@ export const MobileCalendarView = ({
     );
   };
 
+  // When a date cell is clicked in Month view
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    setCurrentDate(date);
+    setView('day');
+    onSelectDate?.(date);
+  };
+
   // Header with navigation and view controls - Mobile optimized with minimal layout
   const renderHeader = () => {
     return (
@@ -279,11 +288,12 @@ export const MobileCalendarView = ({
           <div
             key={dateStr}
             className={cn(
-              "border h-12 p-1.5 relative transition-all duration-200",
+              "border h-12 p-1.5 relative transition-all duration-200 cursor-pointer",
               isToday && "bg-primary/5 border-primary",
               // Add rounded corners and additional styling
               "rounded-md shadow-sm"
             )}
+            onClick={() => handleDateClick(date)}
           >
             <div className="flex justify-between items-center mb-1">
                 <span

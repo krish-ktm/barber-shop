@@ -18,6 +18,9 @@ export const AdminCalendar: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // Memoized key representing the viewed month (YYYY-MM). When this changes we refetch.
+  const monthKey = format(currentDate, 'yyyy-MM');
+
   // Fetch appointments for the current month
   const fetchAppointments = async () => {
     setIsLoading(true);
@@ -76,10 +79,10 @@ export const AdminCalendar: React.FC = () => {
     }
   };
 
-  // Fetch appointments when the component mounts or when the month changes
+  // Fetch appointments when the component mounts or when the viewed month changes
   useEffect(() => {
     fetchAppointments();
-  }, [currentDate]);
+  }, [monthKey]);
 
   const handleViewAppointment = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
