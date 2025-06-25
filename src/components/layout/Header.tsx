@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, LogOut, Menu } from 'lucide-react';
-import { adminUser } from '@/mocks';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -14,10 +13,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Sidebar } from './Sidebar';
+import { StaffSidebar } from './StaffSidebar';
 import { useAuth } from '@/lib/auth';
 
 export const Header: React.FC = () => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -41,7 +41,7 @@ export const Header: React.FC = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
-              <Sidebar />
+              {user?.role === 'staff' ? <StaffSidebar isInSheet /> : <Sidebar isInSheet />}
             </SheetContent>
           </Sheet>
 
@@ -57,17 +57,19 @@ export const Header: React.FC = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={adminUser.image} alt={adminUser.name} />
+                  <AvatarImage src={user?.image} alt={user?.name ?? 'User'} />
                   <AvatarFallback>
-                    {adminUser.name
+                    {(user?.name ?? 'User')
                       .split(' ')
                       .map((n: string) => n[0])
                       .join('')}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden md:inline-block font-medium">
-                  {adminUser.name}
-                </span>
+                {user?.name && (
+                  <span className="hidden md:inline-block font-medium">
+                    {user.name}
+                  </span>
+                )}
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -76,7 +78,9 @@ export const Header: React.FC = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Billing</DropdownMenuItem>
+              {user?.role === 'admin' && (
+                <DropdownMenuItem>Billing</DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
