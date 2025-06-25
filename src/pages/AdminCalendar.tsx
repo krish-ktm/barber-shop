@@ -109,30 +109,30 @@ export const AdminCalendar: React.FC = () => {
     : null;
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Calendar"
         description="View and manage all appointments in a calendar view"
       />
       
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading appointments...</span>
+        <div className="flex flex-col items-center justify-center h-64 bg-card rounded-xl shadow-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <span className="text-muted-foreground">Loading appointments...</span>
         </div>
       ) : error ? (
-        <div className="bg-destructive/10 p-4 rounded-md">
-          <p className="text-destructive font-medium">{error}</p>
+        <div className="bg-destructive/10 p-6 rounded-xl shadow-sm">
+          <p className="text-destructive font-medium mb-3">{error}</p>
           <Button 
             variant="outline" 
-            className="mt-2" 
             onClick={fetchAppointments}
+            className="rounded-md shadow-sm hover:shadow"
           >
             Retry
           </Button>
         </div>
       ) : (
-        <div className="bg-card border rounded-lg">
+        <div className="mb-6">
           <CalendarLayout 
             appointments={appointments}
             onSelectDate={handleSelectDate}

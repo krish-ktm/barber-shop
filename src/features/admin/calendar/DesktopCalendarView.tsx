@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   format, 
   addMonths, 
@@ -45,6 +45,44 @@ export const DesktopCalendarView = ({
 }: DesktopCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('month');
+  
+  // Add CSS for custom scrollbar when component mounts
+  useEffect(() => {
+    // Create style element
+    const style = document.createElement('style');
+    style.textContent = `
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 10px;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #ccc;
+      }
+      
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #ddd transparent;
+      }
+    `;
+    
+    // Add it to the document
+    document.head.appendChild(style);
+    
+    // Clean up
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
   
   // Navigation functions
   const goToPrevious = () => {
@@ -124,7 +162,7 @@ export const DesktopCalendarView = ({
   // Header with navigation and view controls - Desktop optimized with all controls visible
   const renderHeader = () => {
     return (
-      <div className="flex flex-col gap-4 mb-4">
+      <div className="flex flex-col gap-4 mb-5">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">
             {getViewTitle()}
@@ -133,7 +171,7 @@ export const DesktopCalendarView = ({
           <div className="flex items-center gap-3">
             <div className="flex items-center mr-4">
               <Tabs defaultValue={view} onValueChange={(value) => setView(value as CalendarView)} className="w-auto">
-                <TabsList>
+                <TabsList className="shadow-sm">
                   <TabsTrigger value="month" className="flex items-center gap-1">
                     <CalendarDays className="h-4 w-4" />
                     <span>Month</span>
@@ -154,13 +192,13 @@ export const DesktopCalendarView = ({
               </Tabs>
             </div>
             
-            <Button variant="outline" size="icon" onClick={goToPrevious}>
+            <Button variant="outline" size="icon" onClick={goToPrevious} className="rounded-full shadow-sm hover:shadow">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={goToToday}>
+            <Button variant="outline" onClick={goToToday} className="rounded-lg shadow-sm hover:shadow">
               Today
             </Button>
-            <Button variant="outline" size="icon" onClick={goToNext}>
+            <Button variant="outline" size="icon" onClick={goToNext} className="rounded-full shadow-sm hover:shadow">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -174,7 +212,7 @@ export const DesktopCalendarView = ({
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     const renderDays = () => (
-      <div className="grid grid-cols-7 mb-2">
+      <div className="grid grid-cols-7 gap-2 mb-2">
         {daysOfWeek.map((day) => (
           <div
             key={day}
@@ -208,18 +246,19 @@ export const DesktopCalendarView = ({
             <div
               key={formattedDate}
               className={cn(
-                "border p-1 h-32 relative",
+                "border p-1.5 h-32 relative transition-all duration-200 hover:bg-muted/20",
                 !isCurrentMonth && "bg-background-alt opacity-50",
-                isToday && "bg-primary/5 border-primary"
+                isToday && "bg-primary/5 border-primary",
+                "rounded-lg shadow-sm"
               )}
               onClick={() => handleDateClick(cloneDay)}
             >
               <div className="flex justify-between">
                 <span
                   className={cn(
-                    "text-sm font-medium",
+                    "text-sm font-medium rounded-full w-6 h-6 flex items-center justify-center",
                     !isCurrentMonth && "text-muted-foreground",
-                    isToday && "text-primary font-bold"
+                    isToday && "text-primary bg-primary/10 font-bold"
                   )}
                 >
                   {format(cloneDay, 'd')}
@@ -227,11 +266,11 @@ export const DesktopCalendarView = ({
               </div>
               
               {/* Render appointments */}
-              <div className="overflow-y-auto max-h-[80%] mt-1">
+              <div className="overflow-y-auto max-h-[80%] mt-1.5 pr-0.5 custom-scrollbar">
                 {dayAppointments.slice(0, 3).map(appointment => (
                   <div
                     key={appointment.id}
-                    className="mb-1 p-1 text-xs rounded bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors"
+                    className="mb-1.5 p-1.5 text-xs rounded-md bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors hover:shadow-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       onViewAppointment(appointment.id);
@@ -248,7 +287,7 @@ export const DesktopCalendarView = ({
                   </div>
                 ))}
                 {dayAppointments.length > 3 && (
-                  <div className="text-xs text-center text-muted-foreground">
+                  <div className="text-xs text-center text-muted-foreground py-0.5 bg-muted/20 rounded-md">
                     +{dayAppointments.length - 3} more
                   </div>
                 )}
@@ -260,7 +299,7 @@ export const DesktopCalendarView = ({
         }
 
         rows.push(
-          <div key={`row-${rows.length}`} className="grid grid-cols-7 gap-1 mb-1">
+          <div key={`row-${rows.length}`} className="grid grid-cols-7 gap-2 mb-2">
             {days}
           </div>
         );
@@ -288,8 +327,8 @@ export const DesktopCalendarView = ({
     return (
       <div className="flex flex-col">
         {/* Day headers */}
-        <div className="grid grid-cols-8 mb-2 border-b">
-          <div className="h-16 flex items-end justify-center p-2 font-medium text-muted-foreground">
+        <div className="grid grid-cols-8 mb-3 rounded-t-lg overflow-hidden border shadow-sm">
+          <div className="h-16 flex items-end justify-center p-2 font-medium text-muted-foreground bg-muted/10">
             <span className="text-xs">Hour</span>
           </div>
           {weekDays.map((day) => {
@@ -299,36 +338,48 @@ export const DesktopCalendarView = ({
               <div 
                 key={format(day, 'yyyy-MM-dd')} 
                 className={cn(
-                  "h-16 flex flex-col items-center justify-center border-l p-2 cursor-pointer hover:bg-background-alt relative",
-                  isToday && "bg-primary/5 border-primary"
+                  "h-16 flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-background-alt transition-colors relative",
+                  isToday && "bg-primary/5",
+                  "border-l"
                 )}
                 onClick={() => handleDateClick(day)}
               >
                 <span className="text-sm font-medium">{format(day, 'EEE')}</span>
-                <span className={cn("text-lg font-semibold mt-1", isToday && "text-primary")}>{format(day, 'd')}</span>
+                <span className={cn(
+                  "text-lg font-semibold mt-1 flex items-center justify-center w-8 h-8 rounded-full", 
+                  isToday && "text-primary bg-primary/10"
+                )}>
+                  {format(day, 'd')}
+                </span>
               </div>
             );
           })}
         </div>
         
         {/* Time slots */}
-        <div className="grid grid-cols-8 gap-0">
-          {hours.map((hour) => (
+        <div className="grid grid-cols-8 gap-0 rounded-b-lg overflow-hidden border shadow-sm">
+          {hours.map((hour, hourIndex) => (
             <React.Fragment key={hour}>
               {/* Hour column */}
-              <div className="p-2 border-r text-xs text-muted-foreground h-28 flex items-start justify-end">
+              <div className={cn(
+                "p-2 border-r text-xs text-muted-foreground h-28 flex items-start justify-end bg-muted/10",
+                hourIndex === hours.length - 1 && "rounded-bl-lg"
+              )}>
                 {hour}:00
               </div>
               
               {/* Day columns */}
-              {weekDays.map((day) => {
+              {weekDays.map((day, dayIndex) => {
                 const dayAppointments = getAppointmentsForTimeSlot(day, hour);
+                const isLastHour = hourIndex === hours.length - 1;
+                const isLastDay = dayIndex === weekDays.length - 1;
                 
                 return (
                   <div 
                     key={`${format(day, 'yyyy-MM-dd')}-${hour}`}
                     className={cn(
-                      "border-t border-l p-1 h-28 relative"
+                      "border-t border-l p-1 h-28 relative hover:bg-muted/10 transition-colors",
+                      isLastHour && isLastDay && "rounded-br-lg"
                     )}
                   >
                     {dayAppointments.length === 0 ? (
@@ -337,8 +388,8 @@ export const DesktopCalendarView = ({
                       dayAppointments.map((appointment, index) => (
                         <div
                           key={appointment.id}
-                          className={`p-1 rounded bg-primary/10 border border-primary/20 
-                                   text-xs cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden
+                          className={`p-1.5 rounded-md bg-primary/10 border border-primary/20 
+                                   text-xs cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden hover:shadow-sm
                                    ${index > 1 ? 'hidden md:block' : ''}`}
                           style={{
                             maxHeight: `${Math.floor(100 / Math.min(dayAppointments.length, 3))}%`
@@ -351,7 +402,7 @@ export const DesktopCalendarView = ({
                           </div>
                           <div className="truncate">{appointment.customerName}</div>
                           {index === 0 && dayAppointments.length > 3 && (
-                            <div className="text-[10px] text-center text-muted-foreground mt-0.5">
+                            <div className="text-[10px] text-center text-muted-foreground mt-0.5 bg-muted/20 rounded py-0.5">
                               +{dayAppointments.length - 2} more
                             </div>
                           )}
@@ -375,18 +426,21 @@ export const DesktopCalendarView = ({
 
     return (
       <div className="flex flex-col">
-        <div className="text-center mb-4">
-          <div className="font-medium">{format(currentDate, 'EEEE')}</div>
+        <div className="text-center mb-4 bg-muted/10 py-3 rounded-lg shadow-sm">
+          <div className="font-medium text-muted-foreground">{format(currentDate, 'EEEE')}</div>
           <div className="text-2xl font-bold">{format(currentDate, 'MMMM d, yyyy')}</div>
         </div>
         
         <div className="grid grid-cols-12 gap-4">
           {/* Time slots */}
           <div className="col-span-1">
-            {hours.map((hour) => (
+            {hours.map((hour, index) => (
               <div 
                 key={hour} 
-                className="h-28 flex items-start justify-end pr-2 text-sm text-muted-foreground"
+                className={cn(
+                  "h-28 flex items-start justify-end pr-2 text-sm text-muted-foreground",
+                  index === 0 && "pt-1"
+                )}
               >
                 {hour}:00
               </div>
@@ -394,15 +448,18 @@ export const DesktopCalendarView = ({
           </div>
           
           {/* Appointments */}
-          <div className="col-span-11 border-l">
-            {hours.map((hour) => {
+          <div className="col-span-11 border-l rounded-r-lg overflow-hidden shadow-sm">
+            {hours.map((hour, index) => {
               const hourAppointments = dayAppointments.filter(appointment => {
                 const appointmentHour = parseInt(appointment.time.split(':')[0], 10);
                 return appointmentHour === hour;
               });
               
               return (
-                <div key={hour} className="h-28 border-t relative">
+                <div key={hour} className={cn(
+                  "h-28 relative hover:bg-muted/10 transition-colors",
+                  index === 0 ? "rounded-tr-lg" : "border-t",
+                )}>
                   {hourAppointments.map((appointment, idx) => {
                     // Calculate width based on number of appointments in this hour
                     const width = Math.min(100 / Math.max(hourAppointments.length, 2), 50);
@@ -410,8 +467,8 @@ export const DesktopCalendarView = ({
                     return (
                       <div
                         key={appointment.id}
-                        className="absolute inset-y-0 py-2 px-3 m-1 rounded bg-primary/10 border border-primary/20 
-                                 cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden flex flex-col"
+                        className="absolute inset-y-0 py-2 px-3 m-1 rounded-lg bg-primary/10 border border-primary/20 
+                                 cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden flex flex-col hover:shadow"
                         style={{
                           left: `${idx * width}%`,
                           width: `calc(${width}% - 8px)`,
@@ -423,7 +480,7 @@ export const DesktopCalendarView = ({
                         <div className="flex items-center gap-1.5 mb-1">
                           <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
                           <span className="font-semibold text-sm">{appointment.time}</span>
-                          <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-5 whitespace-nowrap">
+                          <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-5 whitespace-nowrap rounded-md">
                             {appointment.status}
                           </Badge>
                         </div>
@@ -441,7 +498,7 @@ export const DesktopCalendarView = ({
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {appointment.services.reduce((total, svc) => total + svc.duration, 0)} min
                           </span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1.5 -my-1" onClick={(e) => {
+                          <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1.5 -my-1 rounded-full" onClick={(e) => {
                             e.stopPropagation();
                             onViewAppointment(appointment.id);
                           }}>
@@ -485,20 +542,20 @@ export const DesktopCalendarView = ({
     const periodAppointments = getAppointmentsForPeriod();
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 custom-scrollbar overflow-y-auto max-h-[75vh]">
         {periodAppointments.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-muted-foreground rounded-lg border p-8">
             No appointments scheduled for this period
           </div>
         ) : (
           periodAppointments.map(({ date, appointments }) => (
-            <div key={format(date, 'yyyy-MM-dd')} className="border rounded-md overflow-hidden">
+            <div key={format(date, 'yyyy-MM-dd')} className="border rounded-lg overflow-hidden shadow-sm">
               <div className={cn(
                 "bg-muted/30 px-4 py-2 font-medium flex justify-between items-center border-b",
                 isSameDay(date, new Date()) && "bg-primary/10"
               )}>
                 <span className="text-lg">{format(date, 'EEEE, MMMM d')}</span>
-                <Badge variant="outline">
+                <Badge variant="outline" className="rounded-full">
                   {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
                 </Badge>
               </div>
@@ -506,7 +563,7 @@ export const DesktopCalendarView = ({
                 {appointments.map((appointment) => (
                   <div
                     key={appointment.id}
-                    className="p-4 hover:bg-muted/10 cursor-pointer flex items-center gap-6"
+                    className="p-4 hover:bg-muted/10 transition-colors cursor-pointer flex items-center gap-6"
                     onClick={() => onViewAppointment(appointment.id)}
                   >
                     <div className="flex-shrink-0 w-24">
@@ -521,13 +578,14 @@ export const DesktopCalendarView = ({
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getStatusColor(appointment.status) }} />
                         <span className="font-medium">{appointment.customerName}</span>
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">
+                      <div className="text-sm text-muted-foreground mt-1 truncate">
                         {appointment.services.map(s => s.serviceName).join(', ')}
                       </div>
                     </div>
                     
                     <div className="flex-shrink-0 text-sm">
                       <Badge variant="outline" className={cn(
+                        "rounded-full",
                         appointment.status === 'confirmed' && "bg-success/10 text-success border-success/30",
                         appointment.status === 'cancelled' && "bg-error/10 text-error border-error/30",
                         appointment.status === 'scheduled' && "bg-warning/10 text-warning border-warning/30"
@@ -559,9 +617,9 @@ export const DesktopCalendarView = ({
   };
 
   return (
-    <div className="p-4 bg-card rounded-lg">
+    <div className="p-6 bg-card rounded-xl shadow-sm border">
       {renderHeader()}
-      <div className="mt-4">
+      <div className="mt-6">
         {view === 'month' && renderMonthView()}
         {view === 'week' && renderWeekView()}
         {view === 'day' && renderDayView()}

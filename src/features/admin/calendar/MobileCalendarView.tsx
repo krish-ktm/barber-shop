@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   format, 
   addMonths, 
@@ -50,13 +50,51 @@ interface MobileCalendarViewProps {
 export const MobileCalendarView = ({
   appointments,
   onSelectDate,
-  onViewAppointment,
+  onViewAppointment: parentOnViewAppointment,
 }: MobileCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('month');
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
+
+  // Add CSS for custom scrollbar when component mounts
+  useEffect(() => {
+    // Create style element
+    const style = document.createElement('style');
+    style.textContent = `
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 3px;
+        height: 3px;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 10px;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #ccc;
+      }
+      
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #ddd transparent;
+      }
+    `;
+    
+    // Add it to the document
+    document.head.appendChild(style);
+    
+    // Clean up
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const selectedAppointment = selectedAppointmentId 
     ? appointments.find(app => app.id === selectedAppointmentId) ?? null
@@ -66,7 +104,8 @@ export const MobileCalendarView = ({
   const handleViewAppointment = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
     setShowAppointmentDetails(true);
-    // Don't call the original handler to avoid showing two modals
+    // Also call the parent handler to maintain compatibility
+    parentOnViewAppointment(appointmentId);
   };
 
   // Navigation functions
@@ -149,35 +188,24 @@ export const MobileCalendarView = ({
       (appointment) => appointment.date === dateStr
     );
   };
-  
-  // Get appointments for a specific time in day/week view
-  const getAppointmentsForTimeSlot = (date: Date, hour: number) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return appointments.filter(appointment => {
-      if (appointment.date !== dateStr) return false;
-      
-      const appointmentHour = parseInt(appointment.time.split(':')[0], 10);
-      return appointmentHour === hour;
-    });
-  };
 
   // Header with navigation and view controls - Mobile optimized with minimal layout
   const renderHeader = () => {
     return (
-      <div className="flex flex-col gap-2 mb-2">
+      <div className="flex flex-col gap-3 mb-3">
         <div className="flex justify-between items-center">
           <h2 className="text-base font-bold truncate max-w-[150px]">
             {getViewTitle()}
           </h2>
           
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" onClick={goToPrevious} className="h-7 w-7">
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="icon" onClick={goToPrevious} className="h-7 w-7 rounded-full shadow-sm">
               <ChevronLeft className="h-3 w-3" />
             </Button>
-            <Button variant="outline" size="sm" onClick={goToToday} className="text-xs px-2 py-0 h-7">
+            <Button variant="outline" size="sm" onClick={goToToday} className="text-xs px-2 py-0 h-7 rounded-md shadow-sm">
               Today
             </Button>
-            <Button variant="outline" size="icon" onClick={goToNext} className="h-7 w-7">
+            <Button variant="outline" size="icon" onClick={goToNext} className="h-7 w-7 rounded-full shadow-sm">
               <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
@@ -189,7 +217,7 @@ export const MobileCalendarView = ({
             onValueChange={(value) => setView(value as CalendarView)} 
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-4 shadow-sm">
               <TabsTrigger value="month" className="text-xs px-0">
                 <CalendarDays className="h-3 w-3 sm:mr-1" />
                 <span className="hidden xs:inline">Month</span>
@@ -222,7 +250,7 @@ export const MobileCalendarView = ({
     const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     
     const renderDays = () => (
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-1.5 mb-2">
         {days.map((day, index) => (
           <div
             key={index}
@@ -243,96 +271,71 @@ export const MobileCalendarView = ({
         cells.push(
           <div
             key={`empty-${i}`}
-            className="border h-12 p-1 bg-background-alt rounded-md opacity-40"
+            className="border h-12 p-1 bg-background-alt rounded-md opacity-40 shadow-sm"
           />
         );
       }
 
-      // Fill in the days of the month
-      for (let i = 1; i <= daysInMonth; i++) {
-        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), i);
-        const dateAppointments = getAppointmentsForDate(date);
+      // Create cells for days in the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        const dateStr = format(date, 'yyyy-MM-dd');
         const isToday = isSameDay(date, new Date());
-        const isSelected = isSameDay(date, selectedDate);
+        const dayAppointments = getAppointmentsForDate(date);
 
         cells.push(
           <div
-            key={i}
+            key={dateStr}
             className={cn(
-              'border h-12 p-1 rounded-md transition-colors cursor-pointer hover:bg-background-alt relative',
-              isToday && 'border-primary',
-              isSelected && 'bg-background-alt border-primary-light',
+              "border h-12 p-1.5 relative transition-all duration-200 hover:bg-muted/20",
+              isToday && "bg-primary/5 border-primary",
+              // Add rounded corners and additional styling
+              "rounded-md active:scale-95 shadow-sm"
             )}
             onClick={() => handleDateClick(date)}
           >
-            <div className="flex flex-col h-full">
-              <div className="flex items-start justify-between">
+            <div className="flex justify-between items-center mb-1">
                 <span
                   className={cn(
-                    'text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center',
-                    isToday && 'bg-primary text-white'
+                  "text-xs font-medium h-5 w-5 flex items-center justify-center",
+                  isToday && "rounded-full text-primary bg-primary/10 font-bold"
                   )}
                 >
-                  {i}
+                {day}
                 </span>
-                {dateAppointments.length > 0 && (
-                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 min-w-[1rem] flex items-center justify-center">
-                    {dateAppointments.length}
+              {dayAppointments.length > 0 && (
+                <Badge variant="outline" className="h-4 text-[10px] px-1 py-0 rounded-full">
+                  {dayAppointments.length}
                   </Badge>
                 )}
               </div>
               
-              {/* Simplified indicator dots for appointments */}
-              {dateAppointments.length > 0 && (
-                <div className="flex justify-center mt-auto gap-0.5">
-                  {dateAppointments.length > 0 && (
+            {/* Show a small indicator if there are appointments */}
+            {dayAppointments.length > 0 && (
+              <div className="absolute bottom-1 left-0 right-0 flex justify-center">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: Math.min(dayAppointments.length, 3) }).map((_, i) => (
                     <div 
-                      className="w-1 h-1 rounded-full" 
-                      style={{ backgroundColor: getStatusColor(dateAppointments[0].status) }}
+                      key={i} 
+                      className="h-1.5 w-1.5 rounded-full bg-primary/50"
                     />
-                  )}
-                  {dateAppointments.length > 1 && (
-                    <div 
-                      className="w-1 h-1 rounded-full" 
-                      style={{ backgroundColor: getStatusColor(dateAppointments[1].status) }}
-                    />
-                  )}
-                  {dateAppointments.length > 2 && (
-                    <div className="w-1 h-1 rounded-full bg-gray-400" />
-                  )}
+                  ))}
+                </div>
                 </div>
               )}
-            </div>
           </div>
         );
 
-        // Push the row once we've added 7 cells
-        if ((i + startDate) % 7 === 0) {
+        // Start a new row after every 7 cells
+        if ((startDate + day) % 7 === 0 || day === daysInMonth) {
+          const row = [...cells];
           rows.push(
-            <div key={`row-${i}`} className="grid grid-cols-7 gap-1 mb-1">
-              {cells.splice(0, 7)}
+            <div className="grid grid-cols-7 gap-1.5 mb-1.5" key={`row-${day}`}>
+              {row}
             </div>
           );
+          cells.length = 0;
         }
-      }
-
-      // Add any remaining cells
-      if (cells.length > 0) {
-        // Add empty cells to complete the row
-        for (let i = cells.length; i < 7; i++) {
-          cells.push(
-            <div
-              key={`empty-end-${i}`}
-              className="border h-12 p-1 bg-background-alt rounded-md opacity-40"
-            />
-          );
-        }
-
-        rows.push(
-          <div key="row-end" className="grid grid-cols-7 gap-1 mb-1">
-            {cells}
-          </div>
-        );
       }
 
       return rows;
@@ -346,143 +349,165 @@ export const MobileCalendarView = ({
     );
   };
   
-  // Week View - Mobile optimized with compact layout
+  // Week View - Mobile optimized
   const renderWeekView = () => {
     const weekStart = startOfWeek(currentDate);
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-    const hours = Array.from({ length: 10 }, (_, i) => i + 9); // 9 AM to 6 PM
 
     return (
-      <div className="flex flex-col">
+      <div className="space-y-3">
         {/* Day headers */}
-        <div className="grid grid-cols-8 mb-1 border-b">
-          <div className="h-10 flex items-end justify-center p-1 font-medium text-muted-foreground">
-            <span className="text-[8px]">Hr</span>
-          </div>
+        <div className="grid grid-cols-7 gap-1 text-center mb-2">
           {weekDays.map((day) => {
             const isToday = isSameDay(day, new Date());
-            const dayNum = format(day, 'd');
-            const dayOfWeek = format(day, 'E')[0]; // First letter of day
+            const isSelected = isSameDay(day, selectedDate);
             
             return (
               <div 
                 key={format(day, 'yyyy-MM-dd')} 
                 className={cn(
-                  "h-10 flex flex-col items-center justify-center border-l p-0.5 cursor-pointer hover:bg-background-alt",
-                  isToday && "bg-primary/5 border-primary"
+                  "flex flex-col items-center justify-center py-1 rounded-md cursor-pointer transition-all duration-200",
+                  isToday && "bg-primary/10",
+                  isSelected && "ring-1 ring-primary",
+                  "hover:bg-muted/20 active:scale-95"
                 )}
-                onClick={() => {
-                  handleDateClick(day);
-                  setView('day');
-                }}
+                onClick={() => handleDateClick(day)}
               >
-                <span className={cn("text-[9px] font-medium", isToday && "text-primary")}>{dayOfWeek}</span>
-                <span className={cn("text-xs font-semibold", isToday && "text-primary")}>{dayNum}</span>
+                <span className="text-xs text-muted-foreground">{format(day, 'EEE')}</span>
+                <span className={cn(
+                  "text-xs font-medium mt-1 h-5 w-5 flex items-center justify-center",
+                  isToday && "rounded-full bg-primary/20 text-primary"
+                )}>
+                  {format(day, 'd')}
+                </span>
               </div>
             );
           })}
         </div>
         
-        {/* Time slots */}
-        <div className="grid grid-cols-8 gap-0">
-          {hours.map((hour) => (
-            <React.Fragment key={hour}>
-              {/* Hour column */}
-              <div className="py-0.5 px-1 border-r text-[8px] text-muted-foreground h-8 flex items-start justify-end">
-                {hour}
+        {/* Appointments for selected date */}
+        <div className="space-y-1 mt-2">
+          <h3 className="text-sm font-medium px-1">
+            {format(selectedDate, 'EEEE, MMMM d')}
+          </h3>
+          
+          <div className="border rounded-lg overflow-hidden shadow-sm divide-y">
+            {getAppointmentsForDate(selectedDate).length === 0 ? (
+              <div className="py-4 text-center text-muted-foreground text-xs">
+                No appointments for this day
               </div>
-              
-              {/* Day columns */}
-              {weekDays.map((day) => {
-                const dayAppointments = getAppointmentsForTimeSlot(day, hour);
-                const hasAppointments = dayAppointments.length > 0;
-                
-                return (
-                  <div 
-                    key={`${format(day, 'yyyy-MM-dd')}-${hour}`}
-                    className={cn(
-                      "border-t border-l h-8 relative",
-                      hasAppointments && "bg-primary/5"
-                    )}
-                    onClick={() => {
-                      if (hasAppointments) {
-                        setCurrentDate(day);
-                        setSelectedDate(day);
-                        setView('day');
-                      }
-                    }}
-                  >
-                    {hasAppointments && (
-                      <div className="absolute inset-0 flex items-center justify-center">
+            ) : (
+              getAppointmentsForDate(selectedDate).map((appointment) => (
+                <div 
+                  key={appointment.id}
+                  className="p-2 hover:bg-muted/10 transition-colors active:bg-muted/20"
+                  onClick={() => handleViewAppointment(appointment.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
                         <div 
                           className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: getStatusColor(dayAppointments[0].status) }}
-                        />
-                        {dayAppointments.length > 1 && (
-                          <span className="absolute text-[7px] font-bold -mt-3 ml-2">
-                            {dayAppointments.length}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                        style={{ backgroundColor: getStatusColor(appointment.status) }}
+                      />
+                      <span className="text-xs font-medium">{appointment.time}</span>
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "text-[10px] h-4 px-1 py-0 rounded-full",
+                        appointment.status === 'confirmed' && "bg-success/10 text-success border-success/30",
+                        appointment.status === 'cancelled' && "bg-error/10 text-error border-error/30",
+                        appointment.status === 'scheduled' && "bg-warning/10 text-warning border-warning/30"
+                      )}
+                    >
+                      {appointment.status}
+                    </Badge>
                   </div>
-                );
-              })}
-            </React.Fragment>
-          ))}
+                  <div className="ml-3 mt-1">
+                    <div className="text-xs font-medium">{appointment.customerName}</div>
+                    <div className="text-[10px] text-muted-foreground truncate max-w-[90%]">
+                      {appointment.services.map(s => s.serviceName).join(', ')}
+                      </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
-  // Day View - Mobile optimized
+  // Day View - Mobile optimized with single day focus
   const renderDayView = () => {
+    const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
     const dayAppointments = getAppointmentsForDate(currentDate);
 
     return (
-      <div className="flex flex-col">
-        <div className="text-center mb-3">
-          <div className="text-sm font-medium">{format(currentDate, 'EEEE')}</div>
+      <div>
+        <div className="text-center mb-3 bg-muted/10 py-2 rounded-lg shadow-sm">
+          <div className="text-sm font-medium text-muted-foreground">{format(currentDate, 'EEEE')}</div>
           <div className="text-base font-bold">{format(currentDate, 'MMMM d, yyyy')}</div>
         </div>
         
-        {dayAppointments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No appointments scheduled for this day
+        <div className="border rounded-lg shadow-sm divide-y overflow-hidden custom-scrollbar overflow-y-auto max-h-[70vh]">
+          {hours.map((hour) => {
+            const hourAppointments = dayAppointments.filter(appointment => {
+              const appointmentHour = parseInt(appointment.time.split(':')[0], 10);
+              return appointmentHour === hour;
+            });
+            
+            return (
+              <div key={hour} className="flex items-start">
+                <div className="p-2 text-xs text-muted-foreground w-10 flex-shrink-0">
+                  {hour}:00
           </div>
+                <div className="flex-1 min-h-[50px] p-1 hover:bg-muted/5">
+                  {hourAppointments.length === 0 ? (
+                    <div className="h-full"></div>
         ) : (
-          <div className="border rounded-md overflow-hidden">
-            <div className="divide-y">
-              {dayAppointments.map((appointment) => (
+                    <div className="space-y-1">
+                      {hourAppointments.map((appointment) => (
                 <div
                   key={appointment.id}
-                  className="p-2 hover:bg-muted/10 cursor-pointer"
+                          className="p-1.5 rounded-md bg-primary/10 border border-primary/20 text-xs cursor-pointer hover:bg-primary/20 transition-colors active:bg-primary/30 shadow-sm"
                   onClick={() => handleViewAppointment(appointment.id)}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1">
                       <div 
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: getStatusColor(appointment.status) }}
                       />
-                      <span className="font-medium text-xs">{appointment.time}</span>
+                              <span className="font-medium">{appointment.time}</span>
+                            </div>
+                            <Badge 
+                              variant="outline" 
+                              className="text-[9px] h-4 px-1 py-0 rounded-full"
+                            >
+                              {getTotalServiceDuration(appointment)} min
+                            </Badge>
+                          </div>
+                          <div className="font-medium mt-1 truncate">
+                            {appointment.customerName}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {getServiceNames(appointment)}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {getTotalServiceDuration(appointment)} min
-                    </span>
-                  </div>
-                  <div className="mt-1 text-xs">{appointment.customerName}</div>
-                  <div className="mt-0.5 text-[10px] text-muted-foreground">{getServiceNames(appointment)}</div>
+                  )}
                 </div>
-              ))}
             </div>
+            );
+          })}
           </div>
-        )}
       </div>
     );
   };
 
-  // List view - more suitable for mobile than day/week views
+  // List View - Mobile optimized with simplified layout
   const renderListView = () => {
     // Get appointments for the next 14 days
     const getAppointmentsForPeriod = () => {
@@ -507,20 +532,20 @@ export const MobileCalendarView = ({
     const periodAppointments = getAppointmentsForPeriod();
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-4 custom-scrollbar overflow-y-auto max-h-[70vh]">
         {periodAppointments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No appointments scheduled for this period
+          <div className="border rounded-lg p-4 text-center text-sm text-muted-foreground">
+            No appointments scheduled
           </div>
         ) : (
           periodAppointments.map(({ date, appointments }) => (
-            <div key={format(date, 'yyyy-MM-dd')} className="border rounded-md overflow-hidden">
+            <div key={format(date, 'yyyy-MM-dd')} className="border rounded-lg overflow-hidden shadow-sm">
               <div className={cn(
-                "bg-muted/30 px-2 py-1 text-xs font-medium flex justify-between items-center",
+                "px-3 py-2 font-medium text-sm border-b",
                 isSameDay(date, new Date()) && "bg-primary/10"
               )}>
-                <span>{format(date, 'EEEE, MMM d')}</span>
-                <Badge variant="outline" className="text-[9px] h-4">
+                {format(date, 'EEE, MMM d')}
+                <Badge variant="outline" className="ml-2 text-[10px] rounded-full">
                   {appointments.length}
                 </Badge>
               </div>
@@ -528,23 +553,33 @@ export const MobileCalendarView = ({
                 {appointments.map((appointment) => (
                   <div
                     key={appointment.id}
-                    className="p-2 hover:bg-muted/10 cursor-pointer"
+                    className="p-2 hover:bg-muted/10 transition-colors active:bg-muted/20"
                     onClick={() => handleViewAppointment(appointment.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div 
-                          className="w-2 h-2 rounded-full"
+                      <div className="font-medium text-xs">{appointment.time}</div>
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-[10px] h-4 px-1 py-0 rounded-full",
+                          appointment.status === 'confirmed' && "bg-success/10 text-success border-success/30",
+                          appointment.status === 'cancelled' && "bg-error/10 text-error border-error/30",
+                          appointment.status === 'scheduled' && "bg-warning/10 text-warning border-warning/30"
+                        )}
+                      >
+                        {appointment.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div 
+                        className="w-1.5 h-1.5 rounded-full" 
                           style={{ backgroundColor: getStatusColor(appointment.status) }}
                         />
-                        <span className="font-medium text-xs">{appointment.time}</span>
+                      <div className="text-xs">{appointment.customerName}</div>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {getTotalServiceDuration(appointment)} min
-                      </span>
+                    <div className="text-[10px] text-muted-foreground ml-3 truncate">
+                      {getServiceNames(appointment)}
                     </div>
-                    <div className="mt-1 text-xs">{appointment.customerName}</div>
-                    <div className="mt-0.5 text-[10px] text-muted-foreground">{getServiceNames(appointment)}</div>
                   </div>
                 ))}
               </div>
@@ -555,12 +590,11 @@ export const MobileCalendarView = ({
     );
   };
 
-  // Helper function to get total duration of all services
+  // Helper functions
   const getTotalServiceDuration = (appointment: Appointment) => {
     return appointment.services.reduce((total, service) => total + service.duration, 0);
   };
 
-  // Helper function to get service names
   const getServiceNames = (appointment: Appointment) => {
     return appointment.services.map(service => service.serviceName).join(', ');
   };
@@ -579,20 +613,23 @@ export const MobileCalendarView = ({
   };
 
   return (
-    <div className="p-2 bg-card rounded-lg">
+    <div className="p-3 bg-card rounded-lg shadow-sm border">
       {renderHeader()}
-      <div className="mt-2">
+      <div className="mt-3">
         {view === 'month' && renderMonthView()}
         {view === 'week' && renderWeekView()}
         {view === 'day' && renderDayView()}
         {view === 'list' && renderListView()}
       </div>
       
+      {/* Mobile appointment details modal */}
+      {selectedAppointment && (
       <AppointmentDetailsModalMobile
         appointment={selectedAppointment}
         open={showAppointmentDetails}
         onOpenChange={setShowAppointmentDetails}
       />
+      )}
     </div>
   );
 }; 
