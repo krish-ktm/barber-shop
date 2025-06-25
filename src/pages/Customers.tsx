@@ -373,42 +373,49 @@ export const Customers: React.FC = () => {
             Search
           </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch gap-2">
+          {/* Filter & Sort group (row on all screens) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className={getActiveFilterCount() > 0 ? 'bg-muted' : ''}
+              onClick={() => handleOpenFilters(true)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+              {getActiveFilterCount() > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+                >
+                  {getActiveFilterCount()}
+                </Badge>
+              )}
+            </Button>
+
+            <Select value={sortBy} onValueChange={(value) => {
+              setSortBy(value);
+              loadCustomers();
+            }}>
+              <SelectTrigger className="w-[160px]">
+                <SortAsc className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="last_visit">Last Visit</SelectItem>
+                <SelectItem value="visit_count">Visit Count</SelectItem>
+                <SelectItem value="total_spent">Total Spent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Add button - full width on mobile, inline on larger */}
           <Button
-            variant="outline"
-            size="sm"
-            className={getActiveFilterCount() > 0 ? 'bg-muted' : ''}
-            onClick={() => handleOpenFilters(true)}
+            className="w-full sm:w-auto"
+            onClick={() => setShowAddDialog(true)}
           >
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-            {getActiveFilterCount() > 0 && (
-              <Badge
-                variant="secondary"
-                className="ml-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
-              >
-                {getActiveFilterCount()}
-              </Badge>
-            )}
-          </Button>
-
-          <Select value={sortBy} onValueChange={(value) => {
-            setSortBy(value);
-            loadCustomers();
-          }}>
-            <SelectTrigger className="w-[160px]">
-              <SortAsc className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="last_visit">Last Visit</SelectItem>
-              <SelectItem value="visit_count">Visit Count</SelectItem>
-              <SelectItem value="total_spent">Total Spent</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             <span>Add Customer</span>
           </Button>
@@ -498,7 +505,7 @@ export const Customers: React.FC = () => {
 
       {/* Filter Sidebar */}
       <Sheet open={showFilters} onOpenChange={handleOpenFilters}>
-        <SheetContent className="w-[340px] sm:w-[540px]">
+        <SheetContent className="w-full sm:w-[540px] sm:max-w-[540px]  sm:p-6 overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Filter Customers</SheetTitle>
           </SheetHeader>
