@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout';
-import { FullCalendarView } from '@/features/appointments/FullCalendarView';
+import { CalendarLayout } from '@/features/admin/calendar/CalendarLayout';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -8,11 +8,16 @@ import { getStaffAppointments, updateAppointmentStatus } from '@/api/services/ap
 import { Appointment as ApiAppointment, Service } from '@/api/services/appointmentService';
 import { Appointment as UIAppointment } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 export const StaffCalendar: React.FC = () => {
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const monthKey = format(currentDate, 'yyyy-MM');
+  const [appointmentsCache, setAppointmentsCache] = useState<Record<string, UIAppointment[]>>({});
+  const [staffAppointments, setStaffAppointments] = useState<UIAppointment[]>([]);
   const [staffData, setStaffData] = useState<{
     appointments: ApiAppointment[];
     services: Service[];
@@ -22,9 +27,17 @@ export const StaffCalendar: React.FC = () => {
 
   // Fetch all appointments for the staff member
   const fetchStaffAppointments = async () => {
+    // check cache first
+    if (appointmentsCache[monthKey]) {
+      setStaffAppointments(appointmentsCache[monthKey]);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const response = await getStaffAppointments(1, 1000, 'date_asc'); // Get all appointments
+      const startDate = format(startOfMonth(currentDate), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(currentDate), 'yyyy-MM-dd');
+      const response = await getStaffAppointments(1, 1000, 'date_asc', startDate, endDate);
       
       if (response.success) {
         setStaffData({
@@ -32,6 +45,10 @@ export const StaffCalendar: React.FC = () => {
           services: response.services,
           totalCount: response.totalCount
         });
+        // convert and cache
+        const converted = response.appointments.map(convertApiToUIAppointment);
+        setStaffAppointments(converted);
+        setAppointmentsCache(prev => ({ ...prev, [monthKey]: converted }));
       } else {
         toast({
           title: 'Error',
@@ -51,10 +68,10 @@ export const StaffCalendar: React.FC = () => {
     }
   };
 
-  // Fetch data when component mounts
+  // Fetch data when month changes
   useEffect(() => {
     fetchStaffAppointments();
-  }, []);
+  }, [monthKey]);
 
   const handleViewAppointment = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
@@ -62,8 +79,7 @@ export const StaffCalendar: React.FC = () => {
   };
 
   const handleSelectDate = (date: Date) => {
-    // In a real app, this could be used to pre-fill a date for a new appointment
-    console.log('Selected date:', date);
+    setCurrentDate(date);
   };
 
   // Handle appointment status change
@@ -144,9 +160,6 @@ export const StaffCalendar: React.FC = () => {
     return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
   };
 
-  // Get UI appointments
-  const staffAppointments = (staffData?.appointments || []).map(convertApiToUIAppointment);
-
   const selectedAppointment = selectedAppointmentId 
     ? staffAppointments.find(app => app.id === selectedAppointmentId) 
     : null;
@@ -159,20 +172,20 @@ export const StaffCalendar: React.FC = () => {
       />
 
       <Card className="p-0">
-        {isLoading ? (
-          <div className="text-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-            <p className="text-muted-foreground">
-              Loading calendar...
-            </p>
-          </div>
-        ) : (
-          <FullCalendarView
+        <div className="relative">
+          <CalendarLayout
             appointments={staffAppointments}
             onSelectDate={handleSelectDate}
             onViewAppointment={handleViewAppointment}
           />
-        )}
+
+          {isLoading && (
+            <div className="absolute inset-0 bg-background/60 flex flex-col items-center justify-center rounded-xl">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+              <span className="text-xs text-muted-foreground">Loading…</span>
+            </div>
+          )}
+        </div>
       </Card>
 
       {selectedAppointment && (
