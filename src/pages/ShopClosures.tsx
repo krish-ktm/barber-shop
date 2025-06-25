@@ -25,6 +25,16 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 
 interface ShopClosure {
   id?: string;
@@ -53,6 +63,9 @@ const ShopClosures: React.FC = () => {
   
   // Date state for the Calendar component
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ShopClosure | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch shop closures
   const fetchClosures = async () => {
@@ -127,6 +140,14 @@ const ShopClosures: React.FC = () => {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    await deleteClosure(deleteTarget.id as string);
+    setIsDeleting(false);
+    setDeleteTarget(null);
+  };
+
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -145,6 +166,8 @@ const ShopClosures: React.FC = () => {
         ...prev,
         date: format(date, 'yyyy-MM-dd')
       }));
+      // Close the popover after selecting a date
+      setIsDatePickerOpen(false);
     }
   };
 
@@ -195,16 +218,16 @@ const ShopClosures: React.FC = () => {
 
       {/* Modal Dialog for Adding Shop Closure */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add New Shop Closure</DialogTitle>
+        <DialogContent className="max-w-[95%] w-full sm:max-w-[500px] p-0 max-h-[90vh] overflow-y-auto rounded-xl mx-auto [&>button]:hidden">
+          <DialogHeader className="px-5 py-4 border-b sticky top-0 z-10 bg-card rounded-t-xl flex justify-center">
+            <DialogTitle className="text-base font-semibold text-center">Add New Shop Closure</DialogTitle>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5 p-5">
             {/* Date Field with Shadcn Date Picker */}
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
-              <Popover>
+              <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="date"
@@ -245,7 +268,7 @@ const ShopClosures: React.FC = () => {
 
             {/* Time Fields - Only shown when not full day */}
             {!formData.is_full_day && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start_time">Start Time</Label>
                   <div className="relative">
@@ -294,7 +317,7 @@ const ShopClosures: React.FC = () => {
               />
             </div>
 
-            <DialogFooter className="mt-6">
+            <DialogFooter className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
@@ -325,19 +348,19 @@ const ShopClosures: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {closures.map((closure) => (
             <Card key={closure.id} className="overflow-hidden">
               <div className="bg-primary text-primary-foreground p-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
                     <CalendarIcon className="mr-2 h-5 w-5" />
-                    <span className="font-medium">{format(new Date(closure.date), 'MMM dd, yyyy')}</span>
+                    <span className="font-medium text-sm sm:text-base">{format(new Date(closure.date), 'MMM dd, yyyy')}</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => closure.id && deleteClosure(closure.id)}
+                    onClick={() => setDeleteTarget(closure)}
                     className="text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/20"
                   >
                     <Trash className="h-4 w-4" />
@@ -364,6 +387,25 @@ const ShopClosures: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="max-w-[95%] sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Closure</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this shop closure? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="flex items-center gap-2">
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
