@@ -526,8 +526,8 @@ export const StaffManagement: React.FC = () => {
       />
       
       <div className="bg-card border rounded-lg">
-        <div className="p-4 border-b">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="p-3 sm:p-4 border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="relative flex-1 min-w-[200px] max-w-[400px] flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -548,16 +548,17 @@ export const StaffManagement: React.FC = () => {
               <Button 
                 variant="default" 
                 size="sm" 
+                className="flex items-center"
                 onClick={handleSearch}
                 disabled={isLoading}
               >
-                Search
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
               </Button>
             </div>
 
-            <div className="hidden sm:flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch gap-2">
               <Select value={sortBy} onValueChange={handleSortChange}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SortAsc className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -576,7 +577,7 @@ export const StaffManagement: React.FC = () => {
                   availability: value as 'all' | 'available' | 'unavailable'
                 }));
               }}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by availability" />
                 </SelectTrigger>
@@ -615,7 +616,7 @@ export const StaffManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {isLoading ? (
             <div className="flex justify-center items-center p-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

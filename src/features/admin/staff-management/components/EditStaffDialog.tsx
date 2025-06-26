@@ -201,7 +201,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       }
     }}>
       <style>{customStyles}</style>
-      <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[95%] w-full sm:max-w-[600px] h-[90vh] flex flex-col rounded-xl">
         <DialogHeader>
           <DialogTitle>Edit Staff Profile</DialogTitle>
           <DialogDescription>
@@ -210,8 +210,8 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
         </DialogHeader>
 
         <ScrollArea className="flex-1">
-          <div className="px-6 pb-6">
-            <Form {...form} className="custom-form">
+          <div className="px-4 sm:px-6 pb-6">
+            <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
@@ -236,7 +236,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="name"
@@ -252,7 +252,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="email"
@@ -437,7 +437,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
           </div>
         </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-2">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

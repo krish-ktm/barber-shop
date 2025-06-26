@@ -5,7 +5,6 @@ import {
   MoreHorizontal, 
   Phone, 
   Trash,
-  Clock,
   Loader2
 } from 'lucide-react';
 import { Staff } from '@/types';
@@ -68,7 +67,7 @@ export const StaffList: React.FC<StaffListProps> = ({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         {staff.map((member) => (
           <Card key={member.id} className={`overflow-hidden relative ${deletingStaffId === member.id ? 'opacity-70' : ''}`}>
             {deletingStaffId === member.id && (
@@ -81,8 +80,8 @@ export const StaffList: React.FC<StaffListProps> = ({
             )}
             
             <div className="relative">
-              <div className="h-24 bg-gradient-to-r from-black to-primary"></div>
-              <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-16 w-16 border-4 border-background">
+              <div className="h-20 sm:h-24 bg-gradient-to-r from-black to-primary"></div>
+              <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-14 w-14 sm:h-16 sm:w-16 border-4 border-background">
                 <AvatarImage src={member.image} alt={member.name || 'Staff'} />
                 <AvatarFallback>
                   {member.name
@@ -124,7 +123,7 @@ export const StaffList: React.FC<StaffListProps> = ({
               </div>
             </div>
             
-            <CardContent className="pt-10 pb-6">
+            <CardContent className="pt-8 pb-5 px-4 sm:px-6">
               <div className="mb-4">
                 <h3 className="font-semibold text-lg">{member.name || 'Unnamed Staff'}</h3>
                 <div className="mt-2 flex items-center gap-2">
@@ -149,37 +148,10 @@ export const StaffList: React.FC<StaffListProps> = ({
                 )}
               </div>
               
-              <div className="grid grid-cols-3 gap-4 py-4 border-t border-b mb-4">
-                <div className="text-center">
-                  <p className="text-2xl font-semibold">{member.totalAppointments}</p>
-                  <p className="text-xs text-muted-foreground">Appointments</p>
-                </div>
-                <div className="text-center border-x">
-                  <p className="text-2xl font-semibold">
-                    {member.services?.length || 0}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Services</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-semibold">
-                    {formatCurrency(member.totalEarnings || 0)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Earnings</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium mb-2">Today's Schedule</h4>
-                {member.workingHours && member.workingHours[getDayKey(new Date())]?.length > 0 ? (
-                  member.workingHours[getDayKey(new Date())].map((slot, index) => (
-                    <div key={index} className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{slot.start} - {slot.end}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">Not scheduled today</p>
-                )}
+              <div className="grid grid-cols-3 gap-x-4 sm:gap-x-6 gap-y-4 py-4 border-t border-b mb-4 text-center">
+                <MetricCell label="Appointments" value={member.totalAppointments.toString()} addRightBorder />
+                <MetricCell label="Services" value={(member.services?.length || 0).toString()} addRightBorder />
+                <MetricCell label="Earnings" value={formatCurrency(member.totalEarnings || 0)} />
               </div>
             </CardContent>
           </Card>
@@ -200,16 +172,18 @@ export const StaffList: React.FC<StaffListProps> = ({
   );
 };
 
-// Helper function to get the day key for workingHours
-const getDayKey = (date: Date): keyof Staff['workingHours'] => {
-  const days: (keyof Staff['workingHours'])[] = [
-    'sunday',
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-  ];
-  return days[date.getDay()];
-};
+// MetricCell - keeps design consistent and handles responsive font / borders
+interface MetricCellProps {
+  label: string;
+  value: string;
+  addRightBorder?: boolean;
+}
+
+const MetricCell: React.FC<MetricCellProps> = ({ label, value, addRightBorder = false }) => (
+  <div className={`flex flex-col items-center justify-center ${addRightBorder ? 'sm:border-r sm:pr-4' : ''}`}>
+    <p className="font-semibold text-xl sm:text-2xl leading-tight break-words max-w-[6rem] sm:max-w-none">
+      {value}
+    </p>
+    <p className="text-xs text-muted-foreground mt-0.5 whitespace-nowrap">{label}</p>
+  </div>
+);

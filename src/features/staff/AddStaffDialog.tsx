@@ -173,7 +173,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
         onOpenChange(isOpen);
       }
     }}>
-      <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[95%] w-full sm:max-w-[600px] h-[90vh] flex flex-col rounded-xl">
         <DialogHeader>
           <DialogTitle>Add New Staff Member</DialogTitle>
           <DialogDescription>
@@ -182,7 +182,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
         </DialogHeader>
 
         <ScrollArea className="flex-1">
-          <div className="px-6 pb-6">
+          <div className="px-1 sm:px-3 pb-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -208,7 +208,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="name"
@@ -224,7 +224,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="email"
@@ -426,7 +426,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
           </div>
         </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-2">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
