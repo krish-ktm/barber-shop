@@ -134,6 +134,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
         },
         totalEarnings: 0,
         totalAppointments: 0,
+        breaks: [],
         isAvailable: values.isActive, // Map isActive to isAvailable
         password: values.password, // Explicitly include password
       };
@@ -344,11 +345,13 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
                                               key={s.id}
                                               type="button"
                                               variant={isSelected ? "default" : "outline"}
-                                              className="w-full justify-between group"
+                                              className="w-full grid grid-cols-[1fr_auto] items-center gap-2 whitespace-normal py-2 h-auto"
                                               onClick={() => handleServiceSelection(s.id)}
                                             >
-                                              <span>{s.name}</span>
-                                              <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
+                                              <span className="text-left break-words whitespace-normal pr-2 leading-snug py-0.5">
+                                                {s.name}
+                                              </span>
+                                              <span className={`${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'} pl-2 justify-self-end`}>
                                                 {formatCurrency(Number(s.price) || 0)}
                                               </span>
                                             </Button>

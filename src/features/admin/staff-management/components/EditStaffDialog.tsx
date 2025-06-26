@@ -106,8 +106,12 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
   // Initialize selected services from staff data when component mounts or staff/services change
   useEffect(() => {
     if (staff?.services && Array.isArray(staff.services) && services.length > 0) {
-      // Filter out any service IDs that don't exist in the available services
-      const validServiceIds = staff.services.filter(id => 
+      // Normalize staff services to an array of IDs regardless of whether they are objects or strings
+      const staffServiceIds = staff.services.map((s: Service | string) =>
+        typeof s === 'string' ? s : s.id
+      );
+
+      const validServiceIds = staffServiceIds.filter(id =>
         services.some(service => service.id === id)
       );
       
@@ -354,11 +358,13 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                                               key={s.id}
                                               type="button"
                                               variant={isSelected ? "default" : "outline"}
-                                              className="w-full justify-between group"
+                                              className="w-full grid grid-cols-[1fr_auto] items-center gap-2 whitespace-normal py-2 h-auto"
                                               onClick={() => handleServiceSelection(s.id)}
                                             >
-                                              <span>{s.name}</span>
-                                              <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
+                                              <span className="text-left break-words whitespace-normal pr-2 leading-snug py-0.5">
+                                                {s.name}
+                                              </span>
+                                              <span className={`${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'} pl-2 justify-self-end`}>
                                                 {formatCurrency(Number(s.price) || 0)}
                                               </span>
                                             </Button>
