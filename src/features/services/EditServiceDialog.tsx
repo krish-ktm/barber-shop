@@ -64,18 +64,18 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
     },
   });
 
-  // Update form values when service changes
+  // Update form values whenever the selected service changes so the dialog opens with fresh data.
   useEffect(() => {
-    if (service && open) {
+    if (service) {
       form.reset({
         name: service.name,
         description: service.description || '',
         price: service.price,
         duration: service.duration,
-        category: service.category,
+        category: (service.category || '').toLowerCase(),
       });
     }
-  }, [form, service, open]);
+  }, [service, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!service) return;
@@ -92,9 +92,18 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
     }
   };
 
+  // Prepare category options (include any API-provided category)
+  const defaultCategories = ['haircut','beard','shave','color','treatment','combo'];
+  const currentCat = (service?.category || '').toLowerCase();
+  const categories = defaultCategories.includes(currentCat)
+    ? defaultCategories
+    : currentCat
+      ? [...defaultCategories, currentCat]
+      : defaultCategories;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent key={service?.id ?? 'new'} className="sm:max-w-[425px] rounded-lg sm:rounded-lg p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Edit Service</DialogTitle>
           <DialogDescription>
@@ -121,12 +130,11 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="haircut">Haircut</SelectItem>
-                      <SelectItem value="beard">Beard</SelectItem>
-                      <SelectItem value="shave">Shave</SelectItem>
-                      <SelectItem value="color">Color</SelectItem>
-                      <SelectItem value="treatment">Treatment</SelectItem>
-                      <SelectItem value="combo">Combo</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

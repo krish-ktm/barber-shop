@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, Filter, Plus, Search, SortAsc, X, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,7 @@ import { useToast } from '@/hooks/use-toast';
 export const Services: React.FC = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('name');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -93,31 +94,58 @@ export const Services: React.FC = () => {
     execute: executeDeleteService,
   } = useApi(deleteService);
   
-  useEffect(() => {
-    // Convert sort state to API parameter format
-    let sortParam = '';
+  // Helper that maps sortBy -> API sort string
+  const getSortParam = useCallback((): string => {
     switch (sortBy) {
       case 'name':
-        sortParam = 'name_asc';
-        break;
+        return 'name_asc';
       case 'price':
-        sortParam = 'price_desc';
-        break;
+        return 'price_desc';
       case 'duration':
-        sortParam = 'duration_desc';
-        break;
+        return 'duration_desc';
       case 'category':
-        sortParam = 'category_asc';
-        break;
+        return 'category_asc';
       default:
-        sortParam = 'name_asc';
+        return 'name_asc';
     }
-    
-    // Only send category filter if it's not "all"
-    const category = categoryFilter !== 'all' ? categoryFilter : undefined;
-    
-    fetchServices(page, limit, sortParam, category);
-  }, [fetchServices, page, limit, sortBy, categoryFilter]);
+  }, [sortBy]);
+
+  // Centralised loader that fetches services based on the current filter state
+  const loadServices = useCallback(() => {
+    const extraParams: Record<string, string | number | undefined> = {};
+
+    if (searchQuery) extraParams.search = searchQuery;
+
+    if (categoryFilter !== 'all') extraParams.category = categoryFilter;
+
+    if (selectedCategories.length > 0) {
+      extraParams.categories = selectedCategories.join(',');
+    }
+
+    if (priceRange.length === 2) {
+      extraParams.minPrice = priceRange[0];
+      extraParams.maxPrice = priceRange[1];
+    }
+
+    if (durationRange.length === 2) {
+      extraParams.minDuration = durationRange[0];
+      extraParams.maxDuration = durationRange[1];
+    }
+
+    fetchServices(page, limit, getSortParam(), extraParams);
+  }, [searchQuery, categoryFilter, selectedCategories, priceRange, durationRange, page, limit, fetchServices, getSortParam]);
+
+  // Triggered when the user clicks the Search button (or presses Enter)
+  const handleSearch = useCallback(() => {
+    setSearchQuery(pendingSearchQuery);
+    loadServices();
+  }, [pendingSearchQuery, loadServices]);
+
+  // Initial load
+  useEffect(() => {
+    loadServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Set maxPrice and maxDuration based on API data
   const services = servicesData?.services || [];
@@ -150,37 +178,22 @@ export const Services: React.FC = () => {
     return count;
   };
 
-  // Filter services
-  const filteredServices = services
-    .filter(service => {
-      // Text search
-      const searchLower = searchQuery.toLowerCase();
-      const searchMatch = searchQuery === '' || 
-        service.name.toLowerCase().includes(searchLower) ||
-        (service.description?.toLowerCase().includes(searchLower) || false);
-      if (!searchMatch) return false;
-      
-      // Selected categories (checkboxes)
-      if (selectedCategories.length > 0 && !selectedCategories.includes(service.category)) {
-        return false;
-      }
-      
-      // Price range
-      if (service.price < priceRange[0] || service.price > priceRange[1]) return false;
-      
-      // Duration range
-      if (service.duration < durationRange[0] || service.duration > durationRange[1]) return false;
-      
-      return true;
-    });
+  // All filtering is now done server-side; just use response data directly.
+  const filteredServices = services;
 
   const clearFilters = () => {
+    setPendingSearchQuery('');
     setSearchQuery('');
     setSortBy('name');
     setCategoryFilter('all');
     setSelectedCategories([]);
     setPriceRange([0, maxPrice]);
     setDurationRange([0, maxDuration]);
+
+    // Reload with cleared filters
+    setTimeout(() => {
+      loadServices();
+    }, 0);
   };
 
   const handleEditService = (service: Service) => {
@@ -204,7 +217,7 @@ export const Services: React.FC = () => {
         title: "Success",
         description: "Service deleted successfully",
       });
-      fetchServices(page, limit);
+      loadServices();
     } catch (error) {
       console.error("Error deleting service:", error);
       toast({
@@ -226,7 +239,7 @@ export const Services: React.FC = () => {
         title: "Success",
         description: "Service created successfully",
       });
-      fetchServices(page, limit);
+      loadServices();
     } catch (error) {
       console.error("Error saving service:", error);
       toast({
@@ -246,7 +259,7 @@ export const Services: React.FC = () => {
         title: "Success",
         description: "Service updated successfully",
       });
-      fetchServices(page, limit);
+      loadServices();
     } catch (error) {
       console.error("Error updating service:", error);
       toast({
@@ -304,20 +317,38 @@ export const Services: React.FC = () => {
       <div className="bg-card border rounded-lg">
         <div className="p-4 border-b">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px] max-w-[400px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search services..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="flex flex-1 min-w-[200px] max-w-[400px] items-center gap-2">
+              {/* Search input */}
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search services..."
+                  className="pl-8"
+                  value={pendingSearchQuery}
+                  onChange={(e) => setPendingSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
+                />
+              </div>
+              {/* Search trigger */}
+              <Button
+                variant="default"
+                size="sm"
+                className="flex items-center"
+                onClick={handleSearch}
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
+              </Button>
             </div>
 
-            <div className="hidden sm:flex items-center gap-3">
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px]">
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch gap-2 sm:gap-3 overflow-x-auto whitespace-nowrap">
+              <Select value={sortBy} onValueChange={(value) => { setSortBy(value); loadServices(); }}>
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SortAsc className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -329,8 +360,8 @@ export const Services: React.FC = () => {
                 </SelectContent>
               </Select>
 
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
+              <Select value={categoryFilter} onValueChange={(value) => { setCategoryFilter(value); loadServices(); }}>
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
@@ -468,7 +499,7 @@ export const Services: React.FC = () => {
           <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] p-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Sort By</label>
-              <Select value={sortBy} onValueChange={setSortBy}>
+              <Select value={sortBy} onValueChange={(value) => { setSortBy(value); loadServices(); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -570,7 +601,7 @@ export const Services: React.FC = () => {
               Reset filters
             </Button>
             <SheetClose asChild>
-              <Button>Apply filters</Button>
+              <Button onClick={loadServices}>Apply filters</Button>
             </SheetClose>
           </SheetFooter>
         </SheetContent>
@@ -590,7 +621,7 @@ export const Services: React.FC = () => {
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-lg sm:rounded-lg p-4 sm:p-6">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>

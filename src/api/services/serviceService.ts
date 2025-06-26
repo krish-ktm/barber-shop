@@ -32,15 +32,21 @@ export const getAllServices = async (
   page = 1,
   limit = 10,
   sort = 'name_asc',
-  category?: string
+  extraParams: Record<string, string | number | undefined> = {}
 ): Promise<ServiceListResponse> => {
-  let url = `/services?page=${page}&limit=${limit}&sort=${sort}`;
-  
-  if (category) {
-    url += `&category=${category}`;
-  }
-  
-  return get<ServiceListResponse>(url);
+  const params = new URLSearchParams();
+  params.append('page', page.toString());
+  params.append('limit', limit.toString());
+  params.append('sort', sort);
+
+  // Dynamically append any provided extra parameters
+  Object.entries(extraParams).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.append(key, String(value));
+    }
+  });
+
+  return get<ServiceListResponse>(`/services?${params.toString()}`);
 };
 
 /**

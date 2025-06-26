@@ -75,7 +75,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] rounded-lg sm:rounded-lg p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Add New Service</DialogTitle>
           <DialogDescription>
