@@ -75,7 +75,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] rounded-lg sm:rounded-lg p-4 sm:p-6">
+      <DialogContent className="w-[90vw] sm:max-w-[425px] rounded-lg sm:rounded-lg p-4 sm:p-6 max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add New Service</DialogTitle>
           <DialogDescription>
@@ -83,6 +83,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto px-1">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -212,6 +213,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
             </DialogFooter>
           </form>
         </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );

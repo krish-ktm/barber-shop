@@ -85,7 +85,7 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-2 gap-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
           {/* Left column - Form Fields */}
           <div className="space-y-4">
             <FormField
@@ -130,7 +130,7 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="price"
@@ -179,7 +179,7 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="commission"

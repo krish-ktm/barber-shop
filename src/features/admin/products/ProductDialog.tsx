@@ -29,7 +29,7 @@ export function ProductDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="w-[90vw] sm:max-w-[600px] rounded-lg p-4 sm:p-6 max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {initialData ? 'Edit Product' : 'Add New Product'}
@@ -41,12 +41,14 @@ export function ProductDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <ProductForm 
-          initialData={initialData}
-          onSubmit={onSubmit}
-          onCancel={handleCancel}
-          isSubmitting={isSubmitting}
-        />
+        <div className="flex-1 overflow-y-auto px-1">
+          <ProductForm 
+            initialData={initialData}
+            onSubmit={onSubmit}
+            onCancel={handleCancel}
+            isSubmitting={isSubmitting}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
