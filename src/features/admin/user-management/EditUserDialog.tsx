@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,7 +27,7 @@ import { User } from '@/types';
 const schema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  phone: z.string().min(6).optional(),
+  phone: z.union([z.string().min(6), z.literal('')]).optional(),
   role: z.enum(['admin', 'billing']),
 });
 
@@ -46,12 +46,22 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({ open, onOpenChan
   const form = useForm<EditUserPayload>({
     resolver: zodResolver(schema),
     defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      role: 'billing',
+    },
+  });
+
+  // Update form when user changes
+  useEffect(() => {
+    form.reset({
       name: user.name,
       email: user.email,
       phone: user.phone || '',
       role: user.role,
-    },
-  });
+    });
+  }, [user, form]);
 
   const handleSubmit = async (values: EditUserPayload) => {
     setSubmitting(true);

@@ -27,7 +27,7 @@ import { Loader2 } from 'lucide-react';
 const schema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  phone: z.string().min(6).optional(),
+  phone: z.union([z.string().min(6), z.literal('')]).optional(),
   password: z.string().min(6),
   role: z.enum(['admin', 'billing']),
 });
