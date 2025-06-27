@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import { format } from 'date-fns';
 import {
   Download,
@@ -44,6 +44,7 @@ import { getAllInvoices, Invoice } from '@/api/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
 
 export const POS: React.FC = () => {
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('date');
   const [showFilters, setShowFilters] = useState(false);
@@ -70,10 +71,10 @@ export const POS: React.FC = () => {
     execute: fetchInvoices
   } = useApi(getAllInvoices);
 
-  // Fetch invoices on component mount and when sort changes
+  // Fetch invoices on component mount and whenever sort or searchQuery changes
   useEffect(() => {
-    fetchInvoices(page, limit, sortMap[sortBy]);
-  }, [fetchInvoices, page, limit, sortBy]);
+    fetchInvoices(page, limit, sortMap[sortBy], undefined, undefined, undefined, undefined, undefined, searchQuery);
+  }, [fetchInvoices, page, limit, sortBy, searchQuery]);
 
   // Show error toast if API call fails
   useEffect(() => {
@@ -86,22 +87,19 @@ export const POS: React.FC = () => {
     }
   }, [error, toast]);
 
-  // Filter invoices from the API response
-  const filteredInvoices = React.useMemo(() => {
-    if (!invoicesResponse?.invoices) return [];
-    
-    return invoicesResponse.invoices.filter(invoice => {
-      const searchLower = searchQuery.toLowerCase();
-      return searchQuery === '' || 
-        invoice.customer_name.toLowerCase().includes(searchLower) ||
-        invoice.id.toLowerCase().includes(searchLower) ||
-        invoice.staff_name.toLowerCase().includes(searchLower);
-    });
-  }, [invoicesResponse, searchQuery]);
+  const invoices = invoicesResponse?.invoices ?? [];
 
   const clearFilters = () => {
+    setSearchInput('');
     setSearchQuery('');
     setSortBy('date');
+    // Refetch default list
+    fetchInvoices(page, limit, sortMap['date']);
+  };
+
+  const handleSearchSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    setSearchQuery(searchInput.trim());
   };
 
   // Convert API status to UI badge
@@ -139,7 +137,7 @@ export const POS: React.FC = () => {
 
   const handleInvoiceCreated = () => {
     // Refresh the invoice list after creating a new invoice
-    fetchInvoices(page, limit, sortMap[sortBy]);
+    fetchInvoices(page, limit, sortMap[sortBy], undefined, undefined, undefined, undefined, undefined, searchQuery);
     setShowNewInvoiceDialog(false);
   };
 
@@ -160,13 +158,18 @@ export const POS: React.FC = () => {
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-[400px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search invoices..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <form onSubmit={handleSearchSubmit} className="flex">
+                <Input
+                  type="search"
+                  placeholder="Search invoices..."
+                  className="pl-8 pr-20"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+                <Button type="submit" size="sm" className="absolute right-1.5 top-1.5 h-7 px-3">
+                  <Search className="h-4 w-4" />
+                </Button>
+              </form>
             </div>
 
             <div className="hidden sm:flex items-center gap-3">
@@ -254,7 +257,7 @@ export const POS: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden sm:block overflow-x-auto">
           {loading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -273,8 +276,8 @@ export const POS: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-                {filteredInvoices.length > 0 ? (
-                  filteredInvoices.map((invoice) => (
+                {invoices.length > 0 ? (
+                  invoices.map((invoice) => (
                 <TableRow 
                   key={invoice.id}
                   className="cursor-pointer hover:bg-muted/50"
@@ -316,7 +319,7 @@ export const POS: React.FC = () => {
           open={showInvoiceDialog}
           onOpenChange={setShowInvoiceDialog}
           invoice={selectedInvoice}
-          onInvoiceUpdated={() => fetchInvoices(page, limit, sortMap[sortBy])}
+          onInvoiceUpdated={() => fetchInvoices(page, limit, sortMap[sortBy], undefined, undefined, undefined, undefined, undefined, searchQuery)}
         />
       )}
 
@@ -325,6 +328,50 @@ export const POS: React.FC = () => {
         onOpenChange={setShowNewInvoiceDialog}
         onInvoiceCreated={handleInvoiceCreated}
       />
+
+      {/* Mobile card list */}
+      <div className="sm:hidden p-4 space-y-3">
+        {loading && (
+          <div className="flex justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
+        {!loading && invoices.length === 0 && (
+          <p className="text-center text-sm text-muted-foreground">
+            {searchQuery ? "No invoices found matching your search" : "No invoices found"}
+          </p>
+        )}
+        {!loading && invoices.length > 0 && invoices.map((invoice) => (
+          <div
+            key={invoice.id}
+            className="border rounded-lg p-4 shadow-sm bg-background/50 cursor-pointer"
+            onClick={() => handleInvoiceClick(invoice)}
+          >
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium text-sm">#{invoice.id}</h3>
+              {getStatusBadge(invoice.status)}
+            </div>
+            <div className="text-sm space-y-1">
+              <p>
+                <span className="font-semibold">Customer: </span>
+                {invoice.customer_name}
+              </p>
+              <p>
+                <span className="font-semibold">Staff: </span>
+                {invoice.staff_name}
+              </p>
+              <p>
+                <span className="font-semibold">Date: </span>
+                {format(new Date(invoice.date), 'dd MMM yyyy')}
+              </p>
+              <p>
+                <span className="font-semibold">Amount: </span>
+                {formatCurrency(invoice.total)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

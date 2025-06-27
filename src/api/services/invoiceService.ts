@@ -65,7 +65,8 @@ export const getAllInvoices = async (
   dateTo?: string,
   staffId?: string,
   customerId?: string,
-  status?: string
+  status?: string,
+  search?: string
 ): Promise<InvoiceListResponse> => {
   let url = `/invoices?page=${page}&limit=${limit}&sort=${sort}`;
   
@@ -74,6 +75,7 @@ export const getAllInvoices = async (
   if (staffId) url += `&staffId=${staffId}`;
   if (customerId) url += `&customerId=${customerId}`;
   if (status) url += `&status=${status}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
   
   return get<InvoiceListResponse>(url);
 };
