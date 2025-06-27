@@ -8,9 +8,7 @@ import {
   Mail, 
   Users, 
   Scissors,
-  Calendar,
   BadgeCheck,
-  Gift,
   Sparkles,
   Crown,
   Award,
@@ -97,7 +95,7 @@ export const Home: React.FC = () => {
           >
             <motion.h1 
               variants={fadeIn}
-              className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight"
+              className="text-4xl sm:text-5xl md:text-7xl font-bold text-white mb-6 leading-tight"
             >
               Modern Cuts
               <span className="block text-primary-foreground/80">for the Modern Man</span>
@@ -105,7 +103,7 @@ export const Home: React.FC = () => {
             
             <motion.p 
               variants={fadeIn}
-              className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-8"
+              className="text-lg sm:text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-8"
             >
               Experience premium grooming services at our state-of-the-art barbershop
             </motion.p>
@@ -147,7 +145,7 @@ export const Home: React.FC = () => {
 
             <motion.div 
               variants={fadeIn}
-              className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16"
+              className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4 md:gap-8 mt-10 sm:mt-12 md:mt-16"
             >
               {[
                 { value: '10+', label: 'Expert Barbers' },
@@ -160,8 +158,8 @@ export const Home: React.FC = () => {
                   className="text-white/90"
                   whileHover={{ scale: 1.05 }}
                 >
-                  <div className="text-3xl md:text-4xl font-bold mb-2">{stat.value}</div>
-                  <div className="text-sm md:text-base text-white/70">{stat.label}</div>
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">{stat.value}</div>
+                  <div className="text-xs sm:text-sm md:text-base text-white/70">{stat.label}</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -421,7 +419,7 @@ export const Home: React.FC = () => {
             </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredServices.map((service, index) => (
+              {featuredServices.map((service) => (
                 <motion.div
                   key={service.id}
                   variants={serviceCard}
@@ -538,7 +536,7 @@ export const Home: React.FC = () => {
                         {staff.isAvailable ? 'Available' : 'Unavailable'}
                       </Badge>
                       <h3 className="text-lg font-semibold mb-1">{staff.name}</h3>
-                      <p className="text-muted-foreground text-sm mb-3">{staff.position}</p>
+                      <p className="text-muted-foreground text-sm mb-3">{staff.role}</p>
                       <p className="text-sm text-muted-foreground line-clamp-2">{staff.bio}</p>
                     </CardContent>
                   </Card>

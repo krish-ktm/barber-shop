@@ -1,5 +1,5 @@
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
-import { Dashboard } from './pages/Dashboard';
+import { AdminDashboard } from './pages/AdminDashboard';
 import { StaffManagement } from './pages/StaffManagement';
 import { AdminAppointment } from './pages/AdminAppointment';
 import { AdminCalendar } from './pages/AdminCalendar';
@@ -73,7 +73,7 @@ function App() {
           }
         >
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="staff-management" element={<StaffManagement />} />
           <Route path="appointments" element={<AdminAppointment />} />
           <Route path="calendar" element={<AdminCalendar />} />

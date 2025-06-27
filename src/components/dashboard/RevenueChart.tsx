@@ -11,20 +11,24 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RevenueData } from '@/types';
 import { formatCurrency } from '@/utils';
+import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface RevenueChartProps {
   data: RevenueData[];
   title: string;
   className?: string;
+  loading?: boolean;
 }
 
 export const RevenueChart: React.FC<RevenueChartProps> = ({ 
   data, 
   title,
-  className 
+  className,
+  loading = false
 }) => {
   return (
-    <Card className={className}>
+    <Card className={cn('relative', className)}>
       <CardHeader>
         <CardTitle className="text-base font-medium">{title}</CardTitle>
       </CardHeader>
@@ -67,10 +71,18 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
               stroke="#000000" 
               fillOpacity={1} 
               fill="url(#colorRevenue)" 
+              isAnimationActive={true}
+              animationDuration={700}
+              animationEasing="ease-in-out"
             />
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>
+      {loading && (
+        <div className="absolute inset-0 bg-background/50 flex items-center justify-center rounded-xl">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
     </Card>
   );
 };

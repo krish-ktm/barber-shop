@@ -13,12 +13,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
 import { getAdminAppointments, Appointment as ApiAppointment } from '@/api/services/appointmentService';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export const Dashboard: React.FC = () => {
   const { toast } = useToast();
   const [period, setPeriod] = useState<DashboardPeriod>('weekly');
   const { dashboardData, isLoading, error, refetch } = useDashboard(period);
+  const [cachedData, setCachedData] = useState<typeof dashboardData | null>(null);
   
   // State for today's appointments
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
@@ -27,9 +27,6 @@ export const Dashboard: React.FC = () => {
   // State for reschedule dialog
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
-  
-  // State to track loading state during tab switching
-  const [isTabSwitching, setIsTabSwitching] = useState(false);
 
   // Handle error
   useEffect(() => {
@@ -44,13 +41,7 @@ export const Dashboard: React.FC = () => {
   
   // Handle period change
   const handlePeriodChange = (newPeriod: DashboardPeriod) => {
-    setIsTabSwitching(true);
     setPeriod(newPeriod);
-    
-    // Add a small delay to ensure the loading state is visible
-    setTimeout(() => {
-      setIsTabSwitching(false);
-    }, 600);
   };
 
   // Fetch today's appointments
@@ -143,30 +134,33 @@ export const Dashboard: React.FC = () => {
     });
   };
 
-  // If data is loading, show a loading indicator
-  if (isLoading && !dashboardData) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-3">Loading dashboard data...</span>
-      </div>
-    );
-  }
+  // keep last successful payload to avoid UI blink
+  useEffect(() => {
+    if (!isLoading && dashboardData) {
+      setCachedData(dashboardData);
+    }
+  }, [isLoading, dashboardData]);
 
-  // Map the appointment stats for the chart
-  const appointmentChartData: RevenueData[] = dashboardData?.appointmentStats.map(stat => ({
+  const dataToShow = cachedData ?? dashboardData;
+
+  // Build chart data with fallback zero point to keep chart visible
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+  const appointmentStats = dataToShow?.appointmentStats ?? [];
+  const revenueStats = dataToShow?.revenueStats ?? [];
+
+  const appointmentChartData: RevenueData[] = (appointmentStats.length ? appointmentStats : [{ date: todayStr, count: 0 }]).map(stat => ({
     date: stat.date,
     revenue: stat.count // Using revenue field to store appointment count
-  })) || [];
+  }));
 
-  // Map the revenue stats for the chart
-  const revenueChartData: RevenueData[] = dashboardData?.revenueStats.map(stat => ({
+  const revenueChartData: RevenueData[] = (revenueStats.length ? revenueStats : [{ date: todayStr, revenue: '0' }]).map((stat: {date:string; revenue?: string}) => ({
     date: stat.date,
-    revenue: parseFloat(stat.revenue || '0')
-  })) || [];
+    revenue: parseFloat(stat.revenue ?? '0')
+  }));
 
   // Map top services for the performance table
-  const servicePerformanceData: ServicePerformance[] = dashboardData?.topServices.map(service => ({
+  const servicePerformanceData: ServicePerformance[] = dataToShow?.topServices?.map(service => ({
     id: service.service_id || `service-${service.service_name}`,
     name: service.service_name,
     bookings: service.bookings,
@@ -174,7 +168,7 @@ export const Dashboard: React.FC = () => {
   })) || [];
 
   // Map top staff for the performance table
-  const staffPerformanceData: StaffPerformance[] = dashboardData?.topStaff.map(staff => ({
+  const staffPerformanceData: StaffPerformance[] = dataToShow?.topStaff?.map(staff => ({
     id: staff.staff_id || `staff-${staff.staff_name}`,
     name: staff.staff_name,
     appointments: staff.appointments,
@@ -183,7 +177,7 @@ export const Dashboard: React.FC = () => {
   })) || [];
 
   // Convert API appointments to the format expected by AppointmentList
-  const mappedAppointments: Appointment[] = dashboardData?.upcomingAppointments.map(apt => ({
+  const mappedAppointments: Appointment[] = dataToShow?.upcomingAppointments?.map(apt => ({
     id: apt.id,
     customerId: apt.customer?.id || '',
     customerName: apt.customer?.name || 'Unknown Customer',
@@ -207,26 +201,6 @@ export const Dashboard: React.FC = () => {
     updatedAt: apt.updatedAt || apt.createdAt || new Date().toISOString()
   })) || [];
 
-  // Render chart skeleton during tab switching
-  const renderChartSkeleton = () => (
-    <div className="space-y-2">
-      <Skeleton className="h-8 w-1/3" />
-      <Skeleton className="h-[300px] w-full" />
-    </div>
-  );
-
-  // Render table skeleton during tab switching
-  const renderTableSkeleton = () => (
-    <div className="space-y-2">
-      <Skeleton className="h-8 w-1/3" />
-      <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-12 w-full" />
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -234,7 +208,7 @@ export const Dashboard: React.FC = () => {
         description="Overview of your barber shop business"
       />
       
-      {dashboardData && (
+      {dataToShow && (
         <>
           {/* Appointments Sections - Moved to the top */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -268,7 +242,7 @@ export const Dashboard: React.FC = () => {
           
           {/* Calculate tip percentage with proper type handling */}
           {(() => {
-            const tipPercentage = dashboardData.summary?.avgTipPercentage;
+            const tipPercentage = dataToShow.summary?.avgTipPercentage;
             const formattedTipPercentage = typeof tipPercentage === 'number' 
               ? tipPercentage.toFixed(1) 
               : typeof tipPercentage === 'string' 
@@ -280,28 +254,28 @@ export const Dashboard: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                 <StatsCard
                   title="Total Revenue"
-                  value={formatCurrency(parseFloat(dashboardData.summary.totalRevenue || '0'))}
+                  value={formatCurrency(parseFloat(dataToShow.summary.totalRevenue || '0'))}
                   icon={<DollarSign className="h-4 w-4" />}
                   description="period revenue"
                   trend={{ value: 0, positive: true }}
                 />
                 <StatsCard
                   title="Appointments"
-                  value={(dashboardData.summary.appointmentCount || 0).toString()}
+                  value={(dataToShow.summary.appointmentCount || 0).toString()}
                   icon={<Calendar className="h-4 w-4" />}
                   description="total appointments"
                   trend={{ value: 0, positive: true }}
                 />
                 <StatsCard
                   title="Customers"
-                  value={(dashboardData.summary.customerCount || 0).toString()}
+                  value={(dataToShow.summary.customerCount || 0).toString()}
                   icon={<DollarSign className="h-4 w-4" />}
                   description="total customers"
                   trend={{ value: 0, positive: true }}
                 />
                 <StatsCard
                   title="Tips Received"
-                  value={formatCurrency(parseFloat(dashboardData.summary.totalTips || '0'))}
+                  value={formatCurrency(parseFloat(dataToShow.summary.totalTips || '0'))}
                   icon={<DollarSign className="h-4 w-4" />}
                   description={`${formattedTipPercentage}% average`}
                   trend={{ value: 0, positive: true }}
@@ -320,207 +294,159 @@ export const Dashboard: React.FC = () => {
             </TabsList>
             
             {/* Daily Tab Content */}
-            <TabsContent value="daily" className="mt-4">
-              {isTabSwitching ? (
-                <>
-                  {/* Charts Row Skeleton */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div className="col-span-1">{renderChartSkeleton()}</div>
-                    <div className="col-span-1">{renderChartSkeleton()}</div>
-                  </div>
-                  
-                  {/* Performance Tables Row Skeleton */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
-                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Charts Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <RevenueChart 
-                      title="Appointments Over Time" 
-                      data={appointmentChartData} 
-                      className="col-span-1"
-                    />
-                    <RevenueChart 
-                      title="Revenue Over Time" 
-                      data={revenueChartData} 
-                      className="col-span-1"
-                    />
-                  </div>
-                  
-                  {/* Performance Tables Row */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                    <PerformanceTable
-                      title="Top Services"
-                      data={servicePerformanceData.slice(0, 5)}
-                      type="service"
-                      className="lg:col-span-6"
-                    />
-                    <PerformanceTable
-                      title="Top Staff"
-                      data={staffPerformanceData.slice(0, 5)}
-                      type="staff"
-                      className="lg:col-span-6"
-                    />
-                  </div>
-                </>
-              )}
+            <TabsContent value="daily" className="mt-4" forceMount>
+              <>
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <RevenueChart 
+                    title="Appointments Over Time" 
+                    data={appointmentChartData} 
+                    className="col-span-1"
+                    loading={isLoading && !!cachedData}
+                  />
+                  <RevenueChart 
+                    title="Revenue Over Time" 
+                    data={revenueChartData} 
+                    className="col-span-1"
+                    loading={isLoading && !!cachedData}
+                  />
+                </div>
+                
+                {/* Performance Tables Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                  <PerformanceTable
+                    title="Top Services"
+                    data={servicePerformanceData.slice(0, 5)}
+                    type="service"
+                    className="lg:col-span-6"
+                    loading={isLoading && !!cachedData}
+                  />
+                  <PerformanceTable
+                    title="Top Staff"
+                    data={staffPerformanceData.slice(0, 5)}
+                    type="staff"
+                    className="lg:col-span-6"
+                    loading={isLoading && !!cachedData}
+                  />
+                </div>
+              </>
             </TabsContent>
             
             {/* Weekly Tab Content */}
-            <TabsContent value="weekly" className="mt-4">
-              {isTabSwitching ? (
-                <>
-                  {/* Charts Row Skeleton */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div className="col-span-1">{renderChartSkeleton()}</div>
-                    <div className="col-span-1">{renderChartSkeleton()}</div>
-                  </div>
-                  
-                  {/* Performance Tables Row Skeleton */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
-                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Charts Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <RevenueChart 
-                      title="Appointments Over Time" 
-                      data={appointmentChartData} 
-                      className="col-span-1"
-                    />
-                    <RevenueChart 
-                      title="Revenue Over Time" 
-                      data={revenueChartData} 
-                      className="col-span-1"
-                    />
-                  </div>
-                  
-                  {/* Performance Tables Row */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                    <PerformanceTable
-                      title="Top Services"
-                      data={servicePerformanceData.slice(0, 5)}
-                      type="service"
-                      className="lg:col-span-6"
-                    />
-                    <PerformanceTable
-                      title="Top Staff"
-                      data={staffPerformanceData.slice(0, 5)}
-                      type="staff"
-                      className="lg:col-span-6"
-                    />
-                  </div>
-                </>
-              )}
+            <TabsContent value="weekly" className="mt-4" forceMount>
+              <>
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <RevenueChart 
+                    title="Appointments Over Time" 
+                    data={appointmentChartData} 
+                    className="col-span-1"
+                    loading={isLoading && !!cachedData}
+                  />
+                  <RevenueChart 
+                    title="Revenue Over Time" 
+                    data={revenueChartData} 
+                    className="col-span-1"
+                    loading={isLoading && !!cachedData}
+                  />
+                </div>
+                
+                {/* Performance Tables Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                  <PerformanceTable
+                    title="Top Services"
+                    data={servicePerformanceData.slice(0, 5)}
+                    type="service"
+                    className="lg:col-span-6"
+                    loading={isLoading && !!cachedData}
+                  />
+                  <PerformanceTable
+                    title="Top Staff"
+                    data={staffPerformanceData.slice(0, 5)}
+                    type="staff"
+                    className="lg:col-span-6"
+                    loading={isLoading && !!cachedData}
+                  />
+                </div>
+              </>
             </TabsContent>
             
             {/* Monthly Tab Content */}
-            <TabsContent value="monthly" className="mt-4">
-              {isTabSwitching ? (
-                <>
-                  {/* Charts Row Skeleton */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div className="col-span-1">{renderChartSkeleton()}</div>
-                    <div className="col-span-1">{renderChartSkeleton()}</div>
-                  </div>
-                  
-                  {/* Performance Tables Row Skeleton */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
-                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Charts Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <RevenueChart 
-                      title="Appointments Over Time" 
-                      data={appointmentChartData} 
-                      className="col-span-1"
-                    />
-                    <RevenueChart 
-                      title="Revenue Over Time" 
-                      data={revenueChartData} 
-                      className="col-span-1"
-                    />
-                  </div>
-                  
-                  {/* Performance Tables Row */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                    <PerformanceTable
-                      title="Top Services"
-                      data={servicePerformanceData.slice(0, 5)}
-                      type="service"
-                      className="lg:col-span-6"
-                    />
-                    <PerformanceTable
-                      title="Top Staff"
-                      data={staffPerformanceData.slice(0, 5)}
-                      type="staff"
-                      className="lg:col-span-6"
-                    />
-                  </div>
-                </>
-              )}
+            <TabsContent value="monthly" className="mt-4" forceMount>
+              <>
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <RevenueChart 
+                    title="Appointments Over Time" 
+                    data={appointmentChartData} 
+                    className="col-span-1"
+                    loading={isLoading && !!cachedData}
+                  />
+                  <RevenueChart 
+                    title="Revenue Over Time" 
+                    data={revenueChartData} 
+                    className="col-span-1"
+                    loading={isLoading && !!cachedData}
+                  />
+                </div>
+                
+                {/* Performance Tables Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                  <PerformanceTable
+                    title="Top Services"
+                    data={servicePerformanceData.slice(0, 5)}
+                    type="service"
+                    className="lg:col-span-6"
+                    loading={isLoading && !!cachedData}
+                  />
+                  <PerformanceTable
+                    title="Top Staff"
+                    data={staffPerformanceData.slice(0, 5)}
+                    type="staff"
+                    className="lg:col-span-6"
+                    loading={isLoading && !!cachedData}
+                  />
+                </div>
+              </>
             </TabsContent>
             
             {/* Yearly Tab Content */}
-            <TabsContent value="yearly" className="mt-4">
-              {isTabSwitching ? (
-                <>
-                  {/* Charts Row Skeleton */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div className="col-span-1">{renderChartSkeleton()}</div>
-                    <div className="col-span-1">{renderChartSkeleton()}</div>
-                  </div>
-                  
-                  {/* Performance Tables Row Skeleton */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
-                    <div className="lg:col-span-6">{renderTableSkeleton()}</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Charts Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <RevenueChart 
-                      title="Appointments Over Time" 
-                      data={appointmentChartData} 
-                      className="col-span-1"
-                    />
-                    <RevenueChart 
-                      title="Revenue Over Time" 
-                      data={revenueChartData} 
-                      className="col-span-1"
-                    />
-                  </div>
-                  
-                  {/* Performance Tables Row */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                    <PerformanceTable
-                      title="Top Services"
-                      data={servicePerformanceData.slice(0, 5)}
-                      type="service"
-                      className="lg:col-span-6"
-                    />
-                    <PerformanceTable
-                      title="Top Staff"
-                      data={staffPerformanceData.slice(0, 5)}
-                      type="staff"
-                      className="lg:col-span-6"
-                    />
-                  </div>
-                </>
-              )}
+            <TabsContent value="yearly" className="mt-4" forceMount>
+              <>
+                {/* Charts Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <RevenueChart 
+                    title="Appointments Over Time" 
+                    data={appointmentChartData} 
+                    className="col-span-1"
+                    loading={isLoading && !!cachedData}
+                  />
+                  <RevenueChart 
+                    title="Revenue Over Time" 
+                    data={revenueChartData} 
+                    className="col-span-1"
+                    loading={isLoading && !!cachedData}
+                  />
+                </div>
+                
+                {/* Performance Tables Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                  <PerformanceTable
+                    title="Top Services"
+                    data={servicePerformanceData.slice(0, 5)}
+                    type="service"
+                    className="lg:col-span-6"
+                    loading={isLoading && !!cachedData}
+                  />
+                  <PerformanceTable
+                    title="Top Staff"
+                    data={staffPerformanceData.slice(0, 5)}
+                    type="staff"
+                    className="lg:col-span-6"
+                    loading={isLoading && !!cachedData}
+                  />
+                </div>
+              </>
             </TabsContent>
           </Tabs>
           
@@ -529,7 +455,7 @@ export const Dashboard: React.FC = () => {
             <div className="bg-white p-4 rounded-lg shadow">
               <h3 className="text-lg font-semibold mb-4">Appointment Status Distribution</h3>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {dashboardData.appointmentStatusDistribution.map((status) => (
+                {dataToShow.appointmentStatusDistribution.map((status) => (
                   <StatsCard
                     key={status.status}
                     title={status.status.charAt(0).toUpperCase() + status.status.slice(1)}
