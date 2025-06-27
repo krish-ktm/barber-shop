@@ -1,4 +1,4 @@
-import { getGeneric as get, putGeneric as put } from '../apiClient';
+import { getGeneric as get, putGeneric as put, delGeneric as del } from '../apiClient';
 
 // Type definitions
 export interface BusinessSettings {
@@ -87,7 +87,7 @@ export const deleteGSTRate = async (id: string): Promise<{ success: boolean; mes
   console.log(`Deleting GST rate with ID: ${id}`);
   
   try {
-    return await get<{ success: boolean; message: string }>(`/settings/gst-rates/${id}`);
+    return await del<{ success: boolean; message: string }>(`/settings/gst-rates/${id}`);
   } catch (error) {
     console.error('API error in deleteGSTRate:', error);
     throw error;

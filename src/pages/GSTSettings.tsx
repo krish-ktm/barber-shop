@@ -49,7 +49,8 @@ import {
 interface GSTComponent {
   id: string;
   name: string;
-  rate: number;
+  // Allow string so input can be temporarily empty on mobile
+  rate: number | string;
 }
 
 interface GSTRate {
@@ -70,7 +71,7 @@ const mapApiToUiGSTRate = (apiRate: ApiGSTRate): GSTRate => {
     components: apiRate.components.map(comp => ({
       id: comp.id || `comp-${Date.now()}-${Math.random()}`,
       name: comp.name,
-      rate: comp.rate
+      rate: typeof comp.rate === 'string' ? parseFloat(comp.rate) || 0 : comp.rate
     }))
   };
 };
@@ -85,7 +86,10 @@ const mapUiToApiGSTRate = (uiRate: GSTRate): ApiGSTRate => {
     id: isTemporaryId ? undefined : uiRate.id,
     name: uiRate.name,
     is_active: uiRate.isActive,
-    total_rate: uiRate.totalRate,
+    total_rate: uiRate.totalRate ?? uiRate.components.reduce((sum, comp) => {
+      const numeric = typeof comp.rate === 'number' ? comp.rate : parseFloat(comp.rate);
+      return sum + (isNaN(numeric) ? 0 : numeric);
+    }, 0),
     components: uiRate.components.map(comp => {
       // Check if component has a temporary ID
       const isCompTempId = comp.id.startsWith('temp-');
@@ -94,7 +98,7 @@ const mapUiToApiGSTRate = (uiRate: GSTRate): ApiGSTRate => {
         // Only send component ID if it's not temporary
         id: isCompTempId ? undefined : comp.id,
         name: comp.name,
-        rate: comp.rate
+        rate: typeof comp.rate === 'string' ? parseFloat(comp.rate) || 0 : comp.rate
       };
     })
   };
@@ -161,9 +165,11 @@ export const GSTSettings: React.FC = () => {
 
   // Function to calculate total rate from components
   const calculateTotalRate = (components: GSTComponent[]): number => {
-    return parseFloat(
-      components.reduce((sum, comp) => sum + comp.rate, 0).toFixed(2)
-    );
+    const total = components.reduce((sum, comp) => {
+      const numeric = typeof comp.rate === 'number' ? comp.rate : parseFloat(comp.rate);
+      return sum + (isNaN(numeric) ? 0 : numeric);
+    }, 0);
+    return parseFloat(total.toFixed(2));
   };
 
   const handleAddRate = async () => {
@@ -333,7 +339,7 @@ export const GSTSettings: React.FC = () => {
     const newComponent: GSTComponent = {
       id: `temp-${Date.now()}`,
       name: 'New Component',
-      rate: 0
+      rate: '',
     };
 
     setSelectedRate({
@@ -370,7 +376,7 @@ export const GSTSettings: React.FC = () => {
 
       {/* Main content */}
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 py-3 md:px-6 md:py-4">
           <div className="flex items-center justify-between">
             <CardTitle>GST Rates</CardTitle>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -380,7 +386,7 @@ export const GSTSettings: React.FC = () => {
                   Add Rate
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-lg rounded-lg p-6">
                 <DialogHeader>
                   <DialogTitle>Add New GST Rate</DialogTitle>
                   <DialogDescription>
@@ -414,12 +420,12 @@ export const GSTSettings: React.FC = () => {
                         />
                         <Input
                           type="number"
-                          value={component.rate}
+                          value={component.rate === 0 ? '' : component.rate}
                           onChange={(e) => {
                             const updatedComponents = [...(newRate.components || [])];
                             updatedComponents[index] = {
                               ...component,
-                              rate: parseFloat(e.target.value) || 0,
+                              rate: e.target.value,
                             };
                             setNewRate({ ...newRate, components: updatedComponents });
                           }}
@@ -454,7 +460,7 @@ export const GSTSettings: React.FC = () => {
                         const newComponent: GSTComponent = {
                           id: `temp-${Date.now()}`,
                           name: 'New Component',
-                          rate: 0,
+                          rate: '',
                         };
                         setNewRate({
                           ...newRate,
@@ -475,11 +481,19 @@ export const GSTSettings: React.FC = () => {
                     <Label>Active</Label>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsAddDialogOpen(false)}
+                    className="w-full sm:w-auto"
+                  >
                     Cancel
                   </Button>
-                  <Button onClick={handleAddRate} disabled={updateLoading}>
+                  <Button 
+                    onClick={handleAddRate} 
+                    disabled={updateLoading}
+                    className="w-full sm:w-auto"
+                  >
                     {updateLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                     Add Rate
                   </Button>
@@ -488,7 +502,7 @@ export const GSTSettings: React.FC = () => {
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 md:p-6">
           {/* Card loading state */}
           {gstRatesLoading && (
             <div className="flex justify-center items-center py-12">
@@ -505,62 +519,113 @@ export const GSTSettings: React.FC = () => {
               </div>
             ) : (
               <div className="relative">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Components</TableHead>
-                      <TableHead>Total Rate</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {gstRates.map((rate) => (
-                      <TableRow key={rate.id}>
-                        <TableCell className="font-medium">{rate.name}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {rate.components.map((component) => (
-                              <div key={component.id} className="text-sm">
-                                {component.name}: {component.rate}%
-                              </div>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>{rate.totalRate || calculateTotalRate(rate.components)}%</TableCell>
-                        <TableCell>
-                          <Badge variant={rate.isActive ? "default" : "secondary"}>
-                            {rate.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedRate(rate);
-                                setIsEditDialogOpen(true);
-                              }}
-                              disabled={updateLoading || isDeleting}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => handleDeleteProduct(rate)}
-                              disabled={updateLoading || isDeleting}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                {/* Desktop/tablet view */}
+                <div className="relative hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Components</TableHead>
+                        <TableHead>Total Rate</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {gstRates.map((rate) => (
+                        <TableRow key={rate.id}>
+                          <TableCell className="font-medium">{rate.name}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-2">
+                              {rate.components.map((component) => (
+                                <div key={component.id} className="text-sm">
+                                  {component.name}: {component.rate}%
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>{rate.totalRate || calculateTotalRate(rate.components)}%</TableCell>
+                          <TableCell>
+                            <Badge variant={rate.isActive ? "default" : "secondary"}>
+                              {rate.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedRate(rate);
+                                  setIsEditDialogOpen(true);
+                                }}
+                                disabled={updateLoading || isDeleting}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleDeleteProduct(rate)}
+                                disabled={updateLoading || isDeleting}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile card list */}
+                <div className="md:hidden py-2 space-y-3">
+                  {gstRates.map((rate) => (
+                    <div key={rate.id} className="border rounded-lg p-3 shadow-sm bg-card">
+                      {/* Top row: name & total */}
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium text-sm">{rate.name}</h3>
+                        <span className="font-semibold text-sm">{rate.totalRate || calculateTotalRate(rate.components)}%</span>
+                      </div>
+
+                      {/* Components list */}
+                      <ul className="list-disc list-inside text-xs text-muted-foreground mt-1 space-y-0.5">
+                        {rate.components.map((component) => (
+                          <li key={component.id}>{component.name}: {component.rate}%</li>
+                        ))}
+                      </ul>
+
+                      {/* Bottom row: status + actions */}
+                      <div className="flex items-center justify-between mt-2">
+                        <Badge variant={rate.isActive ? 'default' : 'secondary'} className="text-[11px] px-2 py-0.5 rounded-full">
+                          {rate.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedRate(rate);
+                              setIsEditDialogOpen(true);
+                            }}
+                            disabled={updateLoading || isDeleting}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteProduct(rate)}
+                            disabled={updateLoading || isDeleting}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )
           )}
@@ -569,7 +634,7 @@ export const GSTSettings: React.FC = () => {
 
       {/* Edit dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg rounded-lg p-6">
           <DialogHeader>
             <DialogTitle>Edit GST Rate</DialogTitle>
             <DialogDescription>
@@ -580,7 +645,7 @@ export const GSTSettings: React.FC = () => {
             <div className="space-y-2">
               <Label>Rate Name</Label>
               <Input
-                value={selectedRate?.name}
+                value={selectedRate?.name ?? ''}
                 onChange={(e) => setSelectedRate(selectedRate ? {
                   ...selectedRate,
                   name: e.target.value,
@@ -603,11 +668,11 @@ export const GSTSettings: React.FC = () => {
                   />
                   <Input
                     type="number"
-                    value={component.rate}
+                    value={component.rate === 0 ? '' : component.rate}
                     onChange={(e) => handleUpdateComponent(
                       component.id,
                       'rate',
-                      parseFloat(e.target.value) || 0
+                      e.target.value
                     )}
                     placeholder="Rate %"
                     className="w-24"
@@ -632,7 +697,7 @@ export const GSTSettings: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <Switch
-                checked={selectedRate?.isActive}
+                checked={selectedRate?.isActive ?? false}
                 onCheckedChange={(checked) => {
                   setSelectedRate(selectedRate ? {
                     ...selectedRate,
@@ -643,11 +708,19 @@ export const GSTSettings: React.FC = () => {
               <Label>Active</Label>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditDialogOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
-            <Button onClick={handleEditRate} disabled={updateLoading}>
+            <Button 
+              onClick={handleEditRate} 
+              disabled={updateLoading}
+              className="w-full sm:w-auto"
+            >
               {updateLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Save Changes
             </Button>
@@ -657,7 +730,7 @@ export const GSTSettings: React.FC = () => {
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-md rounded-lg p-6">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
