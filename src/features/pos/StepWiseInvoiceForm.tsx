@@ -477,51 +477,6 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             </React.Fragment>
           ))}
         </div>
-        
-        <div className="flex gap-2">
-          {currentStep !== 'customer' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={prevStep}
-              disabled={isSubmitting}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          )}
-          
-          {currentStep === 'summary' ? (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Create Invoice
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              Next
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          )}
-        </div>
       </div>
     );
   };
@@ -1441,9 +1396,18 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         </Button>
         
         {currentStep === 'summary' ? (
-          <Button onClick={handleSubmit}>
-            Create Invoice
-            <Check className="h-4 w-4 ml-2" />
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                Create Invoice
+                <Check className="h-4 w-4 ml-2" />
+              </>
+            )}
           </Button>
         ) : (
           <Button onClick={nextStep}>
