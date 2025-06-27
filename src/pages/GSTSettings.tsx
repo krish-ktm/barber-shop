@@ -582,7 +582,7 @@ export const GSTSettings: React.FC = () => {
                 {/* Mobile card list */}
                 <div className="md:hidden py-2 space-y-3">
                   {gstRates.map((rate) => (
-                    <div key={rate.id} className="border rounded-lg p-3 shadow-sm bg-card">
+                    <div key={rate.id} className="border rounded-lg p-3 shadow-sm bg-card hover:border-primary/60 hover:shadow-md transition">
                       {/* Top row: name & total */}
                       <div className="flex justify-between items-center">
                         <h3 className="font-medium text-sm">{rate.name}</h3>
@@ -590,11 +590,17 @@ export const GSTSettings: React.FC = () => {
                       </div>
 
                       {/* Components list */}
-                      <ul className="list-disc list-inside text-xs text-muted-foreground mt-1 space-y-0.5">
+                      <div className="flex flex-wrap gap-1 mt-1">
                         {rate.components.map((component) => (
-                          <li key={component.id}>{component.name}: {component.rate}%</li>
+                          <Badge
+                            key={component.id}
+                            variant="secondary"
+                            className="text-[10px] font-medium whitespace-nowrap"
+                          >
+                            {component.name}: {component.rate}%
+                          </Badge>
                         ))}
-                      </ul>
+                      </div>
 
                       {/* Bottom row: status + actions */}
                       <div className="flex items-center justify-between mt-2">
