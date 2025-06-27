@@ -26,7 +26,7 @@ export const StaffMobileDashboard: React.FC = () => {
 
   // Bottom-nav state (stats vs appointments) – declare early to honour hook order
   type Section = 'stats' | 'appointments';
-  const [section, setSection] = useState<Section>('stats');
+  const [section, setSection] = useState<Section>('appointments');
 
   /** Fetch dashboard payload */
   const fetchData = async () => {
