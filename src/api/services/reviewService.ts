@@ -125,4 +125,35 @@ export const deleteReview = async (
   id: string
 ): Promise<ReviewActionResponse> => {
   return del<ReviewActionResponse>(`/reviews/${id}`);
+};
+
+/**
+ * Get latest approved reviews for public display
+ */
+export const getPublicReviews = async (
+  page = 1,
+  limit = 6
+): Promise<ReviewsResponse> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    approved: 'true', // ensure only approved reviews
+    sort: 'date_desc'
+  });
+  return get<ReviewsResponse>(`/reviews?${params.toString()}`);
+};
+
+/**
+ * Submit a review from public site (unauthenticated). Review will be created as pending.
+ */
+export const createPublicReview = async (data: {
+  customerName: string;
+  rating: number;
+  reviewText: string;
+}): Promise<ReviewActionResponse> => {
+  return post<ReviewActionResponse>('/public/reviews', {
+    customer_name: data.customerName,
+    rating: data.rating,
+    text: data.reviewText,
+  });
 }; 

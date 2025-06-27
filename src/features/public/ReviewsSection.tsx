@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { reviewsData } from '@/mocks';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getPublicReviews, createPublicReview } from '@/api/services/reviewService';
+import { useApi } from '@/hooks/useApi';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 // Animation variants
@@ -24,13 +30,33 @@ const staggerContainer = {
 };
 
 export const ReviewsSection: React.FC = () => {
-  // Filter reviews that are approved
-  const approvedReviews = reviewsData.filter(review => 
-    review.status === 'approved'
-  );
-  
-  // Get reviews to display (limited to 6)
-  const displayReviews = approvedReviews.slice(0, 6);
+  const {
+    data: apiData,
+    execute: fetchReviews
+  } = useApi(getPublicReviews);
+
+  const { toast } = useToast();
+
+  const [name, setName] = React.useState('');
+  const [text, setText] = React.useState('');
+  const [ratingInput, setRatingInput] = React.useState(5);
+  const [submitting, setSubmitting] = React.useState(false);
+
+  // Load reviews on mount
+  useEffect(() => {
+    fetchReviews(1, 6);
+  }, [fetchReviews]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const approvedReviews = apiData?.reviews?.map((r: any) => ({
+    id: r.id,
+    customerName: r.customer_name ?? r.customer?.name ?? 'Anonymous',
+    reviewText: r.text ?? '',
+    rating: r.rating ?? 5,
+    profileImage: undefined,
+  })) || [];
+
+  const displayReviews = approvedReviews;
   
   // Render stars based on rating
   const renderStars = (rating: number) => {
@@ -49,6 +75,26 @@ export const ReviewsSection: React.FC = () => {
     );
   };
   
+  const submitReview = async () => {
+    if (!name || !text) {
+      toast({ title: 'Please fill all fields.' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await createPublicReview({ customerName: name, rating: ratingInput, reviewText: text });
+      toast({ title: 'Thank you!', description: 'Your review has been submitted for approval.' });
+      setName('');
+      setText('');
+      setRatingInput(5);
+      fetchReviews(1, 6);
+    } catch {
+      toast({ title: 'Error', description: 'Could not submit review.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <section className="py-16 bg-slate-50">
       <div className="container mx-auto px-4">
@@ -67,7 +113,16 @@ export const ReviewsSection: React.FC = () => {
             </p>
           </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayReviews.length === 0 ? (
+            <p className="text-center text-muted-foreground">No reviews yet. Be the first to leave a review!</p>
+          ) : (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            initial="initial"
+            whileInView="animate"
+            variants={staggerContainer}
+            viewport={{ once: true }}
+          >
             {displayReviews.map((review) => (
               <motion.div
                 key={review.id}
@@ -101,10 +156,36 @@ export const ReviewsSection: React.FC = () => {
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>) }
           
-          <motion.div variants={fadeIn} className="text-center mt-8">
-            <Badge variant="outline" className="text-md px-3 py-1">
+          {/* Review form placed after existing testimonials */}
+          <motion.div variants={fadeIn} className="max-w-xl mx-auto w-full">
+            <Card className="mt-10">
+              <CardHeader>
+                <CardTitle>Leave a Review</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Input className="mb-3" placeholder="Your Name" value={name} onChange={(e)=>setName(e.target.value)} />
+                <Textarea className="mb-3" rows={4} placeholder="Your review" value={text} onChange={(e)=>setText(e.target.value)} />
+                <div className="mb-4">
+                  <p className="text-sm mb-1 text-muted-foreground">Your Rating</p>
+                  <div className="flex items-center space-x-1">
+                    {[1,2,3,4,5].map((num)=>(
+                      <Star key={num}
+                        onClick={()=>setRatingInput(num)}
+                        className={`h-6 w-6 cursor-pointer transition-colors ${num<=ratingInput?'fill-yellow-400 text-yellow-400':'text-gray-300 hover:text-yellow-500'}`} />
+                    ))}
+                  </div>
+                </div>
+                <Button onClick={submitReview} disabled={submitting} className="w-full">
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+          
+          <motion.div variants={fadeIn} className="text-center mt-10">
+            <Badge className="px-4 py-2 text-base">
               Join our happy customers today!
             </Badge>
           </motion.div>
