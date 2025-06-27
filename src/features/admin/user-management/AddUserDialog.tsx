@@ -72,7 +72,7 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({ open, onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={(o) => !submitting && onOpenChange(o)}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[90%] sm:max-w-md rounded-lg p-4 sm:p-6 mx-auto">
         <DialogHeader>
           <DialogTitle>Add User</DialogTitle>
           <DialogDescription>Create a new system user.</DialogDescription>
