@@ -7,7 +7,6 @@ import { formatCurrency } from '@/utils';
 import { getStaffDashboardData, StaffDashboardData, UpcomingAppointment } from '@/api/services/dashboardService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { AppointmentList, SimpleAppointment } from '@/components/dashboard/AppointmentList';
@@ -17,8 +16,11 @@ import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleA
 import { Appointment } from '@/types';
 import { Appointment as ApiAppointment } from '@/api/services/appointmentService';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { StaffMobileDashboard } from './StaffMobileDashboard';
 
-export const StaffDashboard: React.FC = () => {
+const StaffDashboardDesktop: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<StaffDashboardData | null>(null);
   const [cachedData, setCachedData] = useState<StaffDashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -249,20 +251,13 @@ export const StaffDashboard: React.FC = () => {
           description="Overview of your performance"
         />
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Period:</span>
-          <Select
-            value={period}
-            onValueChange={(value) => setPeriod(value as 'weekly' | 'monthly' | 'yearly')}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="yearly">Yearly</SelectItem>
-            </SelectContent>
-          </Select>
+          <Tabs defaultValue={period} onValueChange={(value) => setPeriod(value as 'weekly' | 'monthly' | 'yearly')}>
+            <TabsList className="grid grid-cols-3">
+              <TabsTrigger value="weekly">Week</TabsTrigger>
+              <TabsTrigger value="monthly">Month</TabsTrigger>
+              <TabsTrigger value="yearly">Year</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
@@ -400,6 +395,11 @@ export const StaffDashboard: React.FC = () => {
       )}
     </div>
   );
+};
+
+export const StaffDashboard: React.FC = () => {
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  return isMobile ? <StaffMobileDashboard /> : <StaffDashboardDesktop />;
 };
 
 export default StaffDashboard;
