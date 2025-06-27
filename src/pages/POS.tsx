@@ -512,10 +512,13 @@ export const POS: React.FC = () => {
               <span>{format(new Date(invoice.date), 'dd MMM')}</span>
             </div>
 
-            {/* Bottom row: Staff & Status */}
-            <div className="flex justify-between items-center mt-1">
-              <span className="text-xs truncate max-w-[60%] text-muted-foreground">{invoice.staff_name}</span>
-              {getStatusBadge(invoice.status)}
+            {/* Bottom row: Staff, Payment & Status */}
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs truncate text-muted-foreground max-w-[60%]">{invoice.staff_name}</span>
+              <div className="flex items-center gap-1">
+                {getPaymentMethodBadge(invoice.payment_method)}
+                {getStatusBadge(invoice.status)}
+              </div>
             </div>
           </div>
         ))}

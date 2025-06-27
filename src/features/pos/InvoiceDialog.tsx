@@ -55,6 +55,10 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
     }
   };
 
+  // Safe numeric values
+  const discountAmount = invoice.discount_amount ?? 0;
+  const tipAmount = invoice.tip_amount ?? 0;
+
   const handleCopyInvoiceNumber = () => {
     navigator.clipboard.writeText(invoice.id);
     toast({
@@ -117,12 +121,11 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[90vh] flex flex-col w-[95vw] sm:w-auto sm:max-w-2xl rounded-lg">
-        <div className="absolute right-12 top-6">
-          {getStatusBadge(invoice.status)}
-        </div>
-        
         <DialogHeader className="pb-2">
-          <DialogTitle>Invoice Details</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 mr-8">
+            Invoice Details
+            {getStatusBadge(invoice.status)}
+          </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
@@ -207,16 +210,16 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
               <div className="flex justify-between items-center">
                 <div className="flex items-center">
-                  <Percent className={`h-4 w-4 mr-1 ${invoice.discount_amount > 0 ? 'text-blue-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm ${invoice.discount_amount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
+                  <Percent className={`h-4 w-4 mr-1 ${discountAmount > 0 ? 'text-blue-600' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm ${discountAmount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
                     Discount
                     {invoice.discount_type === 'percentage' && invoice.discount_value
                       ? ` (${invoice.discount_value}%)`
                       : ''}
                   </span>
                 </div>
-                <span className={`text-sm ${invoice.discount_amount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
-                  {invoice.discount_amount > 0 ? `-${formatCurrency(invoice.discount_amount)}` : formatCurrency(0)}
+                <span className={`text-sm ${discountAmount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
+                  {discountAmount > 0 ? `-${formatCurrency(discountAmount)}` : formatCurrency(0)}
                 </span>
               </div>
 
@@ -237,13 +240,13 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
               <div className="flex justify-between items-center">
                 <div className="flex items-center">
-                  <DollarSign className={`h-4 w-4 mr-1 ${invoice.tip_amount > 0 ? 'text-green-600' : 'text-muted-foreground'}`} />
-                  <span className={`text-sm ${invoice.tip_amount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
+                  <DollarSign className={`h-4 w-4 mr-1 ${tipAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm ${tipAmount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
                     Tip
                   </span>
                 </div>
-                <span className={`text-sm ${invoice.tip_amount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
-                  {formatCurrency(invoice.tip_amount || 0)}
+                <span className={`text-sm ${tipAmount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
+                  {formatCurrency(tipAmount || 0)}
                 </span>
               </div>
 
@@ -255,16 +258,16 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
               </div>
               
               {/* Percentage indicators for tip and discount */}
-              {(invoice.tip_amount > 0 || invoice.discount_amount > 0) && (
+              {(tipAmount > 0 || discountAmount > 0) && (
                 <div className="text-xs text-muted-foreground space-y-1 mt-1">
-                  {invoice.discount_amount > 0 && invoice.subtotal > 0 && (
+                  {discountAmount > 0 && invoice.subtotal > 0 && (
                     <div className="flex justify-end">
-                      Discount: {((invoice.discount_amount / invoice.subtotal) * 100).toFixed(1)}% of subtotal
+                      Discount: {((discountAmount / invoice.subtotal) * 100).toFixed(1)}% of subtotal
                     </div>
                   )}
-                  {invoice.tip_amount > 0 && invoice.total > 0 && (
+                  {tipAmount > 0 && invoice.total > 0 && (
                     <div className="flex justify-end">
-                      Tip: {((invoice.tip_amount / invoice.total) * 100).toFixed(1)}% of total
+                      Tip: {((tipAmount / invoice.total) * 100).toFixed(1)}% of total
                     </div>
                   )}
                 </div>
