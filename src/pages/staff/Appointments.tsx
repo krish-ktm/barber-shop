@@ -639,6 +639,17 @@ export const StaffAppointments: React.FC = () => {
                 )}
               </Button>
             </SheetTrigger>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="lg:hidden mt-2"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
             <SheetContent side="right" className="w-full sm:max-w-[400px]">
               <SheetHeader className="mb-6">
                 <SheetTitle>Filters</SheetTitle>
