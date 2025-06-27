@@ -84,8 +84,6 @@ const AdminReviews: React.FC = () => {
     page,
     setPage,
     setFilters,
-    approved,
-    sort,
     approveReview,
     deleteReview,
     createReview
@@ -163,14 +161,6 @@ const AdminReviews: React.FC = () => {
     setFilters({ query: query || undefined });
   };
 
-  // Clear filters
-  const clearFilters = () => {
-    setSearchInput('');
-    setFilters({ approved: undefined, sort: 'date_desc', query: undefined });
-  };
-
-  const hasActiveFilters = searchInput.trim() !== '' || approved !== undefined || sort !== 'date_desc';
-
   return (
     <div className="container mx-auto py-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -219,11 +209,6 @@ const AdminReviews: React.FC = () => {
             <Plus size={16} />
             Add Review
           </Button>
-          {hasActiveFilters && (
-            <Button variant="outline" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
-              Clear
-            </Button>
-          )}
         </div>
       </div>
 
