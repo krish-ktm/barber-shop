@@ -177,9 +177,9 @@ const AdminReviews: React.FC = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold">Customer Reviews</h1>
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-4">Customer Reviews</h1>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
           {/* Search bar */}
           <form onSubmit={handleSearchSubmit} className="flex w-full sm:w-auto items-center gap-2">
             <div className="relative flex-1 min-w-[200px]">
