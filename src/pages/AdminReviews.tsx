@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Check, Trash, Star, Plus, Search } from 'lucide-react';
+import { Loader2, Check, Trash, Star, Plus, Search, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -98,6 +98,10 @@ const AdminReviews: React.FC = () => {
   const [isDeletingReview, setIsDeletingReview] = useState(false);
   const [isApprovingReview, setIsApprovingReview] = useState<string | null>(null);
 
+  // Local UI state for filters so we can easily reset them
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'approved' | 'pending'>('all');
+  const [sortFilter, setSortFilter] = useState<string>('date_desc');
+
   // Transform API reviews to UI-friendly format
   const uiReviews = reviews.map(transformReview);
 
@@ -140,7 +144,8 @@ const AdminReviews: React.FC = () => {
   };
 
   // Handle filter changes
-  const handleApprovalFilterChange = (value: string) => {
+  const handleApprovalFilterChange = (value: 'all' | 'approved' | 'pending') => {
+    setApprovalFilter(value);
     if (value === 'all') {
       setFilters({ approved: undefined });
     } else if (value === 'approved') {
@@ -151,7 +156,16 @@ const AdminReviews: React.FC = () => {
   };
 
   const handleSortChange = (value: string) => {
+    setSortFilter(value);
     setFilters({ sort: value });
+  };
+
+  // Clear all search & filter inputs
+  const clearFilters = () => {
+    setSearchInput('');
+    setApprovalFilter('all');
+    setSortFilter('date_desc');
+    setFilters({ approved: undefined, sort: 'date_desc', query: '' });
   };
 
   // Handle search submit
@@ -183,7 +197,7 @@ const AdminReviews: React.FC = () => {
             </Button>
           </form>
           
-          <Select onValueChange={handleApprovalFilterChange} defaultValue="all">
+          <Select value={approvalFilter} onValueChange={handleApprovalFilterChange}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -194,7 +208,7 @@ const AdminReviews: React.FC = () => {
             </SelectContent>
           </Select>
           
-          <Select onValueChange={handleSortChange} defaultValue="date_desc">
+          <Select value={sortFilter} onValueChange={handleSortChange}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
@@ -209,6 +223,18 @@ const AdminReviews: React.FC = () => {
             <Plus size={16} />
             Add Review
           </Button>
+
+          {(searchInput || approvalFilter !== 'all' || sortFilter !== 'date_desc') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-9"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 
