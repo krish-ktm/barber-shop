@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageHeader } from '@/components/layout';
-import { Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -119,9 +118,12 @@ const AdminSettings: React.FC = () => {
     });
   };
   
-  // Save business settings
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handle save from header action (no form submission event)
+  const handleSaveClick = async (e?: React.FormEvent) => {
+    // Prevent default form submission if called from <form onSubmit>
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     if (formData) {
       await saveBusinessSettings(formData);
     }
@@ -140,6 +142,16 @@ const AdminSettings: React.FC = () => {
       <PageHeader
         title="Business Settings"
         description="Configure your business settings and preferences"
+        action={{
+          label: isUpdating ? 'Saving...' : 'Save Settings',
+          onClick: handleSaveClick,
+          icon: isUpdating ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          ),
+          disabled: isUpdating,
+        }}
       />
       
       {error && (
@@ -150,19 +162,19 @@ const AdminSettings: React.FC = () => {
       
       {formData && (
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 overflow-x-auto whitespace-nowrap gap-2 px-1">
             <TabsTrigger value="general">General Settings</TabsTrigger>
             <TabsTrigger value="payment">Payment Options</TabsTrigger>
           </TabsList>
           
-          <form onSubmit={handleSaveSettings}>
+          <form onSubmit={handleSaveClick}>
             <TabsContent value="general" className="mt-0 space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>General Business Settings</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="name">Business Name</Label>
                       <Input
@@ -325,7 +337,7 @@ const AdminSettings: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-2">
                       <div>
                         <h3 className="font-medium">Accept Cash Payments</h3>
                         <p className="text-sm text-muted-foreground">Allow cash payments for services</p>
@@ -339,7 +351,7 @@ const AdminSettings: React.FC = () => {
                       />
                     </div>
                     
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-2">
                       <div>
                         <h3 className="font-medium">Accept Card Payments</h3>
                         <p className="text-sm text-muted-foreground">Allow credit/debit card payments</p>
@@ -353,7 +365,7 @@ const AdminSettings: React.FC = () => {
                       />
                     </div>
                     
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-2">
                       <div>
                         <h3 className="font-medium">Accept Mobile Payments</h3>
                         <p className="text-sm text-muted-foreground">Allow payments via mobile apps</p>
@@ -370,17 +382,6 @@ const AdminSettings: React.FC = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-            
-            <div className="mt-6">
-              <Button
-                type="submit"
-                disabled={isUpdating}
-                className="flex items-center gap-2"
-              >
-                {isUpdating && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isUpdating ? 'Saving...' : 'Save Settings'}
-              </Button>
-            </div>
           </form>
         </Tabs>
       )}
