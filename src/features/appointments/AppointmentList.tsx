@@ -248,7 +248,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       {appointments.map((appointment) => (
         <Card 
           key={appointment.id} 
-          className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+          className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow mx-2 sm:mx-3"
           onClick={() => onViewAppointment && onViewAppointment(appointment.id)}
         >
           <div className="p-4 sm:p-6">

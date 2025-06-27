@@ -48,10 +48,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
+import { AppointmentDetailsModalMobile } from '@/features/appointments/AppointmentDetailsModalMobile';
 import { useToast } from '@/hooks/use-toast';
 import { getStaffAppointments, updateAppointmentStatus } from '@/api/services/appointmentService';
 import { Appointment as ApiAppointment, Service } from '@/api/services/appointmentService';
 import { Appointment as UIAppointment } from '@/types';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 // Date range options
 type DateRangeType = 'today' | 'tomorrow' | 'thisWeek' | 'nextWeek' | 'custom';
@@ -91,6 +93,9 @@ export const StaffAppointments: React.FC = () => {
   } | null>(null);
   const { toast } = useToast();
 
+  // Detect mobile viewport
+  const isMobile = useMediaQuery('(max-width: 767px)');
+
   // Handle date range selection
   useEffect(() => {
     let start = new Date();
@@ -119,13 +124,12 @@ export const StaffAppointments: React.FC = () => {
         break;
     }
     
-    if (dateRangeType !== 'custom') {
-      setDateRange({ start, end });
-      setSelectedDate(start);
-      
-      // Also update tempDateRange to keep them in sync
-      setTempDateRange({ from: start, to: end });
-    }
+    // Update range for preset selections (custom handled separately)
+    setDateRange({ start, end });
+    setSelectedDate(start);
+
+    // Also update tempDateRange to keep them in sync
+    setTempDateRange({ from: start, to: end });
   }, [dateRangeType]);
 
   // Fetch appointments from API
@@ -229,7 +233,7 @@ export const StaffAppointments: React.FC = () => {
   };
 
   const goToPreviousDay = () => {
-    if (dateRangeType === 'custom') {
+    if (dateRangeType === ('custom' as DateRangeType)) {
       setDateRange(prev => ({
         start: addDays(prev.start, -1),
         end: addDays(prev.end, -1)
@@ -248,7 +252,7 @@ export const StaffAppointments: React.FC = () => {
   };
 
   const goToNextDay = () => {
-    if (dateRangeType === 'custom') {
+    if (dateRangeType === ('custom' as DateRangeType)) {
       setDateRange(prev => ({
         start: addDays(prev.start, 1),
         end: addDays(prev.end, 1)
@@ -264,13 +268,6 @@ export const StaffAppointments: React.FC = () => {
       });
       setDateRangeType('custom');
     }
-  };
-
-  const goToToday = () => {
-    const today = new Date();
-    setSelectedDate(today);
-    setDateRange({ start: today, end: today });
-    setDateRangeType('today');
   };
 
   const clearFilters = () => {
@@ -424,7 +421,7 @@ export const StaffAppointments: React.FC = () => {
       <div className="bg-card border rounded-lg">
         <div className="p-4 border-b">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
               <Button
                 variant="outline"
                 size="icon"
@@ -447,7 +444,13 @@ export const StaffAppointments: React.FC = () => {
                     {formatDateRange()}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 min-w-[300px]" align="start">
+                <PopoverContent 
+                  className={cn(
+                    "w-auto p-0 min-w-[300px]",
+                    isMobile ? "max-w-[95vw]" : ""
+                  )}
+                  align={isMobile ? "center" : "start"}
+                >
                   <Tabs defaultValue="preset" className="w-full">
                     <TabsList className="grid grid-cols-2 w-full">
                       <TabsTrigger value="preset">Presets</TabsTrigger>
@@ -491,7 +494,7 @@ export const StaffAppointments: React.FC = () => {
                           }
                         }}
                         initialFocus
-                        numberOfMonths={2}
+                        numberOfMonths={isMobile ? 1 : 2}
                       />
                       <Button 
                         className="w-full mt-4" 
@@ -548,7 +551,7 @@ export const StaffAppointments: React.FC = () => {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="hidden sm:flex items-center gap-2 ml-auto">
               <Badge variant="secondary" className="h-9 px-4">
                 {uiAppointments.length} appointment{uiAppointments.length !== 1 ? 's' : ''}
               </Badge>
@@ -556,29 +559,32 @@ export const StaffAppointments: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search appointments..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
+        <div className="p-4 flex flex-col sm:flex-row items-stretch gap-3">
+          {/* Search row */}
+          <div className="flex w-full gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search appointments..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+            </div>
+            <Button 
+              variant="secondary" 
+              onClick={handleSearch}
+              disabled={isLoading}
+              className="shrink-0"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+              Search
+            </Button>
           </div>
-          
-          <Button 
-            variant="secondary" 
-            onClick={handleSearch}
-            disabled={isLoading}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-            Search
-          </Button>
 
-          <div className="hidden lg:flex items-center gap-3 flex-wrap">
+          <div className="hidden lg:flex items-center gap-3 lg:flex-nowrap">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Status" />
@@ -622,7 +628,7 @@ export const StaffAppointments: React.FC = () => {
             <SheetTrigger asChild>
               <Button
                 variant="outline"
-                className="lg:hidden"
+                className="lg:hidden w-full sm:w-auto"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
@@ -633,7 +639,7 @@ export const StaffAppointments: React.FC = () => {
                 )}
               </Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[90vh]">
+            <SheetContent side="right" className="w-full sm:max-w-[400px]">
               <SheetHeader className="mb-6">
                 <SheetTitle>Filters</SheetTitle>
               </SheetHeader>
@@ -687,7 +693,7 @@ export const StaffAppointments: React.FC = () => {
                   </Select>
                 </div>
 
-                {dateRangeType === 'custom' && (
+                {dateRangeType === ('custom' as DateRangeType) && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Custom Date Range</label>
                     <Calendar
@@ -712,7 +718,7 @@ export const StaffAppointments: React.FC = () => {
                 {staffData?.services && staffData.services.length > 0 && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Services</label>
-                    <div className="flex flex-col space-y-2 max-h-[200px] overflow-y-auto p-2 border rounded-md">
+                    <div className="flex flex-col space-y-2 p-2 border rounded-md">
                       {staffData.services.map(service => (
                         <div key={service.id} className="flex items-center space-x-2">
                           <Checkbox
@@ -764,7 +770,7 @@ export const StaffAppointments: React.FC = () => {
             {dateRangeType !== 'today' && (
               <Badge variant="outline" className="flex items-center gap-1">
                 <CalendarIcon className="h-3 w-3" />
-                {dateRangeType === 'custom' 
+                {(dateRangeType === ('custom' as DateRangeType)) 
                   ? `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d')}`
                   : DATE_RANGE_OPTIONS[dateRangeType]}
                 <button className="ml-1" onClick={() => {
@@ -831,13 +837,21 @@ export const StaffAppointments: React.FC = () => {
       </div>
 
       {selectedAppointment && (
-        <AppointmentDetailsDialog 
-          appointment={selectedAppointment}
-          open={isDetailsOpen}
-          onOpenChange={setIsDetailsOpen}
-          isStaffView={true}
-          onStatusChange={handleStatusChange}
-        />
+        isMobile ? (
+          <AppointmentDetailsModalMobile
+            appointment={selectedAppointment}
+            open={isDetailsOpen}
+            onOpenChange={setIsDetailsOpen}
+          />
+        ) : (
+          <AppointmentDetailsDialog 
+            appointment={selectedAppointment}
+            open={isDetailsOpen}
+            onOpenChange={setIsDetailsOpen}
+            isStaffView={true}
+            onStatusChange={handleStatusChange}
+          />
+        )
       )}
     </div>
   );
