@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { UsersList } from './UsersList';
 import { UsersTable } from './UsersTable';
@@ -7,12 +7,14 @@ import {
    getAllUsers,
    deleteUser,
    createUser,
+   updateUser,
  } from '@/api/services/userService';
 import { User } from '@/types';
 import { PageHeader } from '@/components/layout';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import AddUserDialog, { AddUserPayload } from './AddUserDialog';
+import EditUserDialog, { EditUserPayload } from './EditUserDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export const UsersPage: React.FC = () => {
   const { toast } = useToast();
@@ -28,16 +30,13 @@ export const UsersPage: React.FC = () => {
   const { execute: executeDeleteUser } = useApi(deleteUser);
 
   // Local state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedSearch] = useState('');
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch users on mount & whenever debouncedSearch changes
   useEffect(() => {
@@ -60,28 +59,42 @@ export const UsersPage: React.FC = () => {
   };
 
   const handleEditUser = async (user: User) => {
-    // Placeholder – open dialog for editing
-    toast({
-      title: 'Not implemented',
-      description: `Edit user ${user.name}`
-    });
+    setSelectedUser(user);
+    setShowEditDialog(true);
+  };
+
+  const handleEditUserSave = async (payload: EditUserPayload) => {
+    if (!selectedUser) return;
+    try {
+      await updateUser(selectedUser.id, payload);
+      toast({ title: 'User updated' });
+      fetchUsers(1, 10, debouncedSearch);
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err ? (err as { message: string }).message : 'Failed to update user';
+      toast({ variant: 'destructive', title: 'Error', description: msg });
+      throw err;
+    }
   };
 
   const handleDeleteUser = async (user: User) => {
-    if (!confirm(`Are you sure you want to delete ${user.name}?`)) return;
+    setSelectedUser(user);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedUser) return;
     try {
-      setDeletingUserId(user.id);
-      await executeDeleteUser(user.id);
+      setIsDeleting(true);
+      setDeletingUserId(selectedUser.id);
+      await executeDeleteUser(selectedUser.id);
       toast({ title: 'User deleted' });
       fetchUsers(1, 10, debouncedSearch);
+      setShowDeleteDialog(false);
     } catch (err: unknown) {
-      const errorMessage = err && typeof err === 'object' && 'message' in err ? (err as { message: string }).message : 'Failed to delete user';
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: errorMessage
-      });
+      const msg = err && typeof err === 'object' && 'message' in err ? (err as { message: string }).message : 'Failed to delete user';
+      toast({ variant: 'destructive', title: 'Error', description: msg });
     } finally {
+      setIsDeleting(false);
       setDeletingUserId(null);
     }
   };
@@ -101,44 +114,77 @@ export const UsersPage: React.FC = () => {
         }}
       />
 
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
-        <Input
-          placeholder="Search users..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
-
       {/* Error state */}
       {error && (
         <p className="text-destructive">{error.message || 'Failed to load users'}</p>
       )}
 
-      {/* Loading state */}
-      {loading && <p>Loading users...</p>}
-
       {/* Data */}
-      {!loading && users.length === 0 && (
-        <p className="text-muted-foreground">No users found.</p>
-      )}
-
-      {!loading && users.length > 0 && (
+      {(
         <>
           {/* Desktop table */}
           <div className="hidden md:block">
-            <UsersTable users={users} onEdit={handleEditUser} onDelete={handleDeleteUser} deletingUserId={deletingUserId} />
+            <UsersTable
+              users={users}
+              onEdit={handleEditUser}
+              onDelete={handleDeleteUser}
+              deletingUserId={deletingUserId}
+              isLoading={loading}
+            />
           </div>
 
           {/* Mobile card list */}
           <div className="md:hidden">
-            <UsersList users={users} onEdit={handleEditUser} onDelete={handleDeleteUser} deletingUserId={deletingUserId} />
+            <UsersList
+              users={users}
+              onEdit={handleEditUser}
+              onDelete={handleDeleteUser}
+              deletingUserId={deletingUserId}
+              isLoading={loading}
+            />
           </div>
+
+          {/* Empty state when not loading and no users */}
+          {!loading && users.length === 0 && (
+            <p className="text-center text-muted-foreground pt-6">No users found.</p>
+          )}
         </>
       )}
 
-      {/* Add dialog */}
+      {/* Dialogs */}
       <AddUserDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdd={handleAddUserSave} />
+
+      {selectedUser && (
+        <EditUserDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          user={selectedUser}
+          onSave={handleEditUserSave}
+        />
+      )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={(o) => !isDeleting && setShowDeleteDialog(o)}>
+        <AlertDialogContent className="rounded-lg sm:rounded-lg p-4 sm:p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete user "{selectedUser?.name}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
