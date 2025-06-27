@@ -461,7 +461,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const renderStepIndicator = () => {
     return (
       <div className="flex items-center justify-between border-t py-4 px-6">
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto flex-wrap max-w-full">
           {['customer', 'services', 'staff', 'payment', 'summary'].map((step, index) => (
             <React.Fragment key={step}>
               {index > 0 && (

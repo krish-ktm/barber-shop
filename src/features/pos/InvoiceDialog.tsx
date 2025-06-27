@@ -8,7 +8,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Invoice } from '@/api/services/invoiceService';
@@ -43,13 +42,14 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   if (!invoice) return null;
 
   const getStatusBadge = (status: Invoice['status']) => {
+    const base = 'rounded-full px-2 py-0.5 text-[11px] font-semibold border';
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
+        return <span className={`${base} border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 dark:text-green-400`}>Paid</span>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+        return <span className={`${base} border-yellow-500 text-yellow-600 bg-yellow-50 dark:bg-yellow-500/10 dark:text-yellow-400`}>Pending</span>;
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
+        return <span className={`${base} border-red-500 text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400`}>Cancelled</span>;
       default:
         return null;
     }
@@ -116,7 +116,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
+      <DialogContent className="h-[90vh] flex flex-col w-[95vw] sm:w-auto sm:max-w-2xl rounded-lg">
         <div className="absolute right-12 top-6">
           {getStatusBadge(invoice.status)}
         </div>

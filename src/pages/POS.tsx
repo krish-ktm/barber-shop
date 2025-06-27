@@ -1,4 +1,4 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, useCallback } from 'react';
 import { format } from 'date-fns';
 import {
   Download,
@@ -7,7 +7,8 @@ import {
   Search,
   SortAsc,
   X,
-  Loader2
+  Loader2,
+  CalendarIcon
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
   SheetClose,
 } from '@/components/ui/sheet';
 import {
@@ -42,6 +42,17 @@ import { StepInvoiceDialog } from '@/features/pos/StepInvoiceDialog';
 import { useApi } from '@/hooks/useApi';
 import { getAllInvoices, Invoice } from '@/api/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
+import { getAllStaff } from '@/api/services/staffService';
+
+// Define minimal type for staff option used in filter select
+interface StaffOption {
+  id: string;
+  name?: string;
+  user?: { name?: string };
+}
 
 export const POS: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
@@ -54,6 +65,24 @@ export const POS: React.FC = () => {
   const [page] = useState(1);
   const [limit] = useState(100);
   const { toast } = useToast();
+  const [status, setStatus] = useState<string | undefined>(undefined);
+  const [staffId, setStaffId] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // pending filters for sheet UI
+  const [pendingFilters, setPendingFilters] = useState({
+    status: undefined as string | undefined,
+    staffId: undefined as string | undefined,
+    dateRange: undefined as DateRange | undefined,
+  });
+
+  // Staff options for filter select
+  const {
+    data: staffDataResponse,
+    execute: fetchStaff
+  } = useApi(getAllStaff);
+
+  const staffOptions: StaffOption[] = staffDataResponse?.staff || [];
 
   // Map frontend sort values to API sort parameters
   const sortMap: Record<string, string> = {
@@ -71,10 +100,34 @@ export const POS: React.FC = () => {
     execute: fetchInvoices
   } = useApi(getAllInvoices);
 
-  // Fetch invoices on component mount and whenever sort or searchQuery changes
+  // Function to load invoices with current filters/sort/search
+  const loadInvoices = useCallback(() => {
+    const dateFrom = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined;
+    const dateTo = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined;
+    fetchInvoices(
+      page,
+      limit,
+      sortMap[sortBy],
+      dateFrom,
+      dateTo,
+      staffId,
+      undefined,
+      status,
+      searchQuery
+    );
+  }, [fetchInvoices, page, limit, sortBy, dateRange, staffId, status, searchQuery]);
+
+  // Initial and dependency-based load
   useEffect(() => {
-    fetchInvoices(page, limit, sortMap[sortBy], undefined, undefined, undefined, undefined, undefined, searchQuery);
-  }, [fetchInvoices, page, limit, sortBy, searchQuery]);
+    loadInvoices();
+  }, [loadInvoices]);
+
+  // Fetch staff list when sheet opens (first time)
+  useEffect(() => {
+    if (showFilters && staffOptions.length === 0) {
+      fetchStaff(1, 100, 'name_asc', undefined, 'available');
+    }
+  }, [showFilters, staffOptions.length, fetchStaff]);
 
   // Show error toast if API call fails
   useEffect(() => {
@@ -93,6 +146,10 @@ export const POS: React.FC = () => {
     setSearchInput('');
     setSearchQuery('');
     setSortBy('date');
+    setStatus(undefined);
+    setStaffId(undefined);
+    setDateRange(undefined);
+    setPendingFilters({ status: undefined, staffId: undefined, dateRange: undefined });
     // Refetch default list
     fetchInvoices(page, limit, sortMap['date']);
   };
@@ -102,15 +159,27 @@ export const POS: React.FC = () => {
     setSearchQuery(searchInput.trim());
   };
 
+  const handleApplyFilters = () => {
+    setStatus(pendingFilters.status);
+    setStaffId(pendingFilters.staffId);
+    setDateRange(pendingFilters.dateRange);
+    setShowFilters(false);
+    // After state updates propagate, ensure fetch occurs next tick
+    setTimeout(() => {
+      loadInvoices();
+    }, 0);
+  };
+
   // Convert API status to UI badge
   const getStatusBadge = (status: Invoice['status']) => {
+    const base = 'rounded-full px-2 py-0.5 text-[11px] font-semibold border';
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
+        return <span className={`${base} border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 dark:text-green-400`}>Paid</span>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+        return <span className={`${base} border-yellow-500 text-yellow-600 bg-yellow-50 dark:bg-yellow-500/10 dark:text-yellow-400`}>Pending</span>;
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
+        return <span className={`${base} border-red-500 text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400`}>Cancelled</span>;
       default:
         return null;
     }
@@ -141,6 +210,15 @@ export const POS: React.FC = () => {
     setShowNewInvoiceDialog(false);
   };
 
+  // Utility count of active filters (excluding search)
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (status) count += 1;
+    if (staffId) count += 1;
+    if (dateRange?.from && dateRange?.to) count += 1;
+    return count;
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <PageHeader
@@ -158,15 +236,17 @@ export const POS: React.FC = () => {
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-[400px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <form onSubmit={handleSearchSubmit} className="flex">
-                <Input
-                  type="search"
-                  placeholder="Search invoices..."
-                  className="pl-8 pr-20"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
-                <Button type="submit" size="sm" className="absolute right-1.5 top-1.5 h-7 px-3">
+              <form onSubmit={handleSearchSubmit} className="flex flex-1 min-w-[200px] max-w-[400px] items-center gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type="search"
+                    placeholder="Search invoices..."
+                    className="pl-8"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" size="sm" className="h-9">
                   <Search className="h-4 w-4" />
                 </Button>
               </form>
@@ -191,7 +271,18 @@ export const POS: React.FC = () => {
                 Export
               </Button>
 
-              {(searchQuery || sortBy !== 'date') && (
+              {/* Desktop Filter button */}
+              <Button variant="outline" onClick={() => setShowFilters(true)}>
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+                {(searchQuery || sortBy !== 'date' || getActiveFilterCount() > 0) && (
+                  <Badge variant="secondary" className="ml-2">
+                    {getActiveFilterCount() + (sortBy !== 'date' ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
+
+              {(searchQuery || sortBy !== 'date' || getActiveFilterCount() > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -204,58 +295,120 @@ export const POS: React.FC = () => {
               )}
             </div>
 
-            <Sheet open={showFilters} onOpenChange={setShowFilters}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="sm:hidden"
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                  {(searchQuery || sortBy !== 'date') && (
-                    <Badge variant="secondary" className="ml-2">
-                      {(searchQuery ? 1 : 0) + (sortBy !== 'date' ? 1 : 0)}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="h-[90vh]">
-                <SheetHeader className="mb-6">
-                  <SheetTitle>Filters</SheetTitle>
-                </SheetHeader>
-                
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Sort By</label>
-                    <Select value={sortBy} onValueChange={(value) => {
-                      setSortBy(value);
-                      setShowFilters(false);
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sort by" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="date">Date</SelectItem>
-                        <SelectItem value="amount">Amount</SelectItem>
-                        <SelectItem value="customer">Customer</SelectItem>
-                        <SelectItem value="staff">Staff</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <Button variant="outline" onClick={clearFilters}>
-                      Reset filters
-                    </Button>
-                    <SheetClose asChild>
-                      <Button>Apply filters</Button>
-                    </SheetClose>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+            {/* Mobile Filters button */}
+            <Button
+              variant="outline"
+              className="sm:hidden flex-1"
+              onClick={() => setShowFilters(true)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+              {(searchQuery || sortBy !== 'date' || getActiveFilterCount() > 0) && (
+                <Badge variant="secondary" className="ml-2">
+                  {getActiveFilterCount() + (sortBy !== 'date' ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
           </div>
         </div>
+
+        {/* Filters Drawer */}
+        <Sheet open={showFilters} onOpenChange={setShowFilters}>
+          <SheetContent side="right" className="w-full sm:max-w-md">
+            <SheetHeader className="mb-6">
+              <SheetTitle>Filters</SheetTitle>
+            </SheetHeader>
+
+            <div className="space-y-6">
+              {/* Sort */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sort By</label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="amount">Amount</SelectItem>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select
+                  value={pendingFilters.status ?? 'all'}
+                  onValueChange={(value) => setPendingFilters(prev => ({ ...prev, status: value === 'all' ? undefined : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Staff */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Staff</label>
+                <Select
+                  value={pendingFilters.staffId ?? 'all'}
+                  onValueChange={(value) => setPendingFilters(prev => ({ ...prev, staffId: value === 'all' ? undefined : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All staff" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    <SelectItem value="all">All staff</SelectItem>
+                    {staffOptions.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>{staff.user?.name || staff.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date Range */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date Range</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      {pendingFilters.dateRange?.from && pendingFilters.dateRange?.to ? (
+                        `${format(pendingFilters.dateRange.from, 'MMM d, yyyy')} - ${format(pendingFilters.dateRange.to, 'MMM d, yyyy')}`
+                      ) : (
+                        'Select Date Range'
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0" align="start">
+                    <CalendarComponent
+                      initialFocus
+                      mode="range"
+                      defaultMonth={pendingFilters.dateRange?.from}
+                      selected={pendingFilters.dateRange}
+                      onSelect={(range) => setPendingFilters(prev => ({ ...prev, dateRange: range }))}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t">
+                <Button variant="outline" onClick={clearFilters}>Reset</Button>
+                <SheetClose asChild>
+                  <Button onClick={handleApplyFilters}>Apply</Button>
+                </SheetClose>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
 
         <div className="hidden sm:block overflow-x-auto">
           {loading ? (
@@ -330,7 +483,7 @@ export const POS: React.FC = () => {
       />
 
       {/* Mobile card list */}
-      <div className="sm:hidden p-4 space-y-3">
+      <div className="sm:hidden py-2 space-y-3">
         {loading && (
           <div className="flex justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -344,30 +497,25 @@ export const POS: React.FC = () => {
         {!loading && invoices.length > 0 && invoices.map((invoice) => (
           <div
             key={invoice.id}
-            className="border rounded-lg p-4 shadow-sm bg-background/50 cursor-pointer"
+            className="border rounded-lg p-3 shadow-sm bg-card cursor-pointer hover:bg-muted transition"
             onClick={() => handleInvoiceClick(invoice)}
           >
-            <div className="flex justify-between items-center mb-2">
+            {/* Top row: ID & Amount */}
+            <div className="flex justify-between items-center">
               <h3 className="font-medium text-sm">#{invoice.id}</h3>
-              {getStatusBadge(invoice.status)}
+              <span className="font-semibold text-sm">{formatCurrency(invoice.total)}</span>
             </div>
-            <div className="text-sm space-y-1">
-              <p>
-                <span className="font-semibold">Customer: </span>
-                {invoice.customer_name}
-              </p>
-              <p>
-                <span className="font-semibold">Staff: </span>
-                {invoice.staff_name}
-              </p>
-              <p>
-                <span className="font-semibold">Date: </span>
-                {format(new Date(invoice.date), 'dd MMM yyyy')}
-              </p>
-              <p>
-                <span className="font-semibold">Amount: </span>
-                {formatCurrency(invoice.total)}
-              </p>
+
+            {/* Middle row: Customer & Date */}
+            <div className="flex justify-between items-center text-xs text-muted-foreground mt-1">
+              <span className="truncate max-w-[60%]">{invoice.customer_name}</span>
+              <span>{format(new Date(invoice.date), 'dd MMM')}</span>
+            </div>
+
+            {/* Bottom row: Staff & Status */}
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-xs truncate max-w-[60%] text-muted-foreground">{invoice.staff_name}</span>
+              {getStatusBadge(invoice.status)}
             </div>
           </div>
         ))}
