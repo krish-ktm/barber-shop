@@ -42,12 +42,12 @@ export function ProductDialog({
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto px-1">
-          <ProductForm 
-            initialData={initialData}
-            onSubmit={onSubmit}
-            onCancel={handleCancel}
-            isSubmitting={isSubmitting}
-          />
+        <ProductForm 
+          initialData={initialData}
+          onSubmit={onSubmit}
+          onCancel={handleCancel}
+          isSubmitting={isSubmitting}
+        />
         </div>
       </DialogContent>
     </Dialog>

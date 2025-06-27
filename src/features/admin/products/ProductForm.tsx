@@ -23,6 +23,7 @@ import * as z from 'zod';
 import { Image, Loader2 } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Product } from '@/api/services/productService';
+import { useToast } from '@/hooks/use-toast';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Product name is required'),
@@ -55,6 +56,8 @@ const categories = [
 export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = false }: ProductFormProps) {
   const [imagePreview, setImagePreview] = useState<string | undefined>(initialData?.imageUrl);
 
+  const { toast } = useToast();
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: initialData || {
@@ -69,17 +72,29 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
     },
   });
 
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const imageUrl = event.target?.result as string;
-        setImagePreview(imageUrl);
-        form.setValue('imageUrl', imageUrl);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (file.size > MAX_SIZE_BYTES) {
+      toast({
+        title: 'Image too large',
+        description: 'Please select an image smaller than 5 MB.',
+        variant: 'destructive',
+      });
+      // Clear the input value so same file can be re-selected if needed
+      e.currentTarget.value = '';
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string;
+      setImagePreview(imageUrl);
+      form.setValue('imageUrl', imageUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (

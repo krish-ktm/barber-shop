@@ -217,10 +217,10 @@ export function ProductsPage() {
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 mb-4">
             {/* Search group (input + button) */}
             <div className="flex flex-1 items-stretch">
-              <div className="relative flex-1">
+            <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search products..."
+              <Input
+                placeholder="Search products..."
                   className="pl-10 h-full"
                   value={pendingSearchQuery}
                   onChange={(e) => setPendingSearchQuery(e.target.value)}
