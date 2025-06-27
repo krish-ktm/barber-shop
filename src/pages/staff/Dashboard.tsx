@@ -261,34 +261,7 @@ const StaffDashboardDesktop: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Today's Appointments"
-          value={todayAppointmentsCount.toString()}
-          icon={<Calendar className="h-4 w-4" />}
-          description="Scheduled for today"
-        />
-        <StatsCard
-          title="Total Appointments"
-          value={performanceSummary.totalAppointments.toString()}
-          icon={<Users className="h-4 w-4" />}
-          description={`For ${period} period`}
-        />
-        <StatsCard
-          title="Commission Rate"
-          value={`${staffInfo.commissionPercentage}%`}
-          icon={<Clock className="h-4 w-4" />}
-          description="Current rate"
-        />
-        <StatsCard
-          title="Total Earnings"
-          value={formatCurrency(performanceSummary.totalCommission)}
-          icon={<DollarSign className="h-4 w-4" />}
-          description={`For ${period} period`}
-        />
-      </div>
-
-      {/* Appointments Sections */}
+      {/* Appointments Sections - moved above stats */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's Appointments */}
         <div>
@@ -327,6 +300,34 @@ const StaffDashboardDesktop: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard
+          title="Today's Appointments"
+          value={todayAppointmentsCount.toString()}
+          icon={<Calendar className="h-4 w-4" />}
+          description="Scheduled for today"
+        />
+        <StatsCard
+          title="Total Appointments"
+          value={performanceSummary.totalAppointments.toString()}
+          icon={<Users className="h-4 w-4" />}
+          description={`For ${period} period`}
+        />
+        <StatsCard
+          title="Commission Rate"
+          value={`${staffInfo.commissionPercentage}%`}
+          icon={<Clock className="h-4 w-4" />}
+          description="Current rate"
+        />
+        <StatsCard
+          title="Total Earnings"
+          value={formatCurrency(performanceSummary.totalCommission)}
+          icon={<DollarSign className="h-4 w-4" />}
+          description={`For ${period} period`}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
