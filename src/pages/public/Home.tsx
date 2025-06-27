@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowRight, 
@@ -7,7 +7,6 @@ import {
   Phone, 
   Mail, 
   Users, 
-  Scissors,
   BadgeCheck,
   Sparkles,
   Crown,
@@ -21,8 +20,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { staffData, serviceData } from '@/mocks';
-import { formatCurrency } from '@/utils';
 import { ReviewsSection } from '@/features/public/ReviewsSection';
+import { useApi } from '@/hooks/useApi';
+import { getAllServices, Service } from '@/api/services/serviceService';
+import { ServicesShadCarousel } from '@/components/ServicesShadCarousel';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -63,7 +64,17 @@ const serviceCard = {
 };
 
 export const Home: React.FC = () => {
-  const featuredServices = serviceData.slice(0, 6);
+  const {
+    data: fetchedServices,
+    execute: fetchServices
+  } = useApi(getAllServices);
+
+  // Fetch first 8 services on mount
+  useEffect(() => {
+    fetchServices(1, 8, 'name_asc');
+  }, [fetchServices]);
+
+  const featuredServices: Service[] = (fetchedServices?.services || serviceData).slice(0, 8);
   const featuredStaff = staffData.slice(0, 3);
 
   return (
@@ -230,8 +241,10 @@ export const Home: React.FC = () => {
                   <Card className="h-full border-2 hover:border-primary/50 transition-colors overflow-hidden">
                     <div className="aspect-[4/3] relative overflow-hidden">
                       <img 
-                        src={feature.image} 
+                        src={feature.image + '?auto=compress&cs=tinysrgb&w=1080'} 
                         alt={feature.title}
+                        loading="lazy"
+                        decoding="async"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
@@ -286,8 +299,10 @@ export const Home: React.FC = () => {
                   className="aspect-[4/5] relative rounded-lg overflow-hidden"
                 >
                   <img
-                    src="https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg"
+                    src="https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg?auto=compress&cs=tinysrgb&w=1080"
                     alt="Barber at work"
+                    loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 </motion.div>
@@ -297,8 +312,10 @@ export const Home: React.FC = () => {
                   className="aspect-[4/5] relative rounded-lg overflow-hidden mt-8"
                 >
                   <img
-                    src="https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg"
+                    src="https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg?auto=compress&cs=tinysrgb&w=1080"
                     alt="Barber tools"
+                    loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 </motion.div>
@@ -307,7 +324,7 @@ export const Home: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5 }}
-                className="absolute -bottom-8 -right-8 bg-white rounded-lg shadow-xl p-6 max-w-[240px]"
+                className="absolute -bottom-8 right-0 md:-right-8 bg-white rounded-lg shadow-xl p-6 max-w-[240px]"
               >
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -418,62 +435,7 @@ export const Home: React.FC = () => {
               </p>
             </motion.div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredServices.map((service) => (
-                <motion.div
-                  key={service.id}
-                  variants={serviceCard}
-                  whileHover="hover"
-                  viewport={{ once: true }}
-                >
-                  <Card className="relative overflow-hidden border-2 hover:border-primary/50 transition-colors h-full flex flex-col">
-                    <CardContent className="p-6 flex-1">
-                      <div className="flex flex-col h-full">
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <Scissors className="h-6 w-6 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-lg">{service.name}</h3>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Star className="h-4 w-4" />
-                              <span>4.9</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <p className="text-muted-foreground text-sm mb-4 flex-1">
-                          {service.description}
-                        </p>
-                        
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span className="flex items-center">
-                              <Clock className="h-4 w-4 mr-1" />
-                              {service.duration} min
-                            </span>
-                            <span className="font-semibold text-foreground">
-                              {formatCurrency(service.price)}
-                            </span>
-                          </div>
-                          
-                          <Button className="w-full" variant="outline" size="sm" asChild>
-                            <motion.a
-                              href="/booking"
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              Book Now
-                              <ArrowRight className="h-4 w-4 ml-2" />
-                            </motion.a>
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+            <ServicesShadCarousel services={featuredServices} />
 
             <motion.div
               variants={fadeIn}
@@ -525,8 +487,10 @@ export const Home: React.FC = () => {
                   <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
                     <div className="aspect-[4/3] relative overflow-hidden">
                       <img
-                        src={staff.image}
+                        src={`${staff.image}?auto=compress&cs=tinysrgb&w=1080`}
                         alt={staff.name}
+                        loading="lazy"
+                        decoding="async"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -549,7 +513,7 @@ export const Home: React.FC = () => {
 
       <section className="py-20 relative overflow-hidden">
         <motion.div 
-          className="absolute inset-0 bg-[url('https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg')] bg-cover bg-fixed bg-center"
+          className="absolute inset-0 bg-[url('https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg?auto=compress&cs=tinysrgb&w=1920')] bg-cover bg-center"
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.8 }}
@@ -611,8 +575,10 @@ export const Home: React.FC = () => {
               className="relative aspect-[4/3] bg-white/10 rounded-lg backdrop-blur-sm p-8"
             >
               <img
-                src="https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg"
+                src="https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080"
                 alt="Barber Shop Interior"
+                loading="lazy"
+                decoding="async"
                 className="rounded-lg object-cover w-full h-full"
               />
             </motion.div>
@@ -707,8 +673,10 @@ export const Home: React.FC = () => {
                 className="relative aspect-video rounded-lg overflow-hidden"
               >
                 <img
-                  src="https://images.pexels.com/photos/1634843/pexels-photo-1634843.jpeg"
+                  src="https://images.pexels.com/photos/1634843/pexels-photo-1634843.jpeg?auto=compress&cs=tinysrgb&w=1080"
                   alt="Shop Location"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
