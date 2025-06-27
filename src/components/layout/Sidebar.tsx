@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart3, Calendar, CreditCard, Home, Scissors, Settings, Users, Clock, ListCheck as ListChecklist, Percent, Package, Star, CalendarX } from 'lucide-react';
+import { BarChart3, Calendar, CreditCard, Home, Scissors, Settings, Users, Clock, ListCheck as ListChecklist, Percent, Package, Star, CalendarX, UserCog } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -125,6 +125,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isInSheet = false }) => {
       label: 'Reviews',
       href: '/admin/reviews',
     },
+    {
+      icon: <UserCog size={18} />,
+      label: 'User Management',
+      href: '/admin/users',
+    },
   ];
 
   return (
@@ -133,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isInSheet = false }) => {
         {isInSheet && (
           <div className="absolute left-4 top-4 text-lg font-semibold">Menu</div>
         )}
-        
+
         <div className="space-y-1">
           {sidebarItems.map((item) => (
             <SidebarItem

@@ -15,6 +15,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AuthListener } from '@/components/AuthListener';
 import { AdminProducts } from './pages/AdminProducts';
+import { AdminUsers } from './pages/AdminUsers';
 import AdminReviews from './pages/AdminReviews';
 import AdminSettings from './pages/AdminSettings';
 import ShopClosures from './pages/ShopClosures';
@@ -80,6 +81,7 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="services" element={<Services />} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="users" element={<AdminUsers />} />
           <Route path="pos" element={<POS />} />
           <Route path="slots" element={<Slots />} />
           <Route path="reports" element={<Reports />} />
