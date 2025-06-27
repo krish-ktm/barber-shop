@@ -55,7 +55,7 @@ export const Login: React.FC = () => {
         console.log('Staff user authenticated, navigating to staff dashboard');
         navigate(from || '/staff/dashboard', { replace: true });
       } else if (userRole === 'billing') {
-        navigate(from || '/billing/pos', { replace: true });
+        navigate(from || '/billing/dashboard', { replace: true });
       } else {
         console.warn('Unknown user role:', userRole);
         // Default to login page if role is unknown

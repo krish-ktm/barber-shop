@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Sidebar } from './Sidebar';
 import { StaffSidebar } from './StaffSidebar';
+import { BillingSidebar } from './BillingSidebar';
 import { useAuth } from '@/lib/auth';
 
 export const Header: React.FC = () => {
@@ -41,7 +42,13 @@ export const Header: React.FC = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
-              {user?.role === 'staff' ? <StaffSidebar isInSheet /> : <Sidebar isInSheet />}
+              {user?.role === 'staff' ? (
+                <StaffSidebar isInSheet />
+              ) : user?.role === 'billing' ? (
+                <BillingSidebar isInSheet />
+              ) : (
+                <Sidebar isInSheet />
+              )}
             </SheetContent>
           </Sheet>
 

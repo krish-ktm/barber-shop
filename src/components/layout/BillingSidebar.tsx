@@ -4,16 +4,18 @@ import { CreditCard, Home, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { SheetClose } from '@/components/ui/sheet';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
   href: string;
   isActive: boolean;
+  isInSheet: boolean;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive }) => {
-  return (
+const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive, isInSheet }) => {
+  const content = (
     <Link to={href}>
       <Button
         variant="ghost"
@@ -27,9 +29,13 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive }
       </Button>
     </Link>
   );
+
+  return isInSheet ? <SheetClose asChild>{content}</SheetClose> : content;
 };
 
-export const BillingSidebar: React.FC = () => {
+interface BillingSidebarProps { isInSheet?: boolean }
+
+export const BillingSidebar: React.FC<BillingSidebarProps> = ({ isInSheet = false }) => {
   const location = useLocation();
   const pathName = location.pathname;
 
@@ -48,12 +54,16 @@ export const BillingSidebar: React.FC = () => {
       icon: <CreditCard size={18} />,
       label: 'POS & Invoices',
       href: '/billing/pos',
-    }
+    },
   ];
 
   return (
     <ScrollArea className="h-full">
-      <div className="py-4 px-3 h-full flex flex-col">
+      <div className={`${isInSheet ? 'pt-14' : 'py-4'} px-3 h-full flex flex-col relative`}>
+        {isInSheet && (
+          <div className="absolute left-4 top-4 text-lg font-semibold">Menu</div>
+        )}
+
         <div className="space-y-1">
           {sidebarItems.map((item) => (
             <SidebarItem
@@ -62,10 +72,11 @@ export const BillingSidebar: React.FC = () => {
               label={item.label}
               href={item.href}
               isActive={pathName === item.href}
+              isInSheet={isInSheet}
             />
           ))}
         </div>
-        
+
         <div className="mt-auto pt-4 px-3">
           <div className="bg-background border rounded-lg p-3">
             <p className="text-xs text-muted-foreground mb-2">Billing Portal</p>

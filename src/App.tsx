@@ -123,7 +123,7 @@ function App() {
           <Route path="dashboard" element={<BillingDashboard />} />
           <Route path="calendar" element={<BillingCalendar />} />
           <Route path="pos" element={<BillingPOS />} />
-          <Route path="*" element={<Navigate to="/billing/pos" replace />} />
+          <Route path="*" element={<Navigate to="/billing/dashboard" replace />} />
         </Route>
       </Routes>
       <Toaster />

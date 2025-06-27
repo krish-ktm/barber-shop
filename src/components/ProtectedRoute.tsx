@@ -41,10 +41,10 @@ export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) 
       console.log('ProtectedRoute - Redirecting admin to admin dashboard');
       return <Navigate to="/admin/dashboard" replace />;
     }
-    // Redirect billing users to POS page
+    // Redirect billing users to their dashboard
     if (userRole === 'billing') {
-      console.log('ProtectedRoute - Redirecting billing user to POS');
-      return <Navigate to="/billing/pos" replace />;
+      console.log('ProtectedRoute - Redirecting billing user to billing dashboard');
+      return <Navigate to="/billing/dashboard" replace />;
     }
     // Redirect staff to staff dashboard
     if (userRole === 'staff') {
