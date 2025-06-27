@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Check, Trash, Star, Plus } from 'lucide-react';
+import { Loader2, Check, Trash, Star, Plus, Search } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -84,6 +84,8 @@ const AdminReviews: React.FC = () => {
     page,
     setPage,
     setFilters,
+    approved,
+    sort,
     approveReview,
     deleteReview,
     createReview
@@ -91,6 +93,7 @@ const AdminReviews: React.FC = () => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedReview, setSelectedReview] = useState<UIReview | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -153,17 +156,45 @@ const AdminReviews: React.FC = () => {
     setFilters({ sort: value });
   };
 
+  // Handle search submit
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = searchInput.trim();
+    setFilters({ query: query || undefined });
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setSearchInput('');
+    setFilters({ approved: undefined, sort: 'date_desc', query: undefined });
+  };
+
+  const hasActiveFilters = searchInput.trim() !== '' || approved !== undefined || sort !== 'date_desc';
+
   return (
     <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold">Customer Reviews</h1>
-        <div className="flex gap-4">
-          <Button onClick={() => setCreateDialogOpen(true)} className="flex items-center gap-2">
-            <Plus size={16} />
-            Add Review
-          </Button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
+          {/* Search bar */}
+          <form onSubmit={handleSearchSubmit} className="flex w-full sm:w-auto items-center gap-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search reviews..."
+                className="w-full pl-8 pr-2 h-9 rounded-md border bg-transparent text-sm focus:outline-none"
+              />
+            </div>
+            <Button type="submit" size="sm" className="h-9 w-24 flex-shrink-0" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
+            </Button>
+          </form>
+          
           <Select onValueChange={handleApprovalFilterChange} defaultValue="all">
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -174,7 +205,7 @@ const AdminReviews: React.FC = () => {
           </Select>
           
           <Select onValueChange={handleSortChange} defaultValue="date_desc">
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -184,21 +215,31 @@ const AdminReviews: React.FC = () => {
               <SelectItem value="rating_asc">Lowest Rating</SelectItem>
             </SelectContent>
           </Select>
+          <Button onClick={() => setCreateDialogOpen(true)} className="flex items-center gap-2 w-full sm:w-auto">
+            <Plus size={16} />
+            Add Review
+          </Button>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 py-3 md:px-6 md:py-4">
           <CardTitle>Reviews ({totalCount})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 md:p-6">
           {loading && !isDeletingReview && !isApprovingReview ? (
             <div className="flex justify-center p-4">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : (
             <>
-              <Table>
+              {/* Desktop/tablet table */}
+              <Table className="hidden md:table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
@@ -279,6 +320,70 @@ const AdminReviews: React.FC = () => {
                 </TableBody>
               </Table>
               
+              {/* Mobile card list */}
+              <div className="md:hidden space-y-3">
+                {uiReviews.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No reviews found</p>
+                )}
+                {uiReviews.map((review) => (
+                  <div key={review.id} className="border rounded-lg p-3 bg-card shadow-sm hover:border-primary/60 hover:shadow-md transition ">
+                    {/* Top row: customer & rating */}
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-sm truncate max-w-[180px]">{review.customerName}</p>
+                        <p className="text-xs text-muted-foreground truncate max-w-[180px]">{review.customerEmail}</p>
+                      </div>
+                      <RatingStars rating={review.rating} />
+                    </div>
+
+                    {/* Staff & date */}
+                    <div className="flex justify-between items-center text-xs mt-1">
+                      <span className="truncate max-w-[60%]">{review.staffName}</span>
+                      <span>{format(new Date(review.date), 'dd MMM yyyy')}</span>
+                    </div>
+
+                    {/* Status + actions */}
+                    <div className="flex items-center justify-between mt-2">
+                      <Badge variant={review.isApproved ? 'default' : 'secondary'} className="text-[11px] px-2 py-0.5 rounded-full">
+                        {review.isApproved ? 'Approved' : 'Pending'}
+                      </Badge>
+                      <div className="flex flex-wrap justify-end gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewClick(review)}
+                          className="px-3 py-1 text-xs"
+                        >
+                          View
+                        </Button>
+                        {!review.isApproved && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleApproveClick(review.id)}
+                            disabled={isApprovingReview === review.id}
+                          >
+                            {isApprovingReview === review.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(review.id)}
+                          disabled={isDeletingReview}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
               {pages > 1 && (
                 <div className="flex justify-center mt-4">
                   <ReviewsPagination
@@ -295,26 +400,30 @@ const AdminReviews: React.FC = () => {
       
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-xs rounded-lg p-6 w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this review? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeletingReview}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)} 
+              disabled={isDeletingReview}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={isDeletingReview}>
-              {isDeletingReview ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete'
-              )}
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete} 
+              disabled={isDeletingReview}
+              className="w-full sm:w-auto flex items-center justify-center"
+            >
+              {isDeletingReview && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {isDeletingReview ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -322,12 +431,13 @@ const AdminReviews: React.FC = () => {
       
       {/* View Review Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-lg p-6 w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Review Details</DialogTitle>
           </DialogHeader>
           {selectedReview && (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Customer & Date */}
               <div className="flex justify-between">
                 <div>
                   <h3 className="font-medium">Customer</h3>
@@ -339,11 +449,13 @@ const AdminReviews: React.FC = () => {
                   <p>{format(new Date(selectedReview.date), 'MMMM dd, yyyy')}</p>
                 </div>
               </div>
+              <hr className="my-1 border-dashed" />
               
               <div>
                 <h3 className="font-medium">Staff</h3>
                 <p>{selectedReview.staffName} ({selectedReview.staffPosition})</p>
               </div>
+              <hr className="my-1 border-dashed" />
               
               <div>
                 <h3 className="font-medium">Rating</h3>
@@ -352,13 +464,15 @@ const AdminReviews: React.FC = () => {
                   <span>{selectedReview.rating}/5</span>
                 </div>
               </div>
+              <hr className="my-1 border-dashed" />
               
               <div>
                 <h3 className="font-medium">Review</h3>
-                <p className="whitespace-pre-wrap">
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
                   {selectedReview.reviewText || 'No review text provided.'}
                 </p>
               </div>
+              <hr className="my-1 border-dashed" />
               
               <div>
                 <h3 className="font-medium">Status</h3>
@@ -370,8 +484,8 @@ const AdminReviews: React.FC = () => {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setViewDialogOpen(false)} className="w-full sm:w-auto">
               Close
             </Button>
             {selectedReview && !selectedReview.isApproved && (
@@ -384,6 +498,7 @@ const AdminReviews: React.FC = () => {
                   });
                 }}
                 disabled={isApprovingReview === selectedReview.id}
+                className="w-full sm:w-auto flex items-center justify-center"
               >
                 {isApprovingReview === selectedReview.id ? (
                   <>
@@ -404,7 +519,7 @@ const AdminReviews: React.FC = () => {
 
       {/* Create Review Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-lg p-6 w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Review</DialogTitle>
             <DialogDescription>

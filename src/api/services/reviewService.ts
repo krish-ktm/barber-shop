@@ -79,12 +79,14 @@ export const getAllReviews = async (
   limit = 10,
   approved?: boolean,
   staffId?: string,
-  sort = 'date_desc'
+  sort = 'date_desc',
+  query?: string
 ): Promise<ReviewsResponse> => {
   let url = `/reviews?page=${page}&limit=${limit}&sort=${sort}`;
   
   if (approved !== undefined) url += `&approved=${approved}`;
   if (staffId) url += `&staffId=${staffId}`;
+  if (query) url += `&q=${encodeURIComponent(query)}`;
   
   return get<ReviewsResponse>(url);
 };

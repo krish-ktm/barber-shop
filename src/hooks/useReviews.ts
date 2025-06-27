@@ -21,6 +21,7 @@ export interface ReviewsState {
   approved?: boolean;
   staffId?: string;
   sort: string;
+  query?: string;
 }
 
 export const useReviews = () => {
@@ -67,9 +68,9 @@ export const useReviews = () => {
 
   // Load reviews with current filters
   const loadReviews = useCallback(() => {
-    const { page, limit, approved, staffId, sort } = state;
-    fetchReviews(page, limit, approved, staffId, sort);
-  }, [fetchReviews, state.page, state.limit, state.approved, state.staffId, state.sort]);
+    const { page, limit, approved, staffId, sort, query } = state;
+    fetchReviews(page, limit, approved, staffId, sort, query);
+  }, [fetchReviews, state.page, state.limit, state.approved, state.staffId, state.sort, state.query]);
 
   // Update reviews when data changes
   useEffect(() => {
@@ -116,18 +117,21 @@ export const useReviews = () => {
     approved,
     staffId,
     sort,
-    limit
+    limit,
+    query
   }: {
     approved?: boolean;
     staffId?: string;
     sort?: string;
     limit?: number;
+    query?: string;
   }) => {
     setState(prev => ({
       ...prev,
       approved,
       staffId,
       sort: sort || prev.sort,
+      query: query !== undefined ? query : prev.query,
       limit: limit || prev.limit,
       page: 1 // Reset to first page when filters change
     }));
