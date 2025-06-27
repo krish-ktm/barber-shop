@@ -337,7 +337,11 @@ const AdminReviews: React.FC = () => {
                   <p className="text-sm text-muted-foreground text-center py-4">No reviews found</p>
                 )}
                 {uiReviews.map((review) => (
-                  <div key={review.id} className="border rounded-lg p-3 bg-card shadow-sm hover:border-primary/60 hover:shadow-md transition ">
+                  <div
+                    key={review.id}
+                    className="border rounded-lg p-3 bg-card shadow-sm hover:border-primary/60 hover:shadow-md transition cursor-pointer"
+                    onClick={() => handleViewClick(review)}
+                  >
                     {/* Top row: customer & rating */}
                     <div className="flex justify-between items-center">
                       <div>
@@ -359,19 +363,14 @@ const AdminReviews: React.FC = () => {
                         {review.isApproved ? 'Approved' : 'Pending'}
                       </Badge>
                       <div className="flex flex-wrap justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewClick(review)}
-                          className="px-3 py-1 text-xs"
-                        >
-                          View
-                        </Button>
                         {!review.isApproved && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleApproveClick(review.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApproveClick(review.id);
+                            }}
                             disabled={isApprovingReview === review.id}
                           >
                             {isApprovingReview === review.id ? (
@@ -384,7 +383,10 @@ const AdminReviews: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteClick(review.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(review.id);
+                          }}
                           disabled={isDeletingReview}
                         >
                           <Trash className="h-4 w-4" />
