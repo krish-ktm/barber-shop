@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 
 export const StaffDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<StaffDashboardData | null>(null);
+  const [cachedData, setCachedData] = useState<StaffDashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
@@ -63,6 +64,13 @@ export const StaffDashboard: React.FC = () => {
     fetchDashboardData();
   }, [period]);
   
+  // Cache the last successful payload to avoid UI blink on refresh actions
+  useEffect(() => {
+    if (!loading && dashboardData) {
+      setCachedData(dashboardData);
+    }
+  }, [loading, dashboardData]);
+
   // Handle reschedule appointment
   const handleRescheduleAppointment = (appointment: SimpleAppointment) => {
     // Convert SimpleAppointment to Appointment
@@ -100,7 +108,7 @@ export const StaffDashboard: React.FC = () => {
     });
   };
 
-  if (loading) {
+  if (loading && !cachedData) {
     return (
       <div className="space-y-6">
         <PageHeader 
@@ -173,7 +181,9 @@ export const StaffDashboard: React.FC = () => {
     );
   }
 
-  if (!dashboardData) {
+  const dataToShow = dashboardData || cachedData;
+
+  if (!dataToShow) {
     return (
       <div className="space-y-6">
         <PageHeader 
@@ -184,10 +194,10 @@ export const StaffDashboard: React.FC = () => {
     );
   }
 
-  const { staffInfo, performanceSummary } = dashboardData;
+  const { staffInfo, performanceSummary } = dataToShow;
   
   // Get today's appointments count for stats card
-  const todayAppointmentsCount = dashboardData.todayAppointments ? dashboardData.todayAppointments.length : 0;
+  const todayAppointmentsCount = dataToShow.todayAppointments ? dataToShow.todayAppointments.length : 0;
 
   // Convert API appointments to the format expected by AppointmentList component
   const convertToSimpleAppointment = (appointment: UpcomingAppointment): SimpleAppointment => {
@@ -215,14 +225,14 @@ export const StaffDashboard: React.FC = () => {
   };
 
   // Convert todayAppointments for the AppointmentList
-  const todayAppointments = dashboardData.todayAppointments 
-    ? dashboardData.todayAppointments.map(convertToSimpleAppointment)
+  const todayAppointments = dataToShow.todayAppointments 
+    ? dataToShow.todayAppointments.map(convertToSimpleAppointment)
     : [];
     
   // Filter upcoming appointments to exclude today's appointments
   const today = format(new Date(), 'yyyy-MM-dd');
-  const upcomingAppointments = dashboardData.upcomingAppointments
-    ? dashboardData.upcomingAppointments
+  const upcomingAppointments = dataToShow.upcomingAppointments
+    ? dataToShow.upcomingAppointments
         .filter(appointment => appointment.date !== today)
         .map(convertToSimpleAppointment)
     : [];
@@ -330,9 +340,9 @@ export const StaffDashboard: React.FC = () => {
             <CardTitle>Top Services</CardTitle>
           </CardHeader>
           <CardContent>
-            {dashboardData.serviceBreakdown.length > 0 ? (
+            {dataToShow.serviceBreakdown.length > 0 ? (
               <ul className="space-y-4">
-                {dashboardData.serviceBreakdown.map((service) => (
+                {dataToShow.serviceBreakdown.map((service) => (
                   <li key={service.service_id} className="flex justify-between items-center border-b pb-2">
                     <span className="font-medium">{service.service_name}</span>
                     <div className="flex gap-4">
@@ -355,9 +365,9 @@ export const StaffDashboard: React.FC = () => {
             <CardTitle>Recent Reviews</CardTitle>
           </CardHeader>
           <CardContent>
-            {dashboardData.staffReviews.length > 0 ? (
+            {dataToShow.staffReviews.length > 0 ? (
               <ul className="space-y-4">
-                {dashboardData.staffReviews.map((review) => (
+                {dataToShow.staffReviews.map((review) => (
                   <li key={review.id} className="border-b pb-2">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">{review.customer.name}</span>
