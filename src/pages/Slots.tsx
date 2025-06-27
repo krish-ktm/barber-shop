@@ -16,7 +16,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 // API imports
 import { useApi } from '@/hooks/useApi';
@@ -400,7 +399,11 @@ export const Slots: React.FC = () => {
         action={{
           label: "Save Changes",
           onClick: handleSave,
-          icon: isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />,
+          icon: isLoading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          ),
           disabled: isLoading,
         }}
       />
@@ -452,7 +455,7 @@ export const Slots: React.FC = () => {
               <CardDescription>Set your working hours for each day of the week</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="h-[400px]">
+              <div>
                 <div className="divide-y">
                   {DAYS.map((day) => {
                     const businessHour = getBusinessHour(day.value);
@@ -484,7 +487,7 @@ export const Slots: React.FC = () => {
                         
                         {!isOff && businessHour && (
                           <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <Label className="text-xs text-muted-foreground">Opening Time</Label>
                                 <Input
@@ -605,7 +608,7 @@ export const Slots: React.FC = () => {
                     );
                   })}
                 </div>
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </div>
