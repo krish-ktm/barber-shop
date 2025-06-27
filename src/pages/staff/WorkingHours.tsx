@@ -632,9 +632,8 @@ export const StaffWorkingHours: React.FC = () => {
   // Group breaks by day of week
   const breaksByDay: Record<string, Break[]> = {};
   breaks.forEach(breakItem => {
-    // Ensure day_of_week is a number and convert to string key for grouping
-    const dayNumber = typeof breakItem.day_of_week === 'string' 
-      ? dayOfWeekMap[breakItem.day_of_week.toLowerCase()] || 0
+    const dayNumber = typeof breakItem.day_of_week === 'string'
+      ? dayOfWeekMap[(breakItem.day_of_week as unknown as string).toLowerCase()] ?? 0
       : breakItem.day_of_week;
     
     const dayKey = dayOfWeekNumberToString[dayNumber];
@@ -790,14 +789,14 @@ export const StaffWorkingHours: React.FC = () => {
                                   )}
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="w-[90%] rounded-lg">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete Time Slot</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     Are you sure you want to delete this time slot? This action cannot be undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter>
+                                <AlertDialogFooter className="gap-2">
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction 
                                     onClick={() => handleDeleteTimeSlot(day as keyof WorkingHours, slot)}
@@ -893,14 +892,14 @@ export const StaffWorkingHours: React.FC = () => {
                                     <Trash className="h-3.5 w-3.5 text-destructive" />
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="w-[90%] rounded-lg">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Delete Break</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     Are you sure you want to delete this break? This action cannot be undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter>
+                                <AlertDialogFooter className="gap-2">
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction 
                                     onClick={() => handleDeleteBreak(breakItem.id!)}
@@ -939,7 +938,7 @@ export const StaffWorkingHours: React.FC = () => {
 
       {/* Working Hours Dialog */}
       <Dialog open={isWorkingHoursDialogOpen} onOpenChange={setIsWorkingHoursDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md w-[90%] rounded-lg">
           <DialogHeader>
             <DialogTitle>
               {isEditMode ? "Edit Time Slot" : "Add Time Slot"}
@@ -1001,7 +1000,7 @@ export const StaffWorkingHours: React.FC = () => {
               </div>
             </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsWorkingHoursDialogOpen(false)} disabled={addingSlot}>
               Cancel
             </Button>
@@ -1021,7 +1020,7 @@ export const StaffWorkingHours: React.FC = () => {
 
       {/* Break Dialog */}
       <Dialog open={isBreakDialogOpen} onOpenChange={setIsBreakDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md w-[90%] rounded-lg">
           <DialogHeader>
             <DialogTitle>
               {isEditMode ? "Edit Break" : "Add Break"}
@@ -1112,7 +1111,7 @@ export const StaffWorkingHours: React.FC = () => {
             </div>
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsBreakDialogOpen(false)} disabled={creatingBreak || updatingBreak}>
               Cancel
             </Button>
