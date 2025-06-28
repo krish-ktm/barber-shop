@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { format, addDays, startOfDay } from 'date-fns';
-import { Clock, Loader2, Info, AlertCircle, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Clock, Loader2, AlertCircle, Calendar as CalendarIcon, X } from 'lucide-react';
 import { Calendar } from './Fullcalendar';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,12 +27,8 @@ export const DateTimeSelection: React.FC = () => {
   const [availableSlots, setAvailableSlots] = useState<BookingSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [businessTimezone, setBusinessTimezone] = useState<string | null>(null);
   const [slotDuration, setSlotDuration] = useState<number | null>(null);
   
-  // Get client timezone
-  const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
   // Format date for API
   const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
   
@@ -68,11 +64,6 @@ export const DateTimeSelection: React.FC = () => {
 
         if (response.success) {
           console.log('Available slots:', response.slots);
-          
-          // Store business timezone if provided
-          if (response.businessTimezone) {
-            setBusinessTimezone(response.businessTimezone);
-          }
           
           // Store slot duration if provided
           if (response.slotDuration) {
@@ -151,6 +142,13 @@ export const DateTimeSelection: React.FC = () => {
     return formatDisplayTime(slot.time);
   }, [formatDisplayTime]);
 
+  // Set default date to today when entering this step if none selected yet
+  useEffect(() => {
+    if (!selectedDate) {
+      setSelectedDate(startOfDay(new Date()));
+    }
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -164,16 +162,7 @@ export const DateTimeSelection: React.FC = () => {
           Select your preferred appointment date and time
         </p>
         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {businessTimezone && (
-            <div className="flex items-center">
-              <Info className="h-3 w-3 mr-1" />
-              <span>Shop timezone: {businessTimezone}</span>
-            </div>
-          )}
-          <div className="flex items-center">
-            <Info className="h-3 w-3 mr-1" />
-            <span>Your timezone: {clientTimezone}</span>
-          </div>
+          {/* Timezone info removed as per new requirement */}
           {slotDuration && (
             <div className="flex items-center">
               <Clock className="h-3 w-3 mr-1" />
@@ -220,11 +209,7 @@ export const DateTimeSelection: React.FC = () => {
             <h3 className="font-medium">Select Time</h3>
             <p className="text-sm text-muted-foreground mb-2">
               Duration: {totalDuration} minutes
-              {businessTimezone && (
-                <span className="ml-2">(Times shown in shop's timezone)</span>
-              )}
             </p>
-            
             {/* Enhanced error message design */}
             {error && (
               <motion.div
@@ -291,8 +276,13 @@ export const DateTimeSelection: React.FC = () => {
                           </Button>
                         </motion.div>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        {slot.available ? 'Available' : 'Not available'}
+                      <TooltipContent className="text-sm">
+                        <div className="font-medium">
+                          {getDisplayTimeInBusinessTimezone(slot)}
+                        </div>
+                        <div className="text-xs mt-0.5">
+                          {slot.available ? 'Available' : slot.unavailableReason || 'Not available'}
+                        </div>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
