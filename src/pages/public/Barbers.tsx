@@ -1,21 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Clock, Search, Star, Scissors, Mail, Phone } from 'lucide-react';
+import { ArrowRight, Calendar, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { staffData, serviceData } from '@/mocks';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatCurrency } from '@/utils';
+import { usePublicStaff } from '@/hooks/usePublicStaff';
 import { Link } from 'react-router-dom';
+import { Loader } from '@/components/ui/loader';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -37,43 +28,22 @@ const staggerContainer = {
   }
 };
 
-const cardVariant = {
-  initial: { opacity: 0, scale: 0.95, y: 20 },
-  animate: { 
-    opacity: 1, 
-    scale: 1, 
-    y: 0,
-    transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 15
-    }
-  },
-  hover: { 
-    y: -5,
-    scale: 1.02,
-    transition: {
-      type: "spring",
-      stiffness: 400,
-      damping: 10
-    }
-  }
-};
-
 export const Barbers: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBarber, setSelectedBarber] = useState<typeof staffData[0] | null>(null);
+  const { staff, loading: staffLoading, error: staffError } = usePublicStaff();
 
-  // Filter barbers based on search query
-  const filteredBarbers = staffData.filter(barber => 
-    barber.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    barber.position.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const isFetching = staffLoading || staff.length === 0;
 
-  // Get services for a barber
-  const getBarberServices = (serviceIds: string[]) => {
-    return serviceData.filter(service => serviceIds.includes(service.id));
-  };
+  if (isFetching) {
+    return <Loader className="min-h-screen" size={48} />;
+  }
+
+  if (staffError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-destructive">Failed to load barbers: {staffError.message}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -118,7 +88,7 @@ export const Barbers: React.FC = () => {
             viewport={{ once: true }}
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
           >
-            {staffData.map((staff) => (
+            {staff.map((staff) => (
               <motion.div
                 key={staff.id}
                 variants={fadeIn}
@@ -128,32 +98,50 @@ export const Barbers: React.FC = () => {
                 <Card className="overflow-hidden h-full">
                   <div className="aspect-[4/3] relative overflow-hidden">
                     <img
-                      src={staff.image}
-                      alt={staff.name}
+                      src={staff.image || 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg'}
+                      alt={staff.name || 'Barber'}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     />
                   </div>
                   <CardContent className="p-6 space-y-4">
                     <div>
                       <Badge variant="secondary" className="mb-2">
-                        {staff.position}
+                        {staff.position ?? 'Barber'}
                       </Badge>
-                      <h3 className="text-xl font-semibold">{staff.name}</h3>
-                      <p className="text-muted-foreground mt-2">
-                        {staff.bio}
-                      </p>
+                      <h3 className="text-xl font-semibold">{staff.name ?? staff.user?.name ?? 'Our Barber'}</h3>
+                      {staff.bio && (
+                        <p className="text-muted-foreground mt-2 line-clamp-3">
+                          {staff.bio}
+                        </p>
+                      )}
+
+                      {Array.isArray(staff.services) && staff.services.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {staff.services.map((svc) => (
+                            <Badge key={svc.id} variant="outline" className="text-xs">
+                              {svc.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        <span>{staff.phone}</span>
+                    {(staff.phone || staff.email) && (
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        {staff.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            <span>{staff.phone}</span>
+                          </div>
+                        )}
+                        {staff.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            <span>{staff.email}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        <span>{staff.email}</span>
-                      </div>
-                    </div>
+                    )}
 
                     <Button asChild className="w-full">
                       <Link to="/booking">

@@ -4,7 +4,8 @@ import { Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getPublicReviews, createPublicReview } from '@/api/services/reviewService';
+import { getPublicReviews } from '@/api/services/publicService';
+import { createPublicReview } from '@/api/services/reviewService';
 import { useApi } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +45,7 @@ export const ReviewsSection: React.FC = () => {
 
   // Load reviews on mount
   useEffect(() => {
-    fetchReviews(1, 6);
+    fetchReviews();
   }, [fetchReviews]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,7 +88,7 @@ export const ReviewsSection: React.FC = () => {
       setName('');
       setText('');
       setRatingInput(5);
-      fetchReviews(1, 6);
+      fetchReviews();
     } catch {
       toast({ title: 'Error', description: 'Could not submit review.' });
     } finally {

@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Clock, ChevronRight, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { serviceData } from '@/mocks';
+import { usePublicServices } from '@/hooks/usePublicServices';
 import { formatCurrency } from '@/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader } from '@/components/ui/loader';
 
 const staggerContainer = {
   animate: {
@@ -80,14 +81,25 @@ const categoryImages = {
 };
 
 export const Services: React.FC = () => {
-  // Group services by category
-  const groupedServices = serviceData.reduce((acc, service) => {
-    if (!acc[service.category]) {
-      acc[service.category] = [];
-    }
-    acc[service.category].push(service);
-    return acc;
-  }, {} as Record<string, typeof serviceData>);
+  const { groupedServices, loading, error } = usePublicServices();
+
+  if (loading) {
+    return (
+      <Loader className="min-h-screen" size={48} />
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-destructive">Failed to load services: {error.message}</p>
+      </div>
+    );
+  }
+
+  if (!groupedServices) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-background/90">

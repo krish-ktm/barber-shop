@@ -1,6 +1,5 @@
 import { get, post } from '../apiClient';
 import { Service } from './serviceService';
-import { Staff } from './staffService';
 
 // Type definitions
 export interface BusinessInfo {
@@ -24,7 +23,7 @@ export interface GalleryImage {
   category?: string;
 }
 
-export interface PublicService extends Omit<Service, 'created_at' | 'updated_at'> {}
+export type PublicService = Omit<Service, 'created_at' | 'updated_at'>;
 
 export interface PublicStaff {
   id: string;
@@ -32,7 +31,10 @@ export interface PublicStaff {
   position: string;
   bio?: string;
   image?: string;
-  services: string[];
+  phone?: string;
+  email?: string;
+  services: { id: string; name: string }[];
+  user?: { name?: string; email?: string };
 }
 
 export interface Review {
@@ -95,21 +97,21 @@ interface ContactResponse {
 
 interface BookingResponse {
   success: boolean;
-  appointment: any; // Using any since we don't need the full type for public API
+  appointment: unknown; // We don't need the full type for public API
 }
 
 /**
  * Get public business information
  */
 export const getBusinessInfo = async (): Promise<BusinessResponse> => {
-  return get<BusinessResponse>('/public/business');
+  return get<BusinessResponse>('/public/business', { skipAuth: true });
 };
 
 /**
  * Get gallery images
  */
 export const getGalleryImages = async (): Promise<GalleryResponse> => {
-  return get<GalleryResponse>('/public/gallery');
+  return get<GalleryResponse>('/public/gallery', { skipAuth: true });
 };
 
 /**
@@ -122,33 +124,40 @@ export const getPublicServices = async (category?: string): Promise<ServicesResp
     url += `?category=${category}`;
   }
   
-  return get<ServicesResponse>(url);
+  return get<ServicesResponse>(url, { skipAuth: true });
 };
 
 /**
  * Get public staff information
  */
 export const getPublicStaff = async (): Promise<StaffResponse> => {
-  return get<StaffResponse>('/public/staff');
+  return get<StaffResponse>('/public/staff', { skipAuth: true });
+};
+
+/**
+ * Get public barbers
+ */
+export const getPublicBarbers = async (): Promise<StaffResponse> => {
+  return get<StaffResponse>('/public/barbers', { skipAuth: true });
 };
 
 /**
  * Get public reviews
  */
 export const getPublicReviews = async (): Promise<ReviewsResponse> => {
-  return get<ReviewsResponse>('/public/reviews');
+  return get<ReviewsResponse>('/public/reviews', { skipAuth: true });
 };
 
 /**
  * Submit contact form
  */
 export const submitContactForm = async (formData: ContactForm): Promise<ContactResponse> => {
-  return post<ContactResponse>('/public/contact', formData);
+  return post<ContactResponse>('/public/contact', formData, { skipAuth: true });
 };
 
 /**
  * Create public booking
  */
 export const createPublicBooking = async (bookingData: BookingRequest): Promise<BookingResponse> => {
-  return post<BookingResponse>('/public/booking', bookingData);
+  return post<BookingResponse>('/public/booking', bookingData, { skipAuth: true });
 }; 

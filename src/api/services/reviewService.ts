@@ -155,5 +155,5 @@ export const createPublicReview = async (data: {
     customer_name: data.customerName,
     rating: data.rating,
     text: data.reviewText,
-  });
+  }, { skipAuth: true });
 }; 
