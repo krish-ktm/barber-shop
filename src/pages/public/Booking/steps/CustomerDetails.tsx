@@ -1,11 +1,47 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useBooking } from '../BookingContext';
+import { getCustomerByPhone } from '@/api/services/customerService';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export const CustomerDetails: React.FC = () => {
   const { customerDetails, setCustomerDetails } = useBooking();
+  const { toast } = useToast();
+  const [isSearching, setIsSearching] = useState(false);
+  const lastLookupRef = useRef<string>('');
+
+  // Effect to watch phone input and lookup when 10 digits reached
+  useEffect(() => {
+    const digits = customerDetails.phone.replace(/\D/g, '');
+    if (digits.length === 10 && digits !== lastLookupRef.current) {
+      lastLookupRef.current = digits;
+      (async () => {
+        setIsSearching(true);
+        try {
+          const response = await getCustomerByPhone(digits);
+          if (response.success && response.customer) {
+            setCustomerDetails({
+              name: response.customer.name || '',
+              email: response.customer.email || '',
+              phone: response.customer.phone,
+              notes: response.customer.notes || ''
+            });
+            toast({ title: 'Customer found', description: 'Details auto-filled.' });
+          }
+        } catch (error: unknown) {
+          const err = error as { response?: { status?: number } };
+          if (err?.response?.status !== 404) {
+            toast({ title: 'Lookup failed', description: 'Could not fetch customer details', variant: 'destructive' });
+          }
+        } finally {
+          setIsSearching(false);
+        }
+      })();
+    }
+  }, [customerDetails.phone, setCustomerDetails, toast]);
 
   return (
     <motion.div
@@ -39,6 +75,30 @@ export const CustomerDetails: React.FC = () => {
             animate: { opacity: 1, y: 0 }
           }}
         >
+          <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
+          <div className="relative space-y-1">
+            <Input
+              id="phone"
+              value={customerDetails.phone}
+              onChange={(e) =>
+                setCustomerDetails({ ...customerDetails, phone: e.target.value })
+              }
+              placeholder="Enter your phone number"
+              required
+            />
+            {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+            <p className="text-xs text-muted-foreground">
+              Enter your 10-digit phone number. We'll search our records and auto-fill your details if you've booked before.
+            </p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          variants={{
+            initial: { opacity: 0, y: 20 },
+            animate: { opacity: 1, y: 0 }
+          }}
+        >
           <Label htmlFor="name">Full Name <span className="text-destructive">*</span></Label>
           <Input
             id="name"
@@ -66,24 +126,6 @@ export const CustomerDetails: React.FC = () => {
               setCustomerDetails({ ...customerDetails, email: e.target.value })
             }
             placeholder="Enter your email address"
-          />
-        </motion.div>
-
-        <motion.div
-          variants={{
-            initial: { opacity: 0, y: 20 },
-            animate: { opacity: 1, y: 0 }
-          }}
-        >
-          <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
-          <Input
-            id="phone"
-            value={customerDetails.phone}
-            onChange={(e) =>
-              setCustomerDetails({ ...customerDetails, phone: e.target.value })
-            }
-            placeholder="Enter your phone number"
-            required
           />
         </motion.div>
 

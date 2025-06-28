@@ -99,7 +99,7 @@ export const getCustomerById = async (id: string): Promise<CustomerResponse> => 
  * Get customer by phone number
  */
 export const getCustomerByPhone = async (phone: string): Promise<CustomerResponse> => {
-  return get<CustomerResponse>(`/customers/lookup/${phone}`);
+  return get<CustomerResponse>(`/public/customer/lookup/${phone}`);
 };
 
 /**
