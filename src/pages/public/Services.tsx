@@ -296,7 +296,7 @@ export const Services: React.FC = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <h2 className="text-3xl font-bold mb-6">
+            <h2 className="text-3xl font-bold mb-6 text-white">
               Ready to Experience Premium Grooming?
             </h2>
             <p className="text-lg text-primary-foreground/90 mb-8">
@@ -309,7 +309,7 @@ export const Services: React.FC = () => {
               <Button 
                 size="lg" 
                 variant="secondary"
-                className="min-w-[200px]"
+                className="min-w-[200px] text-white"
                 asChild
               >
                 <motion.a
