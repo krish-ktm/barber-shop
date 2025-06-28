@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -28,8 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Image } from 'lucide-react';
 import { Service } from '@/api/services/serviceService';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -37,6 +38,7 @@ const formSchema = z.object({
   price: z.coerce.number().min(0, 'Price must be positive'),
   duration: z.coerce.number().min(5, 'Duration must be at least 5 minutes'),
   category: z.string().min(1, 'Please select a category'),
+  imageUrl: z.string().optional(),
 });
 
 interface EditServiceDialogProps {
@@ -53,6 +55,8 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
   onSave,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(service?.imageUrl);
+  const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -61,10 +65,35 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
       price: 0,
       duration: 30,
       category: '',
+      imageUrl: '',
     },
   });
 
-  // Update form values whenever the selected service changes so the dialog opens with fresh data.
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_SIZE_BYTES) {
+      toast({
+        title: 'Image too large',
+        description: 'Please select an image smaller than 5 MB.',
+        variant: 'destructive',
+      });
+      e.currentTarget.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const url = event.target?.result as string;
+      setImagePreview(url);
+      form.setValue('imageUrl', url);
+    };
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => {
     if (service) {
       form.reset({
@@ -73,7 +102,9 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
         price: service.price,
         duration: service.duration,
         category: (service.category || '').toLowerCase(),
+        imageUrl: service.imageUrl || '',
       });
+      setImagePreview(service.imageUrl);
     }
   }, [service, form]);
 
@@ -103,7 +134,7 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent key={service?.id ?? 'new'} className="w-[90vw] sm:max-w-[425px] rounded-lg sm:rounded-lg p-4 sm:p-6 max-h-[90vh] flex flex-col">
+      <DialogContent key={service?.id ?? 'new'} className="w-[90vw] sm:max-w-[600px] rounded-lg p-4 sm:p-6 max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit Service</DialogTitle>
           <DialogDescription>
@@ -113,120 +144,174 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
 
         <div className="flex-1 overflow-y-auto px-1">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select 
-                    value={field.value} 
-                    onValueChange={field.onChange}
-                    disabled={isSubmitting}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Service Name</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter service name" 
-                      {...field} 
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter service description"
-                      className="resize-none"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        {...field}
-                        value={field.value}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              {/* Left column */}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select 
+                        value={field.value} 
+                        onValueChange={field.onChange}
                         disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="duration"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duration (minutes)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={5}
-                        step={5}
-                        {...field}
-                        value={field.value}
-                        onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Service Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter service name" 
+                          {...field} 
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter service description"
+                          className="resize-none"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Price and duration */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Price ($)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            {...field}
+                            value={field.value}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="whitespace-nowrap">Duration (minutes)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={5}
+                            step={5}
+                            {...field}
+                            value={field.value}
+                            onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Right column - image */}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Service Image</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col items-center">
+                          {imagePreview ? (
+                            <div className="relative mb-2 w-full max-w-[220px]">
+                              <AspectRatio ratio={1/1} className="bg-muted rounded-md overflow-hidden border">
+                                <img src={imagePreview} alt="Preview" className="object-cover w-full h-full" />
+                              </AspectRatio>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="absolute bottom-2 right-2"
+                                onClick={() => {
+                                  setImagePreview(undefined);
+                                  form.setValue('imageUrl', '');
+                                }}
+                              >Remove</Button>
+                            </div>
+                          ) : (
+                            <div className="w-full max-w-[220px]">
+                              <label htmlFor="edit-service-image-upload" className="flex flex-col items-center justify-center w-full h-[180px] border-2 border-dashed rounded-md cursor-pointer bg-muted/20 hover:bg-muted/30">
+                                <div className="flex flex-col items-center justify-center p-4 text-center">
+                                  <Image className="w-8 h-8 mb-2 text-muted-foreground" />
+                                  <p className="text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span></p>
+                                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG or GIF</p>
+                                </div>
+                                <input id="edit-service-image-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                                <input type="hidden" {...field} />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <DialogFooter>
+            <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
@@ -237,7 +322,8 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
                   'Save changes'
                 )}
               </Button>
-            </DialogFooter>
+            </div>
+
           </form>
         </Form>
         </div>

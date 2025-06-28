@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, Filter, Plus, Search, SortAsc, X, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -408,7 +409,7 @@ export const Services: React.FC = () => {
           </div>
 
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table className="hidden md:table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Service</TableHead>
@@ -441,10 +442,21 @@ export const Services: React.FC = () => {
                       className="hover:bg-muted/50"
                     >
                       <TableCell>
-                        <div>
-                          <div className="font-medium">{service.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {service.description}
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 rounded-md">
+                            {service.imageUrl ? (
+                              <AvatarImage src={service.imageUrl} alt={service.name} />
+                            ) : (
+                              <AvatarFallback className="rounded-md bg-muted">
+                                {service.name.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{service.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {service.description}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -486,6 +498,44 @@ export const Services: React.FC = () => {
                 )}
               </TableBody>
             </Table>
+            {/* Mobile list */}
+            {isLoading ? null : (
+              <div className="space-y-3 md:hidden">
+                {filteredServices.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    {searchQuery ? 'No services found matching your search.' : 'No services available.'}
+                  </p>
+                ) : (
+                  filteredServices.map((service) => (
+                    <div key={service.id} className="flex items-center justify-between bg-card rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 rounded-md">
+                          {service.imageUrl ? (
+                            <AvatarImage src={service.imageUrl} alt={service.name} />
+                          ) : (
+                            <AvatarFallback className="rounded-md bg-muted">
+                              {service.name.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div>
+                          <p className="font-medium leading-none">{service.name}</p>
+                          <p className="text-xs text-muted-foreground">{service.category}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditService(service)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => handleDeleteClick(service, e)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

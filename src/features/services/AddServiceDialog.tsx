@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -28,8 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Image } from 'lucide-react';
 import { Service } from '@/api/services/serviceService';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -37,6 +38,7 @@ const formSchema = z.object({
   price: z.coerce.number().min(0, 'Price must be positive'),
   duration: z.coerce.number().min(5, 'Duration must be at least 5 minutes'),
   category: z.string().min(1, 'Please select a category'),
+  imageUrl: z.string().optional(),
 });
 
 interface AddServiceDialogProps {
@@ -51,6 +53,8 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
   onSave,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
+  const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -59,8 +63,34 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
       price: 0,
       duration: 30,
       category: '',
+      imageUrl: '',
     },
   });
+
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_SIZE_BYTES) {
+      toast({
+        title: 'Image too large',
+        description: 'Please select an image smaller than 5 MB.',
+        variant: 'destructive',
+      });
+      e.currentTarget.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const url = event.target?.result as string;
+      setImagePreview(url);
+      form.setValue('imageUrl', url);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
@@ -68,6 +98,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
       await onSave(values);
       onOpenChange(false);
       form.reset();
+      setImagePreview(undefined);
     } finally {
       setIsSubmitting(false);
     }
@@ -75,7 +106,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] sm:max-w-[425px] rounded-lg sm:rounded-lg p-4 sm:p-6 max-h-[90vh] flex flex-col">
+      <DialogContent className="w-[90vw] sm:max-w-[600px] rounded-lg p-4 sm:p-6 max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add New Service</DialogTitle>
           <DialogDescription>
@@ -85,7 +116,11 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
 
         <div className="flex-1 overflow-y-auto px-1">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              {/* Left column fields */}
+              <div className="space-y-4">
+
             <FormField
               control={form.control}
               name="category"
@@ -134,26 +169,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter service description"
-                      className="resize-none"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="price"
@@ -181,7 +197,7 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
                 name="duration"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Duration (minutes)</FormLabel>
+                    <FormLabel className="whitespace-nowrap">Duration (minutes)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -199,18 +215,88 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
               />
             </div>
 
-            <DialogFooter>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding...
-                  </>
-                ) : (
-                  'Add Service'
-                )}
-              </Button>
-            </DialogFooter>
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter service description"
+                      className="resize-none"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+              </div>
+
+              {/* Right column image */}
+              <div>
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Service Image</FormLabel>
+                  <FormControl>
+                    <div className="flex flex-col items-center">
+                      {imagePreview ? (
+                        <div className="relative mb-2 w-full max-w-[220px]">
+                          <AspectRatio ratio={1/1} className="bg-muted rounded-md overflow-hidden border">
+                            <img src={imagePreview} alt="Preview" className="object-cover w-full h-full" />
+                          </AspectRatio>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="absolute bottom-2 right-2"
+                            onClick={() => {
+                              setImagePreview(undefined);
+                              form.setValue('imageUrl', '');
+                            }}
+                          >Remove</Button>
+                        </div>
+                      ) : (
+                        <div className="w-full max-w-[220px]">
+                          <label htmlFor="service-image-upload" className="flex flex-col items-center justify-center w-full h-[180px] border-2 border-dashed rounded-md cursor-pointer bg-muted/20 hover:bg-muted/30">
+                            <div className="flex flex-col items-center justify-center p-4 text-center">
+                              <Image className="w-8 h-8 mb-2 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span></p>
+                              <p className="text-xs text-muted-foreground mt-1">PNG, JPG or GIF</p>
+                            </div>
+                            <input id="service-image-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                            <input type="hidden" {...field} />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+              </div>
+            </div>
+
+        <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              'Add Service'
+            )}
+          </Button>
+        </div>
           </form>
         </Form>
         </div>

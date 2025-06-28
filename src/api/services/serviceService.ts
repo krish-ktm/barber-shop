@@ -8,6 +8,7 @@ export interface Service {
   price: number;
   duration: number;
   category: string;
+  imageUrl?: string;
   created_at?: string;
   updated_at?: string;
 }
