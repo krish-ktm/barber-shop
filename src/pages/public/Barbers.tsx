@@ -48,34 +48,83 @@ export const Barbers: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative min-h-[60vh] flex items-center justify-center bg-primary text-primary-foreground overflow-hidden">
-        <motion.div 
-          className="absolute inset-0 bg-[url('https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg?auto=compress&cs=tinysrgb&w=1080')] bg-cover bg-center"
+      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
+        {/* Parallax Background */}
+        <motion.div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage:
+              "url(https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg?auto=compress&cs=tinysrgb&w=1080)",
+          }}
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
         >
-          <div className="absolute inset-0 bg-black/70" />
+          {/* Gradient Overlay */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-black/60"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          />
         </motion.div>
-        
-        <div className="container mx-auto px-4 relative z-10">
+
+        <div className="relative z-10 container mx-auto px-4 text-center">
           <motion.div
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="text-center max-w-3xl mx-auto"
+            className="space-y-8"
           >
             <motion.div variants={fadeIn}>
-              <Badge className="mb-4">Our Team</Badge>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              <Badge className="mb-4 h-8 text-base px-4">Our Team</Badge>
+              <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
                 Meet Our Expert Barbers
               </h1>
-              <p className="text-lg text-primary-foreground/80 mb-8">
-                Our skilled team of professionals is dedicated to providing you with the best grooming experience
+              <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto">
+                Our skilled professionals are dedicated to giving you the best grooming experience.
               </p>
+            </motion.div>
+
+            {/* Hero CTA Buttons */}
+            <motion.div variants={fadeIn} className="flex flex-wrap gap-4 justify-center">
+              <Button size="lg" className="text-lg px-8 h-12" asChild>
+                <motion.a
+                  href="/booking"
+                  className="text-white hover:text-white"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Book Now
+                </motion.a>
+              </Button>
+
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-lg px-8 h-12 bg-white/10 hover:bg-white/20 text-white border-white/20"
+                asChild
+              >
+                <motion.a
+                  href="/services"
+                  className="text-white hover:text-white"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  View Services
+                </motion.a>
+              </Button>
             </motion.div>
           </motion.div>
         </div>
+
+        {/* Decorative Bottom Gradient */}
+        <motion.div
+          className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black to-transparent"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        />
       </section>
 
       {/* Team Grid Section */}
@@ -146,7 +195,7 @@ export const Barbers: React.FC = () => {
                     )}
 
                     <Button asChild className="w-full">
-                      <Link to="/booking">
+                      <Link to="/booking" className="hover:text-white">
                         Book Appointment
                         <Calendar className="ml-2 h-4 w-4" />
                       </Link>
@@ -175,7 +224,7 @@ export const Barbers: React.FC = () => {
                 Book an appointment with one of our expert barbers and experience the best in men's grooming
               </p>
               <Button size="lg" asChild>
-                <Link to="/booking">
+                <Link to="/booking" className="hover:text-white">
                   Book Your Appointment
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

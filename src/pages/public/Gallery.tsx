@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -46,6 +46,8 @@ const imageCard = {
 
 export const Gallery: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   const galleryImages = [
     {
@@ -95,6 +97,18 @@ export const Gallery: React.FC = () => {
     },
   ];
 
+  const categories = ['All', ...Array.from(new Set(galleryImages.map((img) => img.category)))] as const;
+
+  const filteredImages = selectedCategory === 'All'
+    ? galleryImages
+    : galleryImages.filter((img) => img.category === selectedCategory);
+
+  // Determine grid span classes for a patterned masonry effect
+  const getSpanClasses = (index: number) => {
+    // Every 7th item will be larger on md+ screens
+    return index % 7 === 0 ? 'md:col-span-2 md:row-span-2' : '';
+  };
+
   return (
     <div>
       {/* Hero Section */}
@@ -110,7 +124,7 @@ export const Gallery: React.FC = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <motion.div 
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-black/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -129,7 +143,7 @@ export const Gallery: React.FC = () => {
               className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight"
             >
               Our Gallery
-              <span className="block text-primary-foreground/80">Portfolio</span>
+              <span className="block text-primary">Portfolio</span>
             </motion.h1>
             
             <motion.p 
@@ -150,6 +164,7 @@ export const Gallery: React.FC = () => {
               >
                 <motion.a 
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -157,28 +172,6 @@ export const Gallery: React.FC = () => {
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </motion.a>
               </Button>
-            </motion.div>
-
-            {/* Stats */}
-            <motion.div 
-              variants={fadeIn}
-              className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16"
-            >
-              {[
-                { value: '1000+', label: 'Happy Clients' },
-                { value: '5000+', label: 'Haircuts' },
-                { value: '4.9', label: 'Rating' },
-                { value: '10+', label: 'Awards' },
-              ].map((stat, index) => (
-                <motion.div
-                  key={index}
-                  className="text-white/90"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <div className="text-3xl md:text-4xl font-bold mb-2">{stat.value}</div>
-                  <div className="text-sm md:text-base text-white/70">{stat.label}</div>
-                </motion.div>
-              ))}
             </motion.div>
           </motion.div>
         </div>
@@ -193,7 +186,7 @@ export const Gallery: React.FC = () => {
       </section>
 
       {/* Gallery Grid */}
-      <section className="py-20">
+      <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <motion.div
             variants={staggerContainer}
@@ -203,17 +196,39 @@ export const Gallery: React.FC = () => {
           >
             <motion.div 
               variants={fadeIn}
-              className="text-center max-w-2xl mx-auto mb-12"
+              className="text-center max-w-2xl mx-auto space-y-6"
             >
-              <Badge className="mb-4">Our Work</Badge>
-              <h2 className="text-3xl font-bold mb-4">Latest Masterpieces</h2>
-              <p className="text-muted-foreground">
-                Browse through our collection of premium cuts and styles
-              </p>
+              <div>
+                <Badge className="mb-4">Our Work</Badge>
+                <h2 className="text-3xl font-bold mb-4">Latest Masterpieces</h2>
+                <p className="text-muted-foreground">
+                  Browse through our collection of premium cuts and styles
+                </p>
+              </div>
+
+              {/* Category Filters */}
+              <div className="flex flex-wrap justify-center gap-2">
+                {categories.map((cat) => (
+                  <Button
+                    key={cat}
+                    size="sm"
+                    variant={selectedCategory === cat ? 'default' : 'outline'}
+                    onClick={() => setSelectedCategory(cat)}
+                    className="px-4 py-1 text-sm"
+                  >
+                    {cat}
+                  </Button>
+                ))}
+              </div>
             </motion.div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {galleryImages.map((image, index) => (
+            <motion.div
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+              className="grid auto-rows-[200px] md:auto-rows-[250px] gap-4 md:grid-cols-3 lg:grid-cols-4"
+            >
+              {filteredImages.map((image, index) => (
                 <motion.div
                   key={index}
                   variants={imageCard}
@@ -222,9 +237,10 @@ export const Gallery: React.FC = () => {
                   whileHover="hover"
                   viewport={{ once: true }}
                   onClick={() => setSelectedImage(image.url)}
+                  className={getSpanClasses(index)}
                 >
-                  <Card className="group h-full overflow-hidden border-2 hover:border-primary/50 transition-colors cursor-pointer">
-                    <div className="aspect-square relative overflow-hidden">
+                  <Card className="group h-full w-full overflow-hidden border-2 hover:border-primary/50 transition-colors cursor-pointer flex flex-col">
+                    <div className="relative flex-1 overflow-hidden">
                       <img
                         src={image.url}
                         alt={image.title}
@@ -237,7 +253,7 @@ export const Gallery: React.FC = () => {
                       </div>
                     </div>
                     <div className="p-4">
-                      <Badge variant="secondary" className="mb-2">
+                      <Badge className="mb-2">
                         {image.category}
                       </Badge>
                       <h3 className="font-semibold group-hover:text-primary transition-colors">
@@ -247,7 +263,7 @@ export const Gallery: React.FC = () => {
                   </Card>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
 
             {/* CTA Section */}
             <motion.div
@@ -263,6 +279,7 @@ export const Gallery: React.FC = () => {
               >
                 <motion.a
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -278,6 +295,10 @@ export const Gallery: React.FC = () => {
       {/* Image Lightbox */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-0">
+          {/* Visually hidden title for accessibility */}
+          <DialogHeader className="sr-only">
+            <DialogTitle>Preview image</DialogTitle>
+          </DialogHeader>
           <Button
             variant="ghost"
             size="icon"
