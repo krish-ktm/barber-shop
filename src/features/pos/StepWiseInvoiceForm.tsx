@@ -540,10 +540,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                           setIsNewCustomer(false);
                           setIsGuestUser(false);
                         }}
-                        className="pr-8"
+                        className="pr-10"
                       />
                       {isSearching && (
-                        <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </span>
                       )}
                     </div>
                   </FormControl>
