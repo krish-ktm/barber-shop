@@ -46,14 +46,14 @@ export const getAllServices = async (
     }
   });
 
-  return get<ServiceListResponse>(`/services?${params.toString()}`);
+  return get<ServiceListResponse>(`/services?${params.toString()}`, { skipAuth: true });
 };
 
 /**
  * Get service by ID
  */
 export const getServiceById = async (id: string): Promise<ServiceResponse> => {
-  return get<ServiceResponse>(`/services/${id}`);
+  return get<ServiceResponse>(`/services/${id}`, { skipAuth: true });
 };
 
 /**

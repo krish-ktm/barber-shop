@@ -6,15 +6,28 @@ const API_BASE_URL = 'https://barber-shop-api-eight.vercel.app/api';
 // Create a custom event for token expiration
 export const TOKEN_EXPIRED_EVENT = 'token_expired';
 
+// Optional configuration for API requests
+interface ApiClientOptions {
+  /**
+   * If set to true the Authorization header will NOT be attached even if a
+   * token exists in storage. This is useful for publicly accessible endpoints
+   * where sending an expired/invalid token would lead to unnecessary 401
+   * responses that in turn redirect the user to the login screen.
+   */
+  skipAuth?: boolean;
+}
+
 /**
  * Core API client for making authenticated requests to the backend
  */
 export const apiClient = async <T>(
   endpoint: string,
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-  body?: unknown
+  body?: unknown,
+  options: ApiClientOptions = {}
 ): Promise<T> => {
-  const token = getToken();
+  const { skipAuth = false } = options;
+  const token = skipAuth ? null : getToken();
   const baseUrl = getApiBaseUrl();
   
   const headers: HeadersInit = {
@@ -25,13 +38,13 @@ export const apiClient = async <T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const options: RequestInit = {
+  const optionsRequest: RequestInit = {
     method,
     headers,
   };
   
   if (body && (method === 'POST' || method === 'PUT')) {
-    options.body = JSON.stringify(body);
+    optionsRequest.body = JSON.stringify(body);
   }
   
   const url = `${baseUrl}${endpoint}`;
@@ -43,7 +56,7 @@ export const apiClient = async <T>(
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     const response = await fetch(url, {
-      ...options,
+      ...optionsRequest,
       signal: controller.signal
     });
     
@@ -103,16 +116,17 @@ export const apiClient = async <T>(
 /**
  * Convenience methods for different HTTP verbs
  */
-export const get = <T>(endpoint: string) => apiClient<T>(endpoint, 'GET');
+export const get = <T>(endpoint: string, options: ApiClientOptions = {}) => 
+  apiClient<T>(endpoint, 'GET', undefined, options);
 
-export const post = <T>(endpoint: string, body: unknown) => 
-  apiClient<T>(endpoint, 'POST', body);
+export const post = <T>(endpoint: string, body: unknown, options: ApiClientOptions = {}) => 
+  apiClient<T>(endpoint, 'POST', body, options);
 
-export const put = <T>(endpoint: string, body: unknown) => 
-  apiClient<T>(endpoint, 'PUT', body);
+export const put = <T>(endpoint: string, body: unknown, options: ApiClientOptions = {}) => 
+  apiClient<T>(endpoint, 'PUT', body, options);
 
-export const del = <T>(endpoint: string) => 
-  apiClient<T>(endpoint, 'DELETE');
+export const del = <T>(endpoint: string, options: ApiClientOptions = {}) => 
+  apiClient<T>(endpoint, 'DELETE', undefined, options);
 
 // Helper to handle API responses
 const handleResponse = async (response: Response) => {

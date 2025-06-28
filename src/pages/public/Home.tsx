@@ -79,7 +79,7 @@ export const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden shadow-2xl">
         <motion.div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
@@ -90,7 +90,7 @@ export const Home: React.FC = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <motion.div 
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-black/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -102,7 +102,7 @@ export const Home: React.FC = () => {
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-8"
+            className="space-y-8 flex flex-col h-full"
           >
             <motion.h1 
               variants={fadeIn}
@@ -130,6 +130,7 @@ export const Home: React.FC = () => {
               >
                 <motion.a 
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -146,6 +147,7 @@ export const Home: React.FC = () => {
               >
                 <motion.a 
                   href="/services"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -156,29 +158,47 @@ export const Home: React.FC = () => {
 
             <motion.div 
               variants={fadeIn}
-              className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4 md:gap-8 mt-10 sm:mt-12 md:mt-16"
+              className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-5 md:gap-8 mt-auto items-center"
             >
               {[
-                { value: '10+', label: 'Expert Barbers' },
-                { value: '5000+', label: 'Happy Clients' },
-                { value: '4.9', label: 'Rating' },
-                { value: '15+', label: 'Years Experience' },
-              ].map((stat, index) => (
-                <motion.div
-                  key={index}
-                  className="text-white/90"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">{stat.value}</div>
-                  <div className="text-xs sm:text-sm md:text-base text-white/70">{stat.label}</div>
-                </motion.div>
+                { type: 'stat', value: '10+', label: 'Expert Barbers' },
+                { type: 'stat', value: '5000+', label: 'Happy Clients' },
+                { type: 'logo' },
+                { type: 'stat', value: '4.9', label: 'Rating' },
+                { type: 'stat', value: '15+', label: 'Years Experience' },
+              ].map((item, index) => (
+                item.type === 'stat' ? (
+                  <motion.div
+                    key={index}
+                    className="text-white/90 text-center"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">{item.value}</div>
+                    <div className="text-xs sm:text-sm md:text-base text-white/70">{item.label}</div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={index}
+                    className="flex justify-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    >
+                      <img
+                        src="/logo/logo-tran.png"
+                        alt="Gentlemen's House Logo"
+                        className="h-[10.5rem] w-auto drop-shadow-md"
+                      />
+                  </motion.div>
+                )
               ))}
             </motion.div>
           </motion.div>
         </div>
 
         <motion.div
-          className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black to-transparent"
+          className="absolute bottom-0 left-0 w-full h-[16rem] bg-gradient-to-t from-black/90 via-black/70 to-transparent"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
