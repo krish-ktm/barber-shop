@@ -2,16 +2,9 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowRight, 
-  Clock, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Users, 
   BadgeCheck,
   Sparkles,
   Crown,
-  Award,
-  Star,
   Shield,
   Heart,
   Gem
@@ -288,149 +281,7 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            className="grid md:grid-cols-2 gap-12 items-center"
-          >
-            <motion.div
-              variants={{
-                initial: { opacity: 0, x: -50 },
-                animate: { 
-                  opacity: 1, 
-                  x: 0,
-                  transition: {
-                    type: "spring",
-                    stiffness: 100,
-                    damping: 20
-                  }
-                }
-              }}
-              className="relative"
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  className="aspect-[4/5] relative rounded-lg overflow-hidden"
-                >
-                  <img
-                    src="https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg?auto=compress&cs=tinysrgb&w=1080"
-                    alt="Barber at work"
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  className="aspect-[4/5] relative rounded-lg overflow-hidden mt-8"
-                >
-                  <img
-                    src="https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg?auto=compress&cs=tinysrgb&w=1080"
-                    alt="Barber tools"
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                </motion.div>
-              </div>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-                className="absolute -bottom-8 right-0 md:-right-8 bg-white rounded-lg shadow-xl p-6 max-w-[240px]"
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Award className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">15+</div>
-                    <div className="text-sm text-muted-foreground">Years of Excellence</div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Star className="h-4 w-4 text-primary" />
-                    <span className="text-sm">4.9 Average Rating</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" />
-                    <span className="text-sm">5000+ Happy Clients</span>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              variants={{
-                initial: { opacity: 0, x: 50 },
-                animate: { 
-                  opacity: 1, 
-                  x: 0,
-                  transition: {
-                    type: "spring",
-                    stiffness: 100,
-                    damping: 20
-                  }
-                }
-              }}
-              className="space-y-6 bg-white/80 backdrop-blur-md rounded-xl shadow-xl p-8"
-            >
-              <Badge>About Us</Badge>
-              <h2 className="text-3xl md:text-4xl font-bold leading-tight">
-                A Legacy of Excellence in
-                <span className="block">Modern Grooming</span>
-              </h2>
-              <div className="space-y-4 text-muted-foreground">
-                <p>
-                  Since 2010, Modern Cuts has been redefining the art of men's grooming. 
-                  What started as a single chair has grown into a premium destination for 
-                  discerning gentlemen who appreciate quality, style, and exceptional service.
-                </p>
-                <p>
-                  Our journey is built on a foundation of expertise, innovation, and an 
-                  unwavering commitment to client satisfaction. Every cut, every shave, 
-                  and every service is delivered with precision and personalized attention.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-6 pt-6">
-                {[
-                  {value:'10+', label:'Expert Barbers'},
-                  {value:'15k+', label:'Haircuts Done'},
-                  {value:'98%', label:'Client Satisfaction'},
-                  {value:'12+', label:'Industry Awards'}
-                ].map((stat,index)=>(
-                  <div key={index} className="space-y-2 hover:scale-105 transition-transform duration-300">
-                    <div className="text-2xl font-extrabold text-secondary">{stat.value}</div>
-                    <div className="text-sm text-muted-foreground">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="pt-6">
-                <Button size="lg" asChild>
-                  <motion.a
-                    href="/about"
-                    className="text-white hover:text-white"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Learn More About Us
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </motion.a>
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
+      
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <motion.div
@@ -454,22 +305,6 @@ export const Home: React.FC = () => {
             <div className="-mx-4 sm:-mx-6 md:-mx-8 lg:-mx-16 pb-8">
               <ServicesShadCarousel services={featuredServices} />
             </div>
-
-            <motion.div
-              variants={fadeIn}
-              className="text-center mt-8"
-            >
-              <Button variant="outline" size="lg" asChild>
-                <motion.a
-                  href="/services"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  View All Services
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </motion.a>
-              </Button>
-            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -494,13 +329,14 @@ export const Home: React.FC = () => {
               </p>
             </motion.div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3">
               {featuredStaff.map((staff) => (
                 <motion.div
                   key={staff.id}
                   variants={serviceCard}
                   whileHover="hover"
                   viewport={{ once: true }}
+                  className="w-full"
                 >
                   <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
                     <div className="aspect-[4/3] relative overflow-hidden">
@@ -536,7 +372,7 @@ export const Home: React.FC = () => {
           animate={{ scale: 1 }}
           transition={{ duration: 0.8 }}
         >
-          <div className="absolute inset-0 bg-black/70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-black/60" />
         </motion.div>
         
         <div className="container mx-auto px-4 relative">
@@ -551,8 +387,8 @@ export const Home: React.FC = () => {
               variants={fadeIn}
               className="text-white space-y-6"
             >
-              <Badge variant="secondary">The Experience</Badge>
-              <h2 className="text-3xl md:text-4xl font-bold">
+              <Badge className="h-8 text-base px-4">The Experience</Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-white">
                 More Than Just a Haircut
               </h2>
               <p className="text-white/80 text-lg">
@@ -566,19 +402,19 @@ export const Home: React.FC = () => {
                   { icon: Sparkles, text: "Relaxing atmosphere" },
                 ].map((item, index) => (
                   <div key={index} className="flex items-center gap-3">
-                    <item.icon className="h-5 w-5 text-primary-foreground" />
+                    <item.icon className="h-5 w-5 text-primary" />
                     <span className="text-white/80">{item.text}</span>
                   </div>
                 ))}
               </div>
               <Button 
-                variant="secondary"
                 size="lg"
                 className="mt-4"
                 asChild
               >
                 <motion.a
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -590,120 +426,16 @@ export const Home: React.FC = () => {
 
             <motion.div
               variants={fadeIn}
-              className="relative aspect-[4/3] bg-white/10 rounded-lg backdrop-blur-sm p-8"
+              className="relative aspect-[4/3] rounded-lg overflow-hidden border-2 border-white/10"
             >
               <img
                 src="https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080"
                 alt="Barber Shop Interior"
                 loading="lazy"
                 decoding="async"
-                className="rounded-lg object-cover w-full h-full"
+                className="object-cover w-full h-full transition-transform duration-300 hover:scale-105"
               />
             </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            className="space-y-12"
-          >
-            <motion.div 
-              variants={fadeIn}
-              className="text-center max-w-2xl mx-auto mb-12"
-            >
-              <Badge className="mb-4">Visit Us</Badge>
-              <h2 className="text-3xl font-bold mb-4">Get in Touch</h2>
-              <p className="text-muted-foreground">
-                Drop by our shop or get in touch to schedule your appointment
-              </p>
-            </motion.div>
-
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <motion.div
-                variants={fadeIn}
-                className="space-y-6"
-              >
-                <Card className="p-4">
-                  <div className="flex items-start space-x-4">
-                    <MapPin className="h-6 w-6 text-primary shrink-0" />
-                    <div>
-                      <h3 className="font-semibold mb-1">Location</h3>
-                      <p className="text-muted-foreground">
-                        123 Main Street<br />
-                        New York, NY 10001
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-4">
-                  <div className="flex items-start space-x-4">
-                    <Clock className="h-6 w-6 text-primary shrink-0" />
-                    <div>
-                      <h3 className="font-semibold mb-1">Hours</h3>
-                      <div className="text-muted-foreground">
-                        <div className="flex justify-between">
-                          <span>Monday - Friday</span>
-                          <span>9:00 AM - 8:00 PM</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Saturday</span>
-                          <span>10:00 AM - 6:00 PM</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Sunday</span>
-                          <span>Closed</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-4">
-                  <div className="flex items-start space-x-4">
-                    <Phone className="h-6 w-6 text-primary shrink-0" />
-                    <div>
-                      <h3 className="font-semibold mb-1">Phone</h3>
-                      <p className="text-muted-foreground">(555) 123-4567</p>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card className="p-4">
-                  <div className="flex items-start space-x-4">
-                    <Mail className="h-6 w-6 text-primary shrink-0" />
-                    <div>
-                      <h3 className="font-semibold mb-1">Email</h3>
-                      <p className="text-muted-foreground">info@moderncuts.com</p>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                variants={fadeIn}
-                className="relative aspect-video rounded-lg overflow-hidden"
-              >
-                <img
-                  src="https://images.pexels.com/photos/1634843/pexels-photo-1634843.jpeg?auto=compress&cs=tinysrgb&w=1080"
-                  alt="Shop Location"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                  <h3 className="text-xl font-semibold mb-2">Visit Our Shop</h3>
-                  <p className="text-white/80">Experience premium grooming services</p>
-                </div>
-              </motion.div>
-            </div>
           </motion.div>
         </div>
       </section>

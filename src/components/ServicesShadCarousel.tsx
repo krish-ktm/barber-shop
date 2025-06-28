@@ -41,7 +41,7 @@ export const ServicesShadCarousel: React.FC<ServicesShadCarouselProps> = ({ serv
     >
       <CarouselContent className="py-4 overflow-visible ml-0">
         {services.map((service) => (
-          <CarouselItem key={service.id} className="pl-0 md:pl-1 basis-2/3 sm:basis-1/3 lg:basis-1/5 overflow-visible">
+          <CarouselItem key={service.id} className="pl-0 md:pl-1 basis-3/4 sm:basis-1/2 lg:basis-1/4 xl:basis-1/5 overflow-visible">
             <motion.div whileHover={{ scale: 1.02 }} className="h-full z-10 relative p-2">
               <Card className="h-full group rounded-xl overflow-hidden shadow-sm ring-1 ring-primary/10 hover:shadow-lg hover:ring-primary/50 transition-all duration-300 flex flex-col bg-white">
                 <div className="aspect-[4/3] bg-muted/50 relative overflow-hidden">

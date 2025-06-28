@@ -73,7 +73,7 @@ export const Contact: React.FC = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <motion.div 
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-black/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -113,6 +113,7 @@ export const Contact: React.FC = () => {
               >
                 <motion.a 
                   href="#contact-form"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -129,6 +130,7 @@ export const Contact: React.FC = () => {
               >
                 <motion.a 
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -175,7 +177,7 @@ export const Contact: React.FC = () => {
                 whileHover="hover"
                 viewport={{ once: true }}
               >
-                <Card className="h-full">
+                <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
                   <CardContent className="pt-6 p-6">
                     <div className="flex flex-col items-center text-center space-y-4">
                       <div className="p-3 bg-primary/5 rounded-full">
@@ -188,8 +190,8 @@ export const Contact: React.FC = () => {
                           New York, NY 10001
                         </p>
                       </div>
-                      <Button variant="outline" className="w-full" asChild>
-                        <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">
+                      <Button variant="default" className="w-full" asChild>
+                        <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="hover:text-white text-white">
                           Get Directions
                         </a>
                       </Button>
@@ -203,7 +205,7 @@ export const Contact: React.FC = () => {
                 whileHover="hover"
                 viewport={{ once: true }}
               >
-                <Card className="h-full">
+                <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
                   <CardContent className="pt-6 p-6">
                     <div className="flex flex-col items-center text-center space-y-4">
                       <div className="p-3 bg-primary/5 rounded-full">
@@ -217,8 +219,8 @@ export const Contact: React.FC = () => {
                           <p>Sunday: Closed</p>
                         </div>
                       </div>
-                      <Button variant="outline" className="w-full" asChild>
-                        <a href="/booking">
+                      <Button variant="default" className="w-full" asChild>
+                        <a href="/booking" className="hover:text-white text-white">
                           Book Now
                         </a>
                       </Button>
@@ -232,7 +234,7 @@ export const Contact: React.FC = () => {
                 whileHover="hover"
                 viewport={{ once: true }}
               >
-                <Card className="h-full">
+                <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
                   <CardContent className="pt-6 p-6">
                     <div className="flex flex-col items-center text-center space-y-4">
                       <div className="p-3 bg-primary/5 rounded-full">
@@ -246,8 +248,8 @@ export const Contact: React.FC = () => {
                           <p>Live Chat Available</p>
                         </div>
                       </div>
-                      <Button variant="outline" className="w-full" asChild>
-                        <a href="tel:(555)123-4567">
+                      <Button variant="default" className="w-full" asChild>
+                        <a href="tel:(555)123-4567" className="hover:text-white text-white">
                           Call Now
                         </a>
                       </Button>
@@ -320,7 +322,7 @@ export const Contact: React.FC = () => {
                       />
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full">
+                    <Button type="submit" size="lg" className="w-full hover:text-white">
                       <Send className="h-4 w-4 mr-2" />
                       Send Message
                     </Button>
@@ -400,7 +402,7 @@ export const Contact: React.FC = () => {
 
       {/* CTA Section */}
       <motion.section 
-        className="py-20 bg-primary text-primary-foreground"
+        className="py-20 bg-muted/30"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -417,12 +419,12 @@ export const Contact: React.FC = () => {
               variants={fadeIn}
               className="text-3xl md:text-4xl font-bold mb-6"
             >
-              Ready to Experience Our Services?
+              Ready to Experience the Difference?
             </motion.h2>
             
             <motion.p 
               variants={fadeIn}
-              className="text-primary-foreground/80 text-lg max-w-2xl mx-auto mb-8"
+              className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8"
             >
               Book your appointment now and discover why we're the preferred choice for modern gentlemen
             </motion.p>
@@ -430,12 +432,12 @@ export const Contact: React.FC = () => {
             <motion.div variants={fadeIn}>
               <Button 
                 size="lg" 
-                variant="secondary"
                 className="min-w-[200px]"
                 asChild
               >
                 <motion.a
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

@@ -17,8 +17,8 @@ export const PublicHeader: React.FC = () => {
   const { scrollY } = useScroll();
   
   // Transform scroll position to header height and logo size
-  const headerHeight = useTransform(scrollY, [0, 100], [96, 64]); // 24rem to 16rem
-  const logoHeight = useTransform(scrollY, [0, 100], [112, 80]); // 28rem to 20rem
+  const headerHeight = useTransform(scrollY, [0, 120], [120, 72]);
+  const logoHeight = useTransform(scrollY, [0, 120], [140, 90]);
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -31,7 +31,7 @@ export const PublicHeader: React.FC = () => {
 
   return (
     <motion.header 
-      className="bg-white border-b sticky top-0 z-50"
+      className="bg-white/70 backdrop-blur-lg shadow-sm sticky top-0 z-50"
       style={{
         height: headerHeight,
       }}
