@@ -124,11 +124,11 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
               whileTap={{ scale: 0.98 }}
             >
               <Button
-                variant={isSelected ? "default" : "outline"}
-                className={`w-full h-auto p-3 text-left flex items-start gap-3 transition-all duration-200 ${
-                  isSelected 
-                    ? "bg-gradient-to-r from-primary to-primary/90 shadow-md" 
-                    : "hover:border-primary/50 hover:shadow-sm"
+                variant="ghost"
+                className={`group w-full h-auto p-4 sm:p-5 text-left flex items-start gap-4 rounded-xl border transition-all duration-200 ${
+                  isSelected
+                    ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg border-primary hover:bg-gradient-to-r hover:from-primary hover:to-primary/90 hover:text-primary-foreground"
+                    : "bg-accent/10 border-accent/30 text-foreground shadow-sm hover:border-accent/50 hover:bg-accent/20 hover:shadow-md"
                 }`}
                 onClick={(e) => {
                   e.preventDefault(); // Prevent default button behavior
@@ -137,7 +137,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                 }}
                 type="button" // Explicitly set type to button
               >
-                <Avatar className={`h-12 w-12 border shrink-0 mt-0.5 ${isSelected ? "ring-2 ring-primary-foreground/30" : ""}`}>
+                <Avatar className={`h-12 w-12 shrink-0 mt-0.5 ${isSelected ? "ring-2 ring-primary-foreground/30" : ""}`}>
                   <AvatarImage src={staff.image} alt={staff.name} />
                   <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
                 </Avatar>
@@ -146,12 +146,12 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                     <span className={`font-medium truncate ${isSelected ? "text-primary-foreground" : ""}`}>
                       {staff.name}
                     </span>
-                    <Badge 
-                      variant={isSelected ? "outline" : "secondary"} 
-                      className={`shrink-0 ${
-                        isSelected 
-                          ? "border-primary-foreground/30 text-primary-foreground bg-primary-foreground/10" 
-                          : ""
+                    <Badge
+                      variant="default"
+                      className={`text-xs shrink-0 border-0 ${
+                        isSelected
+                          ? "bg-white/20 text-white group-hover:bg-white/20"
+                          : "bg-muted/40 text-foreground group-hover:bg-muted/50"
                       }`}
                     >
                       Available
@@ -165,24 +165,24 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                     {staff.position}
                   </span>
                   <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                    <Badge 
-                      variant="outline"
-                      className={`text-xs py-0 h-5 px-1.5 flex items-center gap-1 ${
-                        isSelected 
-                          ? "border-primary-foreground/30 text-primary-foreground bg-primary-foreground/10" 
-                          : ""
+                    <Badge
+                      variant="default"
+                      className={`text-xs py-0 h-5 px-1.5 flex items-center gap-1 border-0 ${
+                        isSelected
+                          ? "bg-white/20 text-white group-hover:bg-white/20"
+                          : "bg-muted/40 text-foreground group-hover:bg-muted/50"
                       }`}
                     >
                       <Scissors className="h-2.5 w-2.5" />
                       <span>{Array.isArray(staff.services) ? staff.services.length : 0}</span>
                     </Badge>
                     {selectedServices.length > 0 && bookingFlow === 'service-first' && (
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-xs ${
-                          isSelected 
-                            ? "bg-primary-foreground/20 text-primary-foreground" 
-                            : ""
+                      <Badge
+                        variant="default"
+                        className={`text-xs border-0 ${
+                          isSelected
+                            ? "bg-white/20 text-white group-hover:bg-white/20"
+                            : "bg-muted/40 text-foreground group-hover:bg-muted/50"
                         }`}
                       >
                         All selected services

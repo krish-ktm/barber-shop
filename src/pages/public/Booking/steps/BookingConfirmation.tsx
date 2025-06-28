@@ -124,63 +124,84 @@ export const BookingConfirmation: React.FC = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="flex flex-col items-center justify-center py-8 space-y-6 text-center"
+        className="flex flex-col items-center justify-center py-10 space-y-8 text-center"
       >
-        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-          <CheckCircle className="h-8 w-8 text-primary" />
+        {/* Success Icon */}
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary to-primary/70 opacity-30 blur-lg" />
+          <div className="relative w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg">
+            <CheckCircle className="h-10 w-10 text-primary-foreground" />
+          </div>
         </div>
-        
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold">Booking Confirmed!</h2>
-          <p className="text-muted-foreground">
-            Your appointment has been successfully booked.
+
+        {/* Heading & ID */}
+        <div className="space-y-3">
+          <h2 className="text-3xl font-extrabold tracking-tight">Booking Confirmed!</h2>
+          <p className="text-muted-foreground max-w-xs sm:max-w-md mx-auto">
+            Thank you for choosing us. We look forward to serving you!
           </p>
           {bookingId && (
-            <p className="text-sm font-medium mt-2">
-              Booking ID: {bookingId}
-            </p>
+            <p className="text-sm font-medium text-primary/80">Reference ID: <span className="text-foreground">{bookingId}</span></p>
           )}
         </div>
-        
-        <div className="w-full max-w-md p-6 border rounded-lg bg-card mt-6 shadow-sm">
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Date:</span>
-              <span className="font-medium">{format(selectedDate!, 'MMMM d, yyyy')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Time:</span>
-              <span className="font-medium">
-                {bookingResponse?.appointment?.display_time || bookingResponse?.appointment?.displayTime || formatDisplayTime(selectedTime!)}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-muted-foreground mb-1">Services:</span>
-              {selectedServices.map((service) => (
-                <div key={service.id} className="flex justify-between pl-2 mb-0.5">
-                  <span className="font-medium">{service.name}</span>
-                  <span>{formatCurrency(service.price)}</span>
+
+        {/* Summary Card */}
+        <div className="w-full max-w-lg">
+          <div className="rounded-2xl border border-primary/40 bg-card shadow-lg overflow-hidden">
+            <div className="p-6 space-y-4 divide-y divide-muted/40">
+              {/* Date & Time */}
+              <div className="flex justify-between items-start pb-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{format(selectedDate!, 'MMM d, yyyy')}</span>
                 </div>
-              ))}
-              {selectedServices.length > 1 && (
-                <div className="flex justify-between border-t mt-1 pt-1 font-semibold">
-                  <span>Total:</span>
-                  <span>{formatCurrency(totalPrice)}</span>
+                <span className="font-medium">
+                  {bookingResponse?.appointment?.display_time || bookingResponse?.appointment?.displayTime || formatDisplayTime(selectedTime!)}
+                </span>
+              </div>
+
+              {/* Services */}
+              <div className="pt-4 pb-4 space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2"><Scissors className="h-3 w-3 text-primary" /> Services</h4>
+                <div className="space-y-1">
+                  {selectedServices.map((service) => (
+                    <div key={service.id} className="flex justify-between text-sm">
+                      <span>{service.name}</span>
+                      <span>{formatCurrency(service.price)}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Staff:</span>
-              <span className="font-medium">{selectedStaffName || "No staff selected"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Timezone:</span>
-              <span className="font-medium">{bookingTimezone || clientTimezone}</span>
+                {selectedServices.length > 1 && (
+                  <div className="flex justify-between font-semibold pt-2 border-t border-muted/30 text-sm">
+                    <span>Total</span>
+                    <span>{formatCurrency(totalPrice)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Staff & Duration */}
+              <div className="pt-4 pb-4 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2"><User className="h-3 w-3 text-primary" /> Staff</span>
+                  <span>{selectedStaffName || "N/A"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2"><Clock className="h-3 w-3 text-primary" /> Duration</span>
+                  <span>{totalDuration} min</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2"><Globe className="h-3 w-3 text-primary" /> Timezone</span>
+                  <span>{bookingTimezone || clientTimezone}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        
-        <Button onClick={handleStartOver} className="mt-6 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
+
+        <Button
+          onClick={handleStartOver}
+          className="mt-4 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-md"
+        >
           Book Another Appointment
         </Button>
       </motion.div>
@@ -278,7 +299,7 @@ export const BookingConfirmation: React.FC = () => {
           {selectedStaffName ? (
             <div className="pl-9">
               <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 border">
+                <Avatar className="h-12 w-12">
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {selectedStaffName?.charAt(0) || <User className="h-5 w-5" />}
                   </AvatarFallback>

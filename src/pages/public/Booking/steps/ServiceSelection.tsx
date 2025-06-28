@@ -193,8 +193,12 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
                     return (
                       <Button
                         key={`service-${service.id}`}
-                        variant={isSelected ? "default" : "outline"}
-                        className={`w-full p-3 h-auto text-left flex flex-col ${isSelected ? "" : "hover:border-primary/50"}`}
+                        variant="ghost"
+                        className={`group w-full p-4 sm:p-5 h-auto text-left flex flex-col rounded-xl border transition-all duration-200 ${
+                          isSelected
+                            ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg border-primary hover:bg-gradient-to-r hover:from-primary hover:to-primary/90 hover:text-primary-foreground"
+                            : "bg-card hover:border-primary/40 hover:shadow-md"
+                        }`}
                         onClick={(e) => {
                           e.preventDefault(); // Prevent default button behavior
                           e.stopPropagation(); // Stop event propagation
@@ -204,10 +208,16 @@ export const ServiceSelection: React.FC<ServiceSelectionProps> = ({ hideHeading 
                       >
                         <div className="flex items-start justify-between w-full">
                           <div className="flex flex-col">
-                            <span className="font-medium truncate max-w-[180px] sm:max-w-[250px]">{service.name}</span>
+                            <span className={`font-medium truncate max-w-[180px] sm:max-w-[250px] ${isSelected ? "text-primary-foreground" : ""}`}>{service.name}</span>
                             <div className="flex items-center gap-1 mt-1">
-                              <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
-                              <span className="text-xs text-muted-foreground">{service.duration} min</span>
+                              <Clock
+                                className={`h-3 w-3 shrink-0 ${isSelected ? "text-primary-foreground" : "text-muted-foreground"}`}
+                              />
+                              <span
+                                className={`text-xs ${isSelected ? "text-primary-foreground/90" : "text-muted-foreground"}`}
+                              >
+                                {service.duration} min
+                              </span>
                             </div>
                           </div>
                           <span className={`text-base font-medium shrink-0 ${isSelected ? "text-primary-foreground" : ""}`}>
