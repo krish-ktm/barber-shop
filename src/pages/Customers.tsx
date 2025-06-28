@@ -402,6 +402,18 @@ export const Customers: React.FC = () => {
                 <SelectItem value="desc">Desc</SelectItem>
               </SelectContent>
             </Select>
+
+            {getActiveFilterCount() > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-9"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            )}
           </div>
 
           {/* Add button - full width on mobile, inline on larger */}
