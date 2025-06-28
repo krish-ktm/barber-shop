@@ -282,46 +282,34 @@ export const Services: React.FC = () => {
 
       {/* CTA Section */}
       <motion.section 
-        className="py-16 bg-primary text-primary-foreground"
+        className="py-20 bg-muted/30"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
       >
-        <div className="container mx-auto px-4 text-center">
-          <motion.div 
-            className="max-w-2xl mx-auto"
+        <div className="container mx-auto px-4">
+          <motion.div
+            className="text-center max-w-2xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <h2 className="text-3xl font-bold mb-6 text-white">
-              Ready to Experience Premium Grooming?
-            </h2>
-            <p className="text-lg text-primary-foreground/90 mb-8">
-              Book your appointment today and elevate your style
+            <h2 className="text-3xl font-bold mb-6">Ready for a Fresh Look?</h2>
+            <p className="text-muted-foreground mb-8">
+              Book an appointment with our expert barbers and experience premium grooming services designed for you
             </p>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                size="lg" 
-                variant="secondary"
-                className="min-w-[200px] text-white"
-                asChild
+            <Button size="lg" asChild>
+              <motion.a
+                href="/booking"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <motion.a
-                  href="/booking"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  Book Now
-                  <ArrowRight className="h-5 w-5 ml-2" />
-                </motion.a>
-              </Button>
-            </motion.div>
+                Book Your Appointment
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </motion.a>
+            </Button>
           </motion.div>
         </div>
       </motion.section>
