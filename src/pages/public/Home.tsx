@@ -708,26 +708,20 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* CTA Section */}
       <motion.section 
-        className="py-20 bg-primary text-primary-foreground relative overflow-hidden"
+        className="py-20 bg-muted/30"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
       >
-        <motion.div 
-          className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg')] bg-cover bg-center bg-no-repeat opacity-10"
-          initial={{ scale: 1.1 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.8 }}
-        />
-        
-        <div className="container mx-auto px-4 text-center relative">
+        <div className="container mx-auto px-4">
           <motion.div
+            className="text-center max-w-2xl mx-auto"
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-8"
           >
             <motion.h2 
               variants={fadeIn}
@@ -738,28 +732,21 @@ export const Home: React.FC = () => {
             
             <motion.p 
               variants={fadeIn}
-              className="text-primary-foreground/80 text-lg max-w-2xl mx-auto mb-8"
+              className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8"
             >
               Book your appointment now and discover why we're the preferred choice for modern gentlemen
             </motion.p>
             
-            <motion.div variants={fadeIn}>
-              <Button 
-                size="lg" 
-                variant="secondary"
-                className="min-w-[200px]"
-                asChild
+            <Button size="lg" asChild>
+              <motion.a
+                href="/booking"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <motion.a
-                  href="/booking"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Book Your Visit
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </motion.a>
-              </Button>
-            </motion.div>
+                Book Your Visit
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </motion.a>
+            </Button>
           </motion.div>
         </div>
       </motion.section>

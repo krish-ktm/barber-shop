@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Star, Scissors, Users, Award } from 'lucide-react';
+import { Clock, Star, Scissors, Users, Award, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -355,18 +355,18 @@ export const About: React.FC = () => {
 
       {/* CTA Section */}
       <motion.section 
-        className="py-20"
+        className="py-20 bg-muted/30"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
       >
-        <div className="container mx-auto px-4 text-center">
+        <div className="container mx-auto px-4">
           <motion.div
+            className="text-center max-w-2xl mx-auto space-y-8"
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-8"
           >
             <motion.h2 
               variants={fadeIn}
@@ -382,22 +382,16 @@ export const About: React.FC = () => {
               Book your appointment now and discover why we're the preferred choice for modern gentlemen
             </motion.p>
             
-            <motion.div variants={fadeIn}>
-              <Button 
-                size="lg" 
-                className="min-w-[200px]"
-                asChild
+            <Button size="lg" asChild>
+              <motion.a
+                href="/booking"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <motion.a
-                  href="/booking"
-                  className="text-white hover:text-white"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Book Your Visit
-                </motion.a>
-              </Button>
-            </motion.div>
+                Book Your Visit
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </motion.a>
+            </Button>
           </motion.div>
         </div>
       </motion.section>
