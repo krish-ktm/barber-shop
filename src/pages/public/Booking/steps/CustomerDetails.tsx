@@ -76,21 +76,27 @@ export const CustomerDetails: React.FC = () => {
           }}
         >
           <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
-          <div className="relative space-y-1">
+          <div className="relative">
             <Input
               id="phone"
               value={customerDetails.phone}
-              onChange={(e) =>
-                setCustomerDetails({ ...customerDetails, phone: e.target.value })
-              }
+              maxLength={10}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                setCustomerDetails({ ...customerDetails, phone: digits });
+              }}
               placeholder="Enter your phone number"
               required
             />
-            {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
-            <p className="text-xs text-muted-foreground">
-              Enter your 10-digit phone number. We'll search our records and auto-fill your details if you've booked before.
-            </p>
+            {isSearching && (
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </span>
+            )}
           </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Enter your 10-digit phone number. We'll search our records and auto-fill your details if you've booked before.
+          </p>
         </motion.div>
 
         <motion.div

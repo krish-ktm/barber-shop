@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Calendar, CheckCircle, Clock, Scissors, User, Globe } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Scissors, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -27,7 +27,6 @@ export const BookingConfirmation: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
-  const [bookingTimezone, setBookingTimezone] = useState<string | null>(null);
   const [bookingResponse, setBookingResponse] = useState<BookingResponse | null>(null);
 
   // Get client timezone
@@ -77,9 +76,6 @@ export const BookingConfirmation: React.FC = () => {
       if (response.success) {
         setIsSuccess(true);
         setBookingId(response.appointment.id);
-        if (response.appointment.timezone) {
-          setBookingTimezone(response.appointment.timezone);
-        }
         setBookingResponse(response);
         toast({
           title: "Booking confirmed!",
@@ -189,10 +185,33 @@ export const BookingConfirmation: React.FC = () => {
                   <span className="flex items-center gap-2"><Clock className="h-3 w-3 text-primary" /> Duration</span>
                   <span>{totalDuration} min</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-2"><Globe className="h-3 w-3 text-primary" /> Timezone</span>
-                  <span>{bookingTimezone || clientTimezone}</span>
-                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Details Card */}
+        <div className="w-full max-w-lg">
+          <div className="rounded-2xl border border-muted/40 bg-card shadow-md overflow-hidden">
+            <div className="p-6 space-y-3">
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2"><User className="h-4 w-4 text-primary"/> Customer Details</h4>
+              <div className="grid grid-cols-[100px_1fr] gap-y-1 text-sm">
+                <span className="text-muted-foreground">Name:</span>
+                <span>{customerDetails.name || 'N/A'}</span>
+                <span className="text-muted-foreground">Phone:</span>
+                <span>{customerDetails.phone || 'N/A'}</span>
+                {customerDetails.email && (
+                  <>
+                    <span className="text-muted-foreground">Email:</span>
+                    <span>{customerDetails.email}</span>
+                  </>
+                )}
+                {customerDetails.notes && (
+                  <>
+                    <span className="text-muted-foreground">Notes:</span>
+                    <span>{customerDetails.notes}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -239,19 +258,6 @@ export const BookingConfirmation: React.FC = () => {
             <div>
               <h3 className="font-medium">Duration</h3>
               <p className="text-sm text-muted-foreground">{totalDuration} minutes</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Globe className="h-5 w-5 text-primary" />
-            <div>
-              <h3 className="font-medium">Timezone</h3>
-              <p className="text-sm text-muted-foreground">
-                {bookingTimezone || clientTimezone}
-                {clientTimezone !== bookingTimezone && (
-                  <span className="block text-xs">(Your timezone: {clientTimezone})</span>
-                )}
-              </p>
             </div>
           </div>
         </div>
@@ -328,7 +334,7 @@ export const BookingConfirmation: React.FC = () => {
           <div className="pl-9 space-y-2">
             <div className="grid grid-cols-[100px_1fr]">
               <span className="text-muted-foreground">Name:</span>
-              <span>{customerDetails.name}</span>
+              <span>{customerDetails.name || 'N/A'}</span>
             </div>
             {customerDetails.email && (
               <div className="grid grid-cols-[100px_1fr]">
@@ -338,7 +344,7 @@ export const BookingConfirmation: React.FC = () => {
             )}
             <div className="grid grid-cols-[100px_1fr]">
               <span className="text-muted-foreground">Phone:</span>
-              <span>{customerDetails.phone}</span>
+              <span>{customerDetails.phone || 'N/A'}</span>
             </div>
             {customerDetails.notes && (
               <div className="grid grid-cols-[100px_1fr]">
