@@ -190,13 +190,18 @@ export const Services: React.FC = () => {
                       className={`md:col-span-6 relative h-[200px] md:h-[500px] ${index % 2 === 0 ? 'md:order-1' : 'md:order-2'}`}
                       variants={imageVariants}
                     >
-                      <img 
-                        src={categoryImages[category as keyof typeof categoryImages]}
-                        alt={category}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      {(() => {
+                        const coverImage = (services[0] && services[0].imageUrl) ? services[0].imageUrl : categoryImages[category as keyof typeof categoryImages];
+                        return (
+                          <img 
+                            src={coverImage}
+                            alt={category}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        );
+                      })()}
                       <motion.div 
                         className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"
                         initial={{ opacity: 0 }}

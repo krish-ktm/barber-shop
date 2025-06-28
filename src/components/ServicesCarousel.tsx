@@ -69,7 +69,7 @@ export const ServicesCarousel: React.FC<ServicesCarouselProps> = ({ services }) 
                 {/* Image placeholder */}
                 <div className="aspect-[4/3] bg-muted/50 relative overflow-hidden">
                   <img
-                    src={`https://source.unsplash.com/600x450/?barber,${service.category}`}
+                    src={service.imageUrl || `https://source.unsplash.com/600x450/?barber,${service.category}`}
                     alt={service.name}
                     className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                     loading="lazy"
