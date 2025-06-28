@@ -12,6 +12,10 @@ export interface User {
 }
 
 export interface Staff extends User {
+  /**
+   * Job title or designation of the staff member (e.g., Senior Barber)
+   */
+  position?: string;
   bio?: string;
   services: string[];
   workingHours: WorkingHours;

@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, MapPin, Star, Scissors, Users, DollarSign, Award } from 'lucide-react';
+import { Clock, Star, Scissors, Users, Award } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { staffData } from '@/mocks';
+import { staffData, reviewsData } from '@/mocks';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -45,6 +45,20 @@ const cardVariant = {
 };
 
 export const About: React.FC = () => {
+  // Dynamic values
+  const foundationYear = 2010;
+  const yearsExperience = new Date().getFullYear() - foundationYear;
+  const averageRating = (
+    reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length
+  ).toFixed(1);
+
+  const stats = [
+    { icon: Clock, value: `${yearsExperience}+`, label: 'Years Experience' },
+    { icon: Users, value: `${staffData.length}+`, label: 'Expert Barbers' },
+    { icon: Scissors, value: '5000+', label: 'Happy Clients' },
+    { icon: Star, value: averageRating, label: 'Average Rating' },
+  ];
+
   return (
     <div>
       {/* Hero Section */}
@@ -60,7 +74,7 @@ export const About: React.FC = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <motion.div 
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-black/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -100,10 +114,27 @@ export const About: React.FC = () => {
               >
                 <motion.a 
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   Book Now
+                </motion.a>
+              </Button>
+
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="text-lg px-8 h-12 bg-white/10 hover:bg-white/20 text-white border-white/20"
+                asChild
+              >
+                <motion.a 
+                  href="/services"
+                  className="text-white hover:text-white"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  View Services
                 </motion.a>
               </Button>
             </motion.div>
@@ -263,7 +294,7 @@ export const About: React.FC = () => {
             </motion.div>
 
             <motion.div className="grid md:grid-cols-3 gap-8">
-              {staffData.map((staff, index) => (
+              {staffData.map((staff) => (
                 <motion.div
                   key={staff.id}
                   variants={cardVariant}
@@ -305,12 +336,7 @@ export const About: React.FC = () => {
             viewport={{ once: true }}
             className="grid md:grid-cols-4 gap-8 text-center"
           >
-            {[
-              { icon: Clock, value: '10+', label: 'Years Experience' },
-              { icon: Users, value: '5000+', label: 'Happy Clients' },
-              { icon: Scissors, value: '15+', label: 'Expert Barbers' },
-              { icon: Star, value: '4.9', label: 'Average Rating' }
-            ].map((stat, index) => (
+            {stats.map((stat, index) => (
               <motion.div
                 key={index}
                 variants={fadeIn}
@@ -364,6 +390,7 @@ export const About: React.FC = () => {
               >
                 <motion.a
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

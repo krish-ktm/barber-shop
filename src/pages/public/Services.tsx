@@ -104,7 +104,7 @@ export const Services: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-background/90">
       {/* Hero Section */}
-      <section className="relative h-[60vh] flex items-center justify-center overflow-hidden bg-primary">
+      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden shadow-2xl">
         <motion.div 
           className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg')] bg-cover bg-center bg-no-repeat"
           initial={{ scale: 1.1 }}
@@ -112,7 +112,7 @@ export const Services: React.FC = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <motion.div 
-            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-black/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -127,7 +127,7 @@ export const Services: React.FC = () => {
             className="space-y-6"
           >
             <motion.h1 
-              className="text-4xl md:text-5xl font-bold text-white mb-4"
+              className="text-5xl md:text-7xl font-bold text-white mb-4 leading-tight"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -149,12 +149,12 @@ export const Services: React.FC = () => {
             >
               <Button 
                 size="lg" 
-                variant="secondary"
-                className="min-w-[200px]"
+                className="text-lg px-8 h-12"
                 asChild
               >
                 <motion.a
                   href="/booking"
+                  className="text-white hover:text-white"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -241,7 +241,7 @@ export const Services: React.FC = () => {
                                       {service.description}
                                     </p>
                                     <div className="flex items-center gap-4 mt-2">
-                                      <Badge variant="secondary" className="text-xs group-hover:bg-primary/10 transition-colors">
+                                      <Badge variant="default" className="text-xs bg-primary text-primary-foreground group-hover:bg-primary transition-colors">
                                         <Clock className="h-3 w-3 mr-1" />
                                         {service.duration} min
                                       </Badge>
