@@ -6,7 +6,6 @@ import {
   ArrowLeft, 
   ArrowRight, 
   Check,
-  Search,
   Trash,
   Percent,
   ChevronDown,
@@ -65,7 +64,9 @@ import { Customer, getCustomerByPhone } from '@/api/services/customerService';
 type Step = 'customer' | 'services' | 'staff' | 'payment' | 'summary';
 
 const formSchema = z.object({
-  customerPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  customerPhone: z.string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .max(10, 'Phone number cannot exceed 10 digits'),
   staffId: z.string().min(1, 'Please select a staff member'),
   discountType: z.enum(['none', 'percentage', 'fixed']).default('none'),
   discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
@@ -198,6 +199,24 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       email: '',
     },
   });
+
+  // Keep track of the last phone number we searched for to avoid duplicate calls
+  const lastSearchedPhoneRef = React.useRef<string>('');
+
+  // Automatically trigger customer search when exactly 10 digits are entered
+  const customerPhoneValue = form.watch('customerPhone');
+  React.useEffect(() => {
+    const digitsOnly = customerPhoneValue.replace(/\D/g, '');
+    if (digitsOnly.length === 10 && digitsOnly !== lastSearchedPhoneRef.current) {
+      handleSearchCustomer(customerPhoneValue);
+      lastSearchedPhoneRef.current = digitsOnly;
+    }
+
+    // Reset the last searched phone if the input becomes shorter than 10 digits
+    if (digitsOnly.length < 10) {
+      lastSearchedPhoneRef.current = '';
+    }
+  }, [customerPhoneValue]);
 
   const handleSearchCustomer = (phone: string) => {
     if (!phone || phone.length < 10) {
@@ -506,34 +525,28 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
-                  <div className="flex gap-2">
-                    <FormControl>
+                  <FormControl>
+                    <div className="relative">
                       <Input
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
                         placeholder="Enter phone number"
                         {...field}
                         onChange={(e) => {
-                          field.onChange(e);
+                          const digitsOnly = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                          field.onChange(digitsOnly);
                           setSelectedCustomer(undefined);
                           setIsNewCustomer(false);
                           setIsGuestUser(false);
                         }}
+                        className="pr-8"
                       />
-                    </FormControl>
-                    <Button
-                      type="button"
-                      onClick={() => handleSearchCustomer(field.value)}
-                      disabled={isSearching || !field.value}
-                    >
-                      {isSearching ? (
-                        "Searching..."
-                      ) : (
-                        <>
-                          <Search className="h-4 w-4 mr-2" />
-                          Search
-                        </>
+                      {isSearching && (
+                        <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
                       )}
-                    </Button>
-                  </div>
+                    </div>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -609,9 +622,15 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
                   <Input 
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
                     placeholder="Enter phone number" 
                     value={form.watch('customerPhone')} 
-                    onChange={(e) => form.setValue('customerPhone', e.target.value)}
+                    onChange={(e) => {
+                      const digitsOnly = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                      form.setValue('customerPhone', digitsOnly);
+                    }}
                   />
                 </FormControl>
                 <FormMessage>{form.formState.errors.customerPhone?.message}</FormMessage>
