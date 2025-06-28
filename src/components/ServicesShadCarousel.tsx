@@ -39,23 +39,23 @@ export const ServicesShadCarousel: React.FC<ServicesShadCarouselProps> = ({ serv
       opts={{ loop: true, align: 'start' }}
       setApi={(api) => setCarouselApi(api as CarouselApiType)}
     >
-      <CarouselContent className="py-4">
+      <CarouselContent className="py-4 overflow-visible ml-0">
         {services.map((service) => (
-          <CarouselItem key={service.id} className="pl-4 md:pl-6 basis-4/5 sm:basis-1/3 lg:basis-1/4 overflow-visible">
-            <motion.div whileHover={{ scale: 1.02 }} className="h-full z-10 relative">
-              <Card className="h-full border hover:border-primary transition-colors shadow-sm flex flex-col">
+          <CarouselItem key={service.id} className="pl-0 md:pl-1 basis-2/3 sm:basis-1/3 lg:basis-1/5 overflow-visible">
+            <motion.div whileHover={{ scale: 1.02 }} className="h-full z-10 relative p-2">
+              <Card className="h-full group rounded-xl overflow-hidden shadow-sm ring-1 ring-primary/10 hover:shadow-lg hover:ring-primary/50 transition-all duration-300 flex flex-col bg-white">
                 <div className="aspect-[4/3] bg-muted/50 relative overflow-hidden">
                   <img
-                    src={`https://source.unsplash.com/600x450/?barber,${service.category}`}
+                    src={`https://source.unsplash.com/600x450/?barbershop,${service.name}&sig=${service.id}`}
                     alt={service.name}
-                    className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
                     decoding="async"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
                 </div>
-                <CardContent className="p-5 flex flex-col flex-1">
-                  <h3 className="font-semibold text-lg text-foreground mb-1 line-clamp-1">
+                <CardContent className="p-6 flex flex-col flex-1 text-secondary">
+                  <h3 className="font-semibold text-lg text-secondary mb-1 line-clamp-1 group-hover:text-primary transition-colors">
                     {service.name}
                   </h3>
                   <p className="text-muted-foreground text-sm flex-1 mb-4 line-clamp-3">
@@ -66,11 +66,11 @@ export const ServicesShadCarousel: React.FC<ServicesShadCarouselProps> = ({ serv
                       <Clock className="h-4 w-4 mr-1" />
                       {service.duration} min
                     </span>
-                    <span className="font-semibold text-foreground">
+                    <span className="font-semibold text-primary">
                       {formatCurrency(service.price)}
                     </span>
                   </div>
-                  <Button variant="secondary" size="sm" asChild className="mt-auto w-full">
+                  <Button variant="default" size="sm" asChild className="mt-auto w-full hover:bg-primary/90 transition-colors">
                     <motion.a
                       href="/booking"
                       whileHover={{ scale: 1.02 }}

@@ -258,7 +258,7 @@ export const Home: React.FC = () => {
                   whileHover="hover"
                   viewport={{ once: true }}
                 >
-                  <Card className="h-full border-2 hover:border-primary/50 transition-colors overflow-hidden">
+                  <Card className="h-full border-2 border-transparent group rounded-xl overflow-hidden shadow-md hover:shadow-2xl hover:border-primary/50 transition-all duration-300">
                     <div className="aspect-[4/3] relative overflow-hidden">
                       <img 
                         src={feature.image + '?auto=compress&cs=tinysrgb&w=1080'} 
@@ -271,10 +271,10 @@ export const Home: React.FC = () => {
                     </div>
                     <CardContent className="p-6 relative">
                       <div className="flex flex-col items-center text-center space-y-4">
-                        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                        <div className="w-14 h-14 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors duration-300">
                           <feature.icon className="h-7 w-7 text-primary" />
                         </div>
-                        <h3 className="text-lg font-semibold">{feature.title}</h3>
+                        <h3 className="text-lg font-semibold group-hover:text-primary transition-colors duration-300">{feature.title}</h3>
                         <p className="text-muted-foreground text-sm">
                           {feature.description}
                         </p>
@@ -381,7 +381,7 @@ export const Home: React.FC = () => {
                   }
                 }
               }}
-              className="space-y-6"
+              className="space-y-6 bg-white/80 backdrop-blur-md rounded-xl shadow-xl p-8"
             >
               <Badge>About Us</Badge>
               <h2 className="text-3xl md:text-4xl font-bold leading-tight">
@@ -401,27 +401,23 @@ export const Home: React.FC = () => {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-6 pt-6">
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold">10+</div>
-                  <div className="text-sm text-muted-foreground">Expert Barbers</div>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold">15k+</div>
-                  <div className="text-sm text-muted-foreground">Haircuts Done</div>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold">98%</div>
-                  <div className="text-sm text-muted-foreground">Client Satisfaction</div>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold">12+</div>
-                  <div className="text-sm text-muted-foreground">Industry Awards</div>
-                </div>
+                {[
+                  {value:'10+', label:'Expert Barbers'},
+                  {value:'15k+', label:'Haircuts Done'},
+                  {value:'98%', label:'Client Satisfaction'},
+                  {value:'12+', label:'Industry Awards'}
+                ].map((stat,index)=>(
+                  <div key={index} className="space-y-2 hover:scale-105 transition-transform duration-300">
+                    <div className="text-2xl font-extrabold text-secondary">{stat.value}</div>
+                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+                  </div>
+                ))}
               </div>
               <div className="pt-6">
                 <Button size="lg" asChild>
                   <motion.a
                     href="/about"
+                    className="text-white hover:text-white"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -455,7 +451,9 @@ export const Home: React.FC = () => {
               </p>
             </motion.div>
 
-            <ServicesShadCarousel services={featuredServices} />
+            <div className="-mx-4 sm:-mx-6 md:-mx-8 lg:-mx-16 pb-8">
+              <ServicesShadCarousel services={featuredServices} />
+            </div>
 
             <motion.div
               variants={fadeIn}

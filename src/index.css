@@ -102,6 +102,12 @@ body {
   }
 }
 
+/* Ensure carousel card shadows are not clipped */
+.keen-slider,
+.keen-slider__slide {
+  overflow: visible !important;
+}
+
 /* Typography defaults */
 h1,h2,h3,h4,h5,h6 {
   @apply font-serif text-secondary;
