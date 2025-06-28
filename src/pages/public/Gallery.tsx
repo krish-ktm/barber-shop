@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Camera, Image as ImageIcon, Plus } from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
@@ -49,47 +49,47 @@ export const Gallery: React.FC = () => {
 
   const galleryImages = [
     {
-      url: 'https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg',
+      url: 'https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Haircuts',
       title: 'Classic Fade',
     },
     {
-      url: 'https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg',
+      url: 'https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Styling',
       title: 'Modern Quiff',
     },
     {
-      url: 'https://images.pexels.com/photos/1813272/pexels-photo-1813272.jpeg',
+      url: 'https://images.pexels.com/photos/1813272/pexels-photo-1813272.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Beard',
       title: 'Beard Grooming',
     },
     {
-      url: 'https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg',
+      url: 'https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Shop',
       title: 'Our Space',
     },
     {
-      url: 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg',
+      url: 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Tools',
       title: 'Professional Equipment',
     },
     {
-      url: 'https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg',
+      url: 'https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Haircuts',
       title: 'Textured Crop',
     },
     {
-      url: 'https://images.pexels.com/photos/1319461/pexels-photo-1319461.jpeg',
+      url: 'https://images.pexels.com/photos/1319461/pexels-photo-1319461.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Styling',
       title: 'Pompadour',
     },
     {
-      url: 'https://images.pexels.com/photos/1634843/pexels-photo-1634843.jpeg',
+      url: 'https://images.pexels.com/photos/1634843/pexels-photo-1634843.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Shop',
       title: 'Barber Station',
     },
     {
-      url: 'https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg',
+      url: 'https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg?auto=compress&cs=tinysrgb&w=1080',
       category: 'Haircuts',
       title: 'Skin Fade',
     },
@@ -103,7 +103,7 @@ export const Gallery: React.FC = () => {
         <motion.div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
-            backgroundImage: 'url(https://images.pexels.com/photos/1634843/pexels-photo-1634843.jpeg)',
+            backgroundImage: 'url(https://images.pexels.com/photos/1634843/pexels-photo-1634843.jpeg?auto=compress&cs=tinysrgb&w=1080)',
           }}
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
@@ -229,6 +229,8 @@ export const Gallery: React.FC = () => {
                         src={image.url}
                         alt={image.title}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                         <Plus className="h-8 w-8 text-white" />
@@ -289,6 +291,8 @@ export const Gallery: React.FC = () => {
               src={selectedImage}
               alt="Gallery preview"
               className="w-full h-auto max-h-[80vh] object-contain"
+              loading="lazy"
+              decoding="async"
             />
           )}
         </DialogContent>

@@ -72,12 +72,12 @@ const serviceRow = {
 
 // Category images mapping
 const categoryImages = {
-  haircut: "https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg",
-  beard: "https://images.pexels.com/photos/1319461/pexels-photo-1319461.jpeg",
-  shave: "https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg",
-  color: "https://images.pexels.com/photos/3997386/pexels-photo-3997386.jpeg",
-  treatment: "https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg",
-  combo: "https://images.pexels.com/photos/1319461/pexels-photo-1319461.jpeg"
+  haircut: "https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg?auto=compress&cs=tinysrgb&w=1080",
+  beard: "https://images.pexels.com/photos/1319461/pexels-photo-1319461.jpeg?auto=compress&cs=tinysrgb&w=1080",
+  shave: "https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg?auto=compress&cs=tinysrgb&w=1080",
+  color: "https://images.pexels.com/photos/3997386/pexels-photo-3997386.jpeg?auto=compress&cs=tinysrgb&w=1080",
+  treatment: "https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg?auto=compress&cs=tinysrgb&w=1080",
+  combo: "https://images.pexels.com/photos/1319461/pexels-photo-1319461.jpeg?auto=compress&cs=tinysrgb&w=1080"
 };
 
 export const Services: React.FC = () => {
@@ -106,7 +106,7 @@ export const Services: React.FC = () => {
       {/* Hero Section */}
       <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden shadow-2xl">
         <motion.div 
-          className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg')] bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg?auto=compress&cs=tinysrgb&w=1080')] bg-cover bg-center bg-no-repeat"
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
@@ -194,6 +194,8 @@ export const Services: React.FC = () => {
                         src={categoryImages[category as keyof typeof categoryImages]}
                         alt={category}
                         className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <motion.div 
                         className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"

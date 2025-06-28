@@ -50,7 +50,7 @@ export const Barbers: React.FC = () => {
       {/* Hero Section */}
       <section className="relative min-h-[60vh] flex items-center justify-center bg-primary text-primary-foreground overflow-hidden">
         <motion.div 
-          className="absolute inset-0 bg-[url('https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg')] bg-cover bg-fixed bg-center"
+          className="absolute inset-0 bg-[url('https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg?auto=compress&cs=tinysrgb&w=1080')] bg-cover bg-center"
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.8 }}
@@ -98,9 +98,11 @@ export const Barbers: React.FC = () => {
                 <Card className="overflow-hidden h-full">
                   <div className="aspect-[4/3] relative overflow-hidden">
                     <img
-                      src={staff.image || 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg'}
+                      src={staff.image || 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080'}
                       alt={staff.name || 'Barber'}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
                   <CardContent className="p-6 space-y-4">

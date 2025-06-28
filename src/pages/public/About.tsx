@@ -192,9 +192,11 @@ export const About: React.FC = () => {
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <img
-                  src="https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg"
+                  src="https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg?auto=compress&cs=tinysrgb&w=1080"
                   alt="Barbershop interior"
                   className="rounded-lg w-full h-64 object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
               </motion.div>
               <motion.div
@@ -203,9 +205,11 @@ export const About: React.FC = () => {
                 className="mt-8"
               >
                 <img
-                  src="https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg"
+                  src="https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080"
                   alt="Barber tools"
                   className="rounded-lg w-full h-64 object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
               </motion.div>
             </motion.div>
@@ -307,6 +311,8 @@ export const About: React.FC = () => {
                         src={staff.image}
                         alt={staff.name}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     </div>
