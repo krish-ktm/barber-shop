@@ -46,8 +46,8 @@ export const PublicHeader: React.FC = () => {
           <div className="md:hidden w-10" />
 
           {/* Centered logo */}
-          <div className="absolute inset-0 flex justify-center md:static md:justify-start">
-            <Link to="/" className="flex items-center">
+          <div className="absolute inset-0 flex justify-center md:static md:justify-start pointer-events-none">
+            <Link to="/" className="flex items-center pointer-events-auto">
               <motion.img 
                 src="/logo/logo-tran.png" 
                 alt="Modern Cuts Logo" 
