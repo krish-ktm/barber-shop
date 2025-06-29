@@ -206,6 +206,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   // Automatically trigger customer search when exactly 10 digits are entered
   const customerPhoneValue = form.watch('customerPhone');
   React.useEffect(() => {
+    // Only auto-search in the "search" tab
+    if (activeTab !== 'search') return;
+
     const digitsOnly = customerPhoneValue.replace(/\D/g, '');
     if (digitsOnly.length === 10 && digitsOnly !== lastSearchedPhoneRef.current) {
       handleSearchCustomer(customerPhoneValue);
@@ -216,7 +219,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     if (digitsOnly.length < 10) {
       lastSearchedPhoneRef.current = '';
     }
-  }, [customerPhoneValue]);
+  }, [customerPhoneValue, activeTab]);
 
   const handleSearchCustomer = (phone: string) => {
     if (!phone || phone.length < 10) {
