@@ -196,15 +196,12 @@ export const Customers: React.FC = () => {
     setCustomerSince(undefined);
     setMinVisits(0);
     
-    // Reload data with cleared filters
-    setTimeout(() => {
-      loadCustomers();
-    }, 0);
+    // No manual reload here – useEffect will trigger automatically when filters state changes
   };
 
   const handleSearch = () => {
     setSearchQuery(pendingSearchQuery);
-    loadCustomers();
+    // No manual reload – useEffect will react to updated filter states
   };
 
   const handleApplyFilters = () => {
@@ -218,8 +215,7 @@ export const Customers: React.FC = () => {
     
     setShowFilters(false);
     
-    // Fetch data with new filters
-    loadCustomers();
+    // No manual reload – useEffect will react to updated filter states
   };
 
   const formatShortDate = (date: string | undefined) => {
@@ -326,7 +322,7 @@ export const Customers: React.FC = () => {
       
       {/* Search and controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-1 max-w-md">
+        <div className="flex flex-1 max-w-md items-center">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input

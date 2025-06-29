@@ -13,7 +13,9 @@ export function useApi<T, P extends unknown[]>(
   const execute = useCallback(
     async (...args: P) => {
       try {
+        // Begin request – show loader and clear out any stale data so that old content doesn't flash
         setLoading(true);
+        setData(null);
         setError(null);
         const result = await apiFunction(...args);
         setData(result);

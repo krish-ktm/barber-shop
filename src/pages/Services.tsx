@@ -75,6 +75,15 @@ export const Services: React.FC = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 200]);
   const [durationRange, setDurationRange] = useState<[number, number]>([0, 120]);
 
+  // Pending filter state for the sidebar – mirrors Customers page pattern
+  const [pendingFilters, setPendingFilters] = useState({
+    sortBy: 'name',
+    categoryFilter: 'all',
+    selectedCategories: [] as string[],
+    priceRange: [0, 200] as [number, number],
+    durationRange: [0, 120] as [number, number]
+  });
+
   // API Hooks
   const {
     data: servicesData,
@@ -136,17 +145,10 @@ export const Services: React.FC = () => {
     fetchServices(page, limit, getSortParam(), extraParams);
   }, [searchQuery, categoryFilter, selectedCategories, priceRange, durationRange, page, limit, fetchServices, getSortParam]);
 
-  // Triggered when the user clicks the Search button (or presses Enter)
-  const handleSearch = useCallback(() => {
-    setSearchQuery(pendingSearchQuery);
-    loadServices();
-  }, [pendingSearchQuery, loadServices]);
-
-  // Initial load
+  // Load services whenever any *active* filter/search/sort state changes
   useEffect(() => {
     loadServices();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadServices]);
 
   // Set maxPrice and maxDuration based on API data
   const services = servicesData?.services || [];
@@ -190,11 +192,14 @@ export const Services: React.FC = () => {
     setSelectedCategories([]);
     setPriceRange([0, maxPrice]);
     setDurationRange([0, maxDuration]);
-
-    // Reload with cleared filters
-    setTimeout(() => {
-      loadServices();
-    }, 0);
+    setPendingFilters({
+      sortBy: 'name',
+      categoryFilter: 'all',
+      selectedCategories: [],
+      priceRange: [0, maxPrice] as [number, number],
+      durationRange: [0, maxDuration] as [number, number]
+    });
+    // useEffect will refetch automatically
   };
 
   const handleEditService = (service: Service) => {
@@ -271,16 +276,6 @@ export const Services: React.FC = () => {
     }
   };
   
-  const handleCategoryChange = (value: string) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(value)) {
-        return prev.filter(c => c !== value);
-      } else {
-        return [...prev, value];
-      }
-    });
-  };
-
   const getCategoryBadge = (category: string) => {
     const categories: Record<string, { label: string; className: string }> = {
       haircut: { label: 'Haircut', className: 'bg-blue-100 text-blue-800' },
@@ -301,6 +296,47 @@ export const Services: React.FC = () => {
         {categoryInfo.label}
       </Badge>
     );
+  };
+
+  const handleSearch = useCallback(() => {
+    setSearchQuery(pendingSearchQuery);
+    // useEffect will fetch with updated query
+  }, [pendingSearchQuery]);
+
+  // When opening/closing the filter sheet copy current active filters into pending
+  const handleOpenFilters = (open: boolean) => {
+    if (open) {
+      setPendingFilters({
+        sortBy,
+        categoryFilter,
+        selectedCategories,
+        priceRange,
+        durationRange
+      });
+    }
+    setShowFilters(open);
+  };
+
+  // Apply pending filters → active filters then fetch
+  const handleApplyFilters = () => {
+    setSortBy(pendingFilters.sortBy);
+    setCategoryFilter(pendingFilters.categoryFilter);
+    setSelectedCategories(pendingFilters.selectedCategories);
+    setPriceRange(pendingFilters.priceRange);
+    setDurationRange(pendingFilters.durationRange);
+    setShowFilters(false);
+    // useEffect will fetch with updated filters
+  };
+
+  // Toggle helper for pending category list
+  const togglePendingCategory = (value: string) => {
+    setPendingFilters((prev) => {
+      const exists = prev.selectedCategories.includes(value);
+      const updated = exists
+        ? prev.selectedCategories.filter((c) => c !== value)
+        : [...prev.selectedCategories, value];
+      return { ...prev, selectedCategories: updated };
+    });
   };
 
   return (
@@ -348,7 +384,7 @@ export const Services: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch gap-2 sm:gap-3 overflow-x-auto whitespace-nowrap">
-              <Select value={sortBy} onValueChange={(value) => { setSortBy(value); loadServices(); }}>
+              <Select value={sortBy} onValueChange={(value) => { setSortBy(value); /* useEffect handles fetch */ }}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <SortAsc className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Sort by" />
@@ -361,7 +397,7 @@ export const Services: React.FC = () => {
                 </SelectContent>
               </Select>
 
-              <Select value={categoryFilter} onValueChange={(value) => { setCategoryFilter(value); loadServices(); }}>
+              <Select value={categoryFilter} onValueChange={(value) => { setCategoryFilter(value); /* useEffect handles fetch */ }}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by category" />
@@ -376,7 +412,7 @@ export const Services: React.FC = () => {
                 </SelectContent>
               </Select>
               
-              <Button variant="outline" onClick={() => setShowFilters(true)}>
+              <Button variant="outline" onClick={() => handleOpenFilters(true)}>
                 <Filter className="h-4 w-4 mr-2" />
                 Advanced Filters
                 {getActiveFilterCount() > 0 && (
@@ -540,7 +576,7 @@ export const Services: React.FC = () => {
         </div>
       </div>
       
-      <Sheet open={showFilters} onOpenChange={setShowFilters}>
+      <Sheet open={showFilters} onOpenChange={handleOpenFilters}>
         <SheetContent side="right" className="w-full max-w-md">
           <SheetHeader className="mb-6">
             <SheetTitle>Advanced Filters</SheetTitle>
@@ -549,7 +585,7 @@ export const Services: React.FC = () => {
           <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] p-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Sort By</label>
-              <Select value={sortBy} onValueChange={(value) => { setSortBy(value); loadServices(); }}>
+              <Select value={pendingFilters.sortBy} onValueChange={(value) => setPendingFilters(prev => ({ ...prev, sortBy: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -569,8 +605,8 @@ export const Services: React.FC = () => {
                   <div key={category} className="flex items-center gap-2">
                     <Checkbox 
                       id={`category-${category}`} 
-                      checked={selectedCategories.includes(category)}
-                      onCheckedChange={() => handleCategoryChange(category)}
+                      checked={pendingFilters.selectedCategories.includes(category)}
+                      onCheckedChange={() => togglePendingCategory(category)}
                     />
                     <Label htmlFor={`category-${category}`} className="cursor-pointer">
                       {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -588,13 +624,13 @@ export const Services: React.FC = () => {
                   min={0}
                   max={maxPrice}
                   step={5}
-                  value={priceRange}
-                  onValueChange={(value) => setPriceRange(value as [number, number])}
+                  value={pendingFilters.priceRange}
+                  onValueChange={(value) => setPendingFilters(prev => ({ ...prev, priceRange: value as [number, number] }))}
                 />
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
-                <div>{formatCurrency(priceRange[0])}</div>
-                <div>{formatCurrency(priceRange[1])}</div>
+                <div>{formatCurrency(pendingFilters.priceRange[0])}</div>
+                <div>{formatCurrency(pendingFilters.priceRange[1])}</div>
               </div>
             </div>
 
@@ -606,39 +642,35 @@ export const Services: React.FC = () => {
                   min={0}
                   max={maxDuration}
                   step={5}
-                  value={durationRange}
-                  onValueChange={(value) => setDurationRange(value as [number, number])}
+                  value={pendingFilters.durationRange}
+                  onValueChange={(value) => setPendingFilters(prev => ({ ...prev, durationRange: value as [number, number] }))}
                 />
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
-                <div>{durationRange[0]} min</div>
-                <div>{durationRange[1]} min</div>
+                <div>{pendingFilters.durationRange[0]} min</div>
+                <div>{pendingFilters.durationRange[1]} min</div>
               </div>
             </div>
             
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" onClick={() => {
-                  // Set short services filter
-                  setDurationRange([0, 30]);
+                  setPendingFilters(prev => ({ ...prev, durationRange: [0, 30] as [number, number] }));
                 }}>
                   Short Services
                 </Button>
                 <Button variant="outline" onClick={() => {
-                  // Set premium services filter
-                  setPriceRange([50, maxPrice]);
+                  setPendingFilters(prev => ({ ...prev, priceRange: [50, maxPrice] as [number, number] }));
                 }}>
                   Premium
                 </Button>
                 <Button variant="outline" onClick={() => {
-                  // Set haircut filter
-                  setSelectedCategories(['haircut']);
+                  setPendingFilters(prev => ({ ...prev, selectedCategories: ['haircut'] }));
                 }}>
                   Haircuts Only
                 </Button>
                 <Button variant="outline" onClick={() => {
-                  // Set combo services filter
-                  setSelectedCategories(['combo']);
+                  setPendingFilters(prev => ({ ...prev, selectedCategories: ['combo'] }));
                 }}>
                   Combo Services
                 </Button>
@@ -651,7 +683,7 @@ export const Services: React.FC = () => {
               Reset filters
             </Button>
             <SheetClose asChild>
-              <Button onClick={loadServices}>Apply filters</Button>
+              <Button onClick={handleApplyFilters}>Apply filters</Button>
             </SheetClose>
           </SheetFooter>
         </SheetContent>

@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Loader2, SortAsc, X } from 'lucide-react';
 import { ProductDialog } from './ProductDialog';
 import {
   AlertDialog,
@@ -44,6 +44,7 @@ export function ProductsPage() {
   const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('name');
   const [products, setProducts] = useState<Product[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -76,25 +77,31 @@ export function ProductsPage() {
     execute: executeDeleteProduct
   } = useApi(deleteProduct);
 
-  // Centralised loader
-  const loadProducts = useCallback(
-    (
-      page: number = 1,
-      limit: number = 100,
-      sort: string = 'name_asc',
-      cat: string | undefined = categoryFilter !== 'all' ? categoryFilter : undefined,
-      search: string | undefined = searchQuery || undefined,
-    ) => {
-      fetchProducts(page, limit, sort, cat, search);
-    },
-    [fetchProducts, categoryFilter, searchQuery]
-  );
+  // Helper to map sortBy -> API sort param
+  const getSortParam = useCallback((): string => {
+    switch (sortBy) {
+      case 'price':
+        return 'price_desc';
+      case 'stock':
+        return 'stock_desc';
+      case 'name':
+      default:
+        return 'name_asc';
+    }
+  }, [sortBy]);
 
-  // Initial load
+  // Centralised loader based on active filters
+  const loadProducts = useCallback(() => {
+    const sortParam = getSortParam();
+    const catParam = categoryFilter !== 'all' ? categoryFilter : undefined;
+    const searchParam = searchQuery || undefined;
+    fetchProducts(1, 100, sortParam, catParam, searchParam);
+  }, [fetchProducts, categoryFilter, searchQuery, getSortParam]);
+
+  // Fetch whenever active filters change
   useEffect(() => {
     loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadProducts]);
   
   // Update local state when products data changes
   useEffect(() => {
@@ -183,13 +190,30 @@ export function ProductsPage() {
   // Search button click handler
   const handleSearchClick = () => {
     setSearchQuery(pendingSearchQuery);
-    loadProducts(1, 100, 'name_asc', categoryFilter !== 'all' ? categoryFilter : undefined, pendingSearchQuery || undefined);
+    // useEffect will fetch with updated search query
   };
 
   // Category change handler
   const handleCategoryChange = (value: string) => {
     setCategoryFilter(value);
-    loadProducts(1, 100, 'name_asc', value !== 'all' ? value : undefined, searchQuery || undefined);
+    // useEffect will fetch automatically
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setPendingSearchQuery('');
+    setSearchQuery('');
+    setCategoryFilter('all');
+    setSortBy('name');
+  };
+
+  // Active filter count for badge
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (searchQuery) count++;
+    if (categoryFilter !== 'all') count++;
+    if (sortBy !== 'name') count++;
+    return count;
   };
 
   const displayedProducts = products;
@@ -217,10 +241,10 @@ export function ProductsPage() {
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 mb-4">
             {/* Search group (input + button) */}
             <div className="flex flex-1 items-stretch">
-            <div className="relative flex-1">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search products..."
+                <Input
+                  placeholder="Search products..."
                   className="pl-10 h-full"
                   value={pendingSearchQuery}
                   onChange={(e) => setPendingSearchQuery(e.target.value)}
@@ -239,6 +263,19 @@ export function ProductsPage() {
               </Button>
             </div>
 
+            {/* Sort dropdown */}
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value)}>
+              <SelectTrigger className="min-w-[120px] w-full md:w-[140px]">
+                <SortAsc className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="price">Price</SelectItem>
+                <SelectItem value="stock">Stock</SelectItem>
+              </SelectContent>
+            </Select>
+
             {/* Category filter */}
             <Select value={categoryFilter} onValueChange={handleCategoryChange}>
               <SelectTrigger className="min-w-[140px] w-full md:w-[180px]">
@@ -251,6 +288,18 @@ export function ProductsPage() {
                 ))}
               </SelectContent>
             </Select>
+
+            {getActiveFilterCount() > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-9"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            )}
           </div>
 
           {isLoading ? (
