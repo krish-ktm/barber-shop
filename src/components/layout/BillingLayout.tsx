@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { BillingSidebar } from './BillingSidebar';
+import '@/styles/admin.css';
 
 export const BillingLayout: React.FC = () => {
+  useEffect(() => {
+    document.documentElement.classList.add('admin-theme');
+    return () => {
+      document.documentElement.classList.remove('admin-theme');
+    };
+  }, []);
+
   return (
-    <div className="h-screen w-screen flex flex-col">
+    <div className="admin h-screen w-screen flex flex-col">
       <div className="border-b">
         <Header />
       </div>
