@@ -6,7 +6,6 @@ import * as z from 'zod';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
 } from '@/components/ui/card';
@@ -84,6 +83,12 @@ export const Login: React.FC = () => {
     }
   }, [location, toast]);
 
+  // Apply admin theme class on mount
+  useEffect(() => {
+    document.documentElement.classList.add('admin-theme');
+    return () => document.documentElement.classList.remove('admin-theme');
+  }, []);
+
   const onSubmit = async (values: z.infer<typeof formSchema>, event?: React.BaseSyntheticEvent) => {
     // Prevent default form submission behavior which would cause page refresh
     if (event) {
@@ -159,15 +164,22 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-[400px]">
-        <CardHeader className="space-y-4 text-center">
-          <div className="flex justify-center">
-            <img src="/logo/logo-tran.png" alt="Barber Shop Logo" className="h-32 w-auto" />
-          </div>
-          <div className="space-y-1">
-            <CardDescription>Sign in to your account</CardDescription>
-          </div>
+    <div
+      className="min-h-screen flex items-center justify-center relative admin"
+      style={{
+        backgroundImage:
+          "url(https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1920)",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+      {/* Centered glass card */}
+      <Card className="relative z-10 w-full max-w-[420px] bg-black/60 backdrop-blur-lg border border-white/20 shadow-2xl rounded-xl text-white">
+        <CardHeader className="text-center items-center py-1">
+          <img src="/logo/logo-tran.png" alt="Barber Shop Logo" className="h-[15rem] w-auto drop-shadow-lg" />
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -187,9 +199,10 @@ export const Login: React.FC = () => {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="Email"
                         {...field}
                         disabled={isLoading}
+                        className="bg-white/10 placeholder:text-white/60 text-white border-white/30 focus-visible:ring-white"
                       />
                     </FormControl>
                     <FormMessage />
@@ -205,22 +218,27 @@ export const Login: React.FC = () => {
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="Enter your password"
+                        placeholder="Password"
                         {...field}
                         disabled={isLoading}
+                        className="bg-white/10 placeholder:text-white/60 text-white border-white/30 focus-visible:ring-white"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg"
+                disabled={isLoading}
+              >
                 {isLoading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4 text-sm text-muted-foreground">
+        <CardFooter className="flex flex-col gap-4 text-sm text-muted-foreground items-center">
           <div className="text-center w-full">
             Demo credentials:
             <div className="pt-2 flex flex-col gap-2">
