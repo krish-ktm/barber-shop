@@ -54,7 +54,10 @@ export const createUser = async (userData: Partial<User> & { password: string })
 /**
  * Update an existing user (admin only)
  */
-export const updateUser = async (id: string, userData: Partial<User>): Promise<UserResponse> => {
+export const updateUser = async (
+  id: string,
+  userData: Partial<User> & { password?: string }
+): Promise<UserResponse> => {
   return put<UserResponse>(`/users/${id}`, userData);
 };
 

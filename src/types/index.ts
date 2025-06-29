@@ -9,6 +9,7 @@ export interface User {
   phone: string;
   role: UserRole;
   image?: string;
+  password?: string;
 }
 
 export interface Staff extends User {

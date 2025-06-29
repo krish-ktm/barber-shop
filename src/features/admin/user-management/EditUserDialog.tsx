@@ -29,6 +29,7 @@ const schema = z.object({
   email: z.string().email(),
   phone: z.union([z.string().min(6), z.literal('')]).optional(),
   role: z.enum(['admin', 'billing']),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
 });
 
 export type EditUserPayload = z.infer<typeof schema>;
@@ -50,6 +51,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({ open, onOpenChan
       email: '',
       phone: '',
       role: 'billing',
+      password: '',
     },
   });
 
@@ -60,6 +62,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({ open, onOpenChan
       email: user.email,
       phone: user.phone || '',
       role: user.role === 'admin' ? 'admin' : 'billing',
+      password: '',
     });
   }, [user, form]);
 
@@ -139,6 +142,19 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({ open, onOpenChan
                       <SelectItem value="billing">Billing</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>New Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Leave blank to keep current" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
