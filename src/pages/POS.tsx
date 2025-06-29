@@ -57,7 +57,7 @@ interface StaffOption {
 export const POS: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<string>('date');
+  const [sortBy, setSortBy] = useState<string>('created');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
@@ -86,6 +86,7 @@ export const POS: React.FC = () => {
 
   // Map frontend sort values to API sort parameters
   const sortMap: Record<string, string> = {
+    'created': 'created_desc',
     'date': 'date_desc',
     'amount': 'total_desc',
     'customer': 'customer_name_asc',
@@ -145,13 +146,13 @@ export const POS: React.FC = () => {
   const clearFilters = () => {
     setSearchInput('');
     setSearchQuery('');
-    setSortBy('date');
+    setSortBy('created');
     setStatus(undefined);
     setStaffId(undefined);
     setDateRange(undefined);
     setPendingFilters({ status: undefined, staffId: undefined, dateRange: undefined });
     // Refetch default list
-    fetchInvoices(page, limit, sortMap['date']);
+    fetchInvoices(page, limit, sortMap['created']);
   };
 
   const handleSearchSubmit = (e: FormEvent) => {
@@ -259,6 +260,7 @@ export const POS: React.FC = () => {
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="created">Created</SelectItem>
                   <SelectItem value="date">Date</SelectItem>
                   <SelectItem value="amount">Amount</SelectItem>
                   <SelectItem value="customer">Customer</SelectItem>
@@ -275,14 +277,14 @@ export const POS: React.FC = () => {
               <Button variant="outline" onClick={() => setShowFilters(true)}>
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
-                {(searchQuery || sortBy !== 'date' || getActiveFilterCount() > 0) && (
+                {(searchQuery || sortBy !== 'created' || getActiveFilterCount() > 0) && (
                   <Badge variant="secondary" className="ml-2">
-                    {getActiveFilterCount() + (sortBy !== 'date' ? 1 : 0)}
+                    {getActiveFilterCount() + (sortBy !== 'created' ? 1 : 0)}
                   </Badge>
                 )}
               </Button>
 
-              {(searchQuery || sortBy !== 'date' || getActiveFilterCount() > 0) && (
+              {(searchQuery || sortBy !== 'created' || getActiveFilterCount() > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -303,9 +305,9 @@ export const POS: React.FC = () => {
             >
               <Filter className="h-4 w-4 mr-2" />
               Filters
-              {(searchQuery || sortBy !== 'date' || getActiveFilterCount() > 0) && (
+              {(searchQuery || sortBy !== 'created' || getActiveFilterCount() > 0) && (
                 <Badge variant="secondary" className="ml-2">
-                  {getActiveFilterCount() + (sortBy !== 'date' ? 1 : 0)}
+                  {getActiveFilterCount() + (sortBy !== 'created' ? 1 : 0)}
                 </Badge>
               )}
             </Button>
@@ -328,6 +330,7 @@ export const POS: React.FC = () => {
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="created">Created</SelectItem>
                     <SelectItem value="date">Date</SelectItem>
                     <SelectItem value="amount">Amount</SelectItem>
                     <SelectItem value="customer">Customer</SelectItem>
