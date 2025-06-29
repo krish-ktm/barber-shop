@@ -22,8 +22,10 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive, 
           <Button
             variant="ghost"
             className={cn(
-              'w-full justify-start gap-2 h-10',
-              isActive && 'bg-accent text-accent-foreground'
+              'w-full justify-start gap-2 h-10 rounded-md transition-colors',
+              isActive
+                ? 'bg-primary text-primary-foreground font-semibold shadow'
+                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
             )}
           >
             {icon}
@@ -36,8 +38,10 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive, 
         <Button
           variant="ghost"
           className={cn(
-            'w-full justify-start gap-2 h-10',
-            isActive && 'bg-accent text-accent-foreground'
+            'w-full justify-start gap-2 h-10 rounded-md transition-colors',
+            isActive
+              ? 'bg-primary text-primary-foreground font-semibold shadow'
+              : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
           )}
         >
           {icon}
