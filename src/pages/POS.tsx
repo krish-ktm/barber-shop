@@ -151,8 +151,6 @@ export const POS: React.FC = () => {
     setStaffId(undefined);
     setDateRange(undefined);
     setPendingFilters({ status: undefined, staffId: undefined, dateRange: undefined });
-    // Refetch default list
-    fetchInvoices(page, limit, sortMap['created']);
   };
 
   const handleSearchSubmit = (e: FormEvent) => {
@@ -165,10 +163,6 @@ export const POS: React.FC = () => {
     setStaffId(pendingFilters.staffId);
     setDateRange(pendingFilters.dateRange);
     setShowFilters(false);
-    // After state updates propagate, ensure fetch occurs next tick
-    setTimeout(() => {
-      loadInvoices();
-    }, 0);
   };
 
   // Convert API status to UI badge
