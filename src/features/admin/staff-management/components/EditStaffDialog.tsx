@@ -64,6 +64,7 @@ const formSchema = z.object({
   commissionPercentage: z.number().min(0).max(100),
   isActive: z.boolean(),
   image: z.string().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
 });
 
 interface EditStaffDialogProps {
@@ -104,6 +105,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       commissionPercentage: staff?.commissionPercentage || 0,
       isActive: staff?.isAvailable || false,
       image: staff?.image || '',
+      password: '',
     },
   });
 
@@ -206,6 +208,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
         isAvailable: values.isActive,
         services: selectedServiceIds, // Use the selected service IDs
         image: values.image,
+        password: values.password || undefined,
       };
       
       await onUpdate(updatedStaff);
@@ -309,6 +312,20 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                         <FormLabel>Phone</FormLabel>
                         <FormControl>
                           <Input placeholder="Enter phone number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Leave blank to keep current" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

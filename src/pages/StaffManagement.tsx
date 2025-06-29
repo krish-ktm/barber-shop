@@ -91,12 +91,13 @@ const mapInternalStaffToApi = (staff: Staff & { password?: string }): CreateStaf
   }
   
   // For updating existing staff (no password)
-  const updateData: Partial<ApiStaff> & { 
+  const updateData: (Partial<ApiStaff> & { 
     name?: string;
     email?: string;
     phone?: string;
     image?: string;
-  } = {
+    password?: string;
+  }) = {
     bio: staff.bio,
     services: staff.services,
     commission_percentage: staff.commissionPercentage,
@@ -108,6 +109,7 @@ const mapInternalStaffToApi = (staff: Staff & { password?: string }): CreateStaf
   if (staff.email) updateData.email = staff.email;
   if (staff.phone) updateData.phone = staff.phone;
   if (staff.image && staff.image !== '/placeholder.jpg') updateData.image = staff.image;
+  if (staff.password) updateData.password = staff.password;
 
   return updateData;
 };

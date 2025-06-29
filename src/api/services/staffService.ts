@@ -173,7 +173,10 @@ export const createStaff = async (staffData: CreateStaffRequest): Promise<StaffR
 /**
  * Update staff member (admin only)
  */
-export const updateStaff = async (id: string, staffData: Partial<Staff>): Promise<StaffResponse> => {
+export const updateStaff = async (
+  id: string,
+  staffData: Partial<Staff> & { password?: string }
+): Promise<StaffResponse> => {
   return put<StaffResponse>(`/staff/${id}`, staffData);
 };
 

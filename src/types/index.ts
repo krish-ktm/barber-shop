@@ -24,6 +24,7 @@ export interface Staff extends User {
   totalEarnings: number;
   totalAppointments: number;
   isAvailable: boolean;
+  password?: string;
 }
 
 export interface WorkingHours {
