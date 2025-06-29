@@ -45,7 +45,6 @@ export function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
-  const [products, setProducts] = useState<Product[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -103,13 +102,6 @@ export function ProductsPage() {
     loadProducts();
   }, [loadProducts]);
   
-  // Update local state when products data changes
-  useEffect(() => {
-    if (productsData) {
-      setProducts(productsData.products);
-    }
-  }, [productsData]);
-  
   // Handle API errors
   useEffect(() => {
     const error = productsError || createError || updateError || deleteError;
@@ -143,9 +135,7 @@ export function ProductsPage() {
         // Update existing product
         const response = await executeUpdateProduct(selectedProduct.id, data);
         if (response && response.product) {
-          setProducts(products.map(p => 
-            p.id === selectedProduct.id ? response.product : p
-          ));
+          loadProducts();
           toast({
             title: 'Success',
             description: 'Product updated successfully',
@@ -155,7 +145,7 @@ export function ProductsPage() {
         // Add new product
         const response = await executeCreateProduct(data);
         if (response && response.product) {
-          setProducts([...products, response.product]);
+          loadProducts();
           toast({
             title: 'Success',
             description: 'Product added successfully',
@@ -172,7 +162,7 @@ export function ProductsPage() {
     if (selectedProduct) {
       try {
         await executeDeleteProduct(selectedProduct.id);
-        setProducts(products.filter(p => p.id !== selectedProduct.id));
+        loadProducts();
         setDeleteDialogOpen(false);
         toast({
           title: 'Success',
@@ -185,10 +175,11 @@ export function ProductsPage() {
   };
 
   // All unique categories from current products
-  const categories = Array.from(new Set(products.map((p) => p.category))).filter(Boolean);
+  const categories = Array.from(new Set((productsData?.products || []).map((p) => p.category))).filter(Boolean);
 
   // Search button click handler
   const handleSearchClick = () => {
+    // Immediately clear list for better UX while new data loads
     setSearchQuery(pendingSearchQuery);
     // useEffect will fetch with updated search query
   };
@@ -216,7 +207,7 @@ export function ProductsPage() {
     return count;
   };
 
-  const displayedProducts = products;
+  const displayedProducts = productsData?.products || [];
 
   return (
     <div className="p-4 md:p-6 space-y-6">
