@@ -9,7 +9,6 @@ import { BookingConfirmation } from './steps/BookingConfirmation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar, CheckCircle2, Info, Scissors, Users } from 'lucide-react';
 import { formatCurrency } from '@/utils';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useLocation } from 'react-router-dom';
 
 const BookingContent: React.FC = () => {
@@ -25,14 +24,14 @@ const BookingContent: React.FC = () => {
     customerDetails
   } = useBooking();
 
-  const isMobile = useMediaQuery('(max-width: 639px)');
-
-  // Scroll to top when step changes on mobile
+  // Scroll to top when step changes (all viewports)
   useEffect(() => {
-    if (isMobile) {
+    // Give the DOM a moment to render the next step before scrolling
+    const id = setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [currentStep, isMobile]);
+    }, 50);
+    return () => clearTimeout(id);
+  }, [currentStep]);
 
   const steps = [
     { 

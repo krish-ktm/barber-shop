@@ -4,14 +4,22 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useBooking } from '../BookingContext';
 import { getCustomerByPhone } from '@/api/services/customerService';
-import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const CustomerDetails: React.FC = () => {
   const { customerDetails, setCustomerDetails } = useBooking();
-  const { toast } = useToast();
   const [isSearching, setIsSearching] = useState(false);
   const lastLookupRef = useRef<string>('');
+  const [lookupStatus, setLookupStatus] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  // Determine color class for lookup status message
+  const statusColor = lookupStatus?.type === 'success'
+    ? 'text-green-600'
+    : lookupStatus?.type === 'error'
+    ? 'text-destructive'
+    : lookupStatus && lookupStatus.message.toLowerCase().includes('not found')
+    ? 'text-destructive'
+    : 'text-muted-foreground';
 
   // Effect to watch phone input and lookup when 10 digits reached
   useEffect(() => {
@@ -20,6 +28,7 @@ export const CustomerDetails: React.FC = () => {
       lastLookupRef.current = digits;
       (async () => {
         setIsSearching(true);
+        setLookupStatus(null);
         try {
           const response = await getCustomerByPhone(digits);
           if (response.success && response.customer) {
@@ -29,19 +38,29 @@ export const CustomerDetails: React.FC = () => {
               phone: response.customer.phone,
               notes: response.customer.notes || ''
             });
-            toast({ title: 'Customer found', description: 'Details auto-filled.' });
+            setLookupStatus({ type: 'success', message: 'Customer details auto-filled.' });
+          } else {
+            const apiMsg = (response as unknown as { message?: string }).message;
+            setLookupStatus({ type: 'info', message: apiMsg || 'Customer not found. Please enter your details.' });
           }
         } catch (error: unknown) {
-          const err = error as { response?: { status?: number } };
-          if (err?.response?.status !== 404) {
-            toast({ title: 'Lookup failed', description: 'Could not fetch customer details', variant: 'destructive' });
+          // Attempt to extract message from API error response
+          const err = error as { response?: { status?: number; data?: { message?: string } }; message?: string };
+          const apiErrorMsg = err?.response?.data?.message || err?.message;
+          if (apiErrorMsg) {
+            const isNotFound = apiErrorMsg.toLowerCase().includes('not found');
+            setLookupStatus({ type: isNotFound ? 'info' : 'error', message: apiErrorMsg });
+          } else if (err?.response?.status === 404) {
+            setLookupStatus({ type: 'info', message: 'Customer not found. Please enter your details.' });
+          } else {
+            setLookupStatus({ type: 'error', message: 'Lookup failed, please try again.' });
           }
         } finally {
           setIsSearching(false);
         }
       })();
     }
-  }, [customerDetails.phone, setCustomerDetails, toast]);
+  }, [customerDetails.phone, setCustomerDetails]);
 
   return (
     <motion.div
@@ -97,6 +116,13 @@ export const CustomerDetails: React.FC = () => {
           <p className="mt-1 text-xs text-muted-foreground">
             Enter your 10-digit phone number. We'll search our records and auto-fill your details if you've booked before.
           </p>
+          {lookupStatus && (
+            <p className={`mt-1 flex items-center gap-1 text-xs ${statusColor}`}>
+              {lookupStatus.type === 'success' && <CheckCircle2 className="h-3 w-3" />}
+              {lookupStatus.type === 'error' && <AlertCircle className="h-3 w-3" />}
+              {lookupStatus.message}
+            </p>
+          )}
         </motion.div>
 
         <motion.div
