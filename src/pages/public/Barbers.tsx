@@ -149,7 +149,10 @@ export const Barbers: React.FC = () => {
                   {/* Image & Overlay */}
                   <div className="relative h-64 w-full overflow-hidden">
                     <img
-                      src={staff.image || 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080'}
+                      src={
+                        staff.image || staff.user?.image ||
+                        'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080'
+                      }
                       alt={staff.name || 'Barber'}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       loading="lazy"

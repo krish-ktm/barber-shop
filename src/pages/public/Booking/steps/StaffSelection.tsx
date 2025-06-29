@@ -138,7 +138,13 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                 type="button" // Explicitly set type to button
               >
                 <Avatar className={`h-14 w-14 sm:h-12 sm:w-12 shrink-0 ${isSelected ? "ring-2 ring-primary-foreground/30" : ""}`}>
-                  <AvatarImage src={staff.image} alt={staff.name} />
+                  <AvatarImage
+                    src={
+                      staff.image || (staff as unknown as { user?: { image?: string } }).user?.image ||
+                      'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1080'
+                    }
+                    alt={staff.name}
+                  />
                   <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col min-w-0 flex-1">

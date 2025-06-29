@@ -310,7 +310,10 @@ export const About: React.FC = () => {
                   <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
                     <div className="aspect-[3/4] relative overflow-hidden">
                       <img
-                        src={staff.image}
+                        src={
+                          staff.image || (staff as unknown as { user?: { image?: string } }).user?.image ||
+                          'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080'
+                        }
                         alt={staff.name}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         loading="lazy"

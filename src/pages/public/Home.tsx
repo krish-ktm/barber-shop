@@ -341,7 +341,7 @@ export const Home: React.FC = () => {
                   <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
                     <div className="aspect-[4/3] relative overflow-hidden">
                       <img
-                        src={`${staff.image}?auto=compress&cs=tinysrgb&w=1080`}
+                        src={`${(staff.image || (staff as unknown as { user?: { image?: string } }).user?.image || 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg') }?auto=compress&cs=tinysrgb&w=1080`}
                         alt={staff.name}
                         loading="lazy"
                         decoding="async"

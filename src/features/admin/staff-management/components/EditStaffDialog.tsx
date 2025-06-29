@@ -25,7 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Staff } from '@/types';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, ChevronDown, ChevronRight, Trash } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronRight, Trash, Image } from 'lucide-react';
 import { Service } from '@/api/services/serviceService';
 import {
   Collapsible,
@@ -33,6 +33,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { formatCurrency } from '@/utils';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 // Custom styles to override red color
 const customStyles = `
@@ -62,6 +63,7 @@ const formSchema = z.object({
   services: z.array(z.string()).min(1, 'Please select at least one service'),
   commissionPercentage: z.number().min(0).max(100),
   isActive: z.boolean(),
+  image: z.string().optional(),
 });
 
 interface EditStaffDialogProps {
@@ -85,6 +87,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(staff?.image);
   
   // Get unique categories from services
   const categories = Array.from(new Set(services.map(service => service.category || 'Uncategorized')));
@@ -100,6 +103,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       services: [], // Initialize empty, will be set in useEffect
       commissionPercentage: staff?.commissionPercentage || 0,
       isActive: staff?.isAvailable || false,
+      image: staff?.image || '',
     },
   });
 
@@ -166,6 +170,31 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       .length;
   };
 
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_SIZE_BYTES) {
+      toast({
+        title: 'Image too large',
+        description: 'Please select an image smaller than 5 MB.',
+        variant: 'destructive',
+      });
+      e.currentTarget.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const url = event.target?.result as string;
+      setImagePreview(url);
+      form.setValue('image', url);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     
@@ -176,6 +205,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
         ...values,
         isAvailable: values.isActive,
         services: selectedServiceIds, // Use the selected service IDs
+        image: values.image,
       };
       
       await onUpdate(updatedStaff);
@@ -298,6 +328,66 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                           className="resize-none"
                           {...field}
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profile Image</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col items-center">
+                          {imagePreview ? (
+                            <div className="relative mb-2 w-full max-w-[220px]">
+                              <AspectRatio ratio={1 / 1} className="bg-muted rounded-md overflow-hidden border">
+                                <img
+                                  src={imagePreview}
+                                  alt="Profile preview"
+                                  className="object-cover w-full h-full"
+                                />
+                              </AspectRatio>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="absolute bottom-2 right-2"
+                                onClick={() => {
+                                  setImagePreview(undefined);
+                                  form.setValue('image', '');
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="w-full max-w-[220px]">
+                              <label
+                                htmlFor="staff-edit-image-upload"
+                                className="flex flex-col items-center justify-center w-full h-[180px] border-2 border-dashed rounded-md cursor-pointer bg-muted/20 hover:bg-muted/30"
+                              >
+                                <div className="flex flex-col items-center justify-center p-4 text-center">
+                                  <Image className="w-8 h-8 mb-2 text-muted-foreground" />
+                                  <p className="text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span></p>
+                                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG or GIF</p>
+                                </div>
+                                <input
+                                  id="staff-edit-image-upload"
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  onChange={handleImageChange}
+                                />
+                                <input type="hidden" {...field} />
+                              </label>
+                            </div>
+                          )}
+                          <p className="text-center text-xs mt-2">Recommended size: 300×300px</p>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
