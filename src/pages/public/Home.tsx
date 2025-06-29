@@ -72,7 +72,7 @@ export const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <section className="relative min-h-[75vh] sm:min-h-[90vh] flex items-center justify-center overflow-hidden shadow-2xl">
+      <section className="relative flex items-center justify-center overflow-hidden shadow-2xl min-h-[100svh] py-24 sm:py-32">
         <motion.div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
