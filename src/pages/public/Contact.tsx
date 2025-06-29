@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useSettings } from '@/hooks/useSettings';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -49,6 +50,11 @@ const cardVariant = {
 
 export const Contact: React.FC = () => {
   const { toast } = useToast();
+  const { settings } = useSettings();
+
+  const addressLines = settings?.address?.split('\n') || ['123 Main Street', 'New York, NY 10001'];
+  const phoneNumber = settings?.phone || '(555) 123-4567';
+  const email = settings?.email || 'info@moderncuts.com';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,8 +192,12 @@ export const Contact: React.FC = () => {
                       <div>
                         <h3 className="font-semibold mb-2">Visit Us</h3>
                         <p className="text-muted-foreground">
-                          123 Main Street<br />
-                          New York, NY 10001
+                          {addressLines.map((l, idx) => (
+                            <React.Fragment key={idx}>
+                              {l}
+                              {idx !== addressLines.length - 1 && <br />}
+                            </React.Fragment>
+                          ))}
                         </p>
                       </div>
                       <Button variant="default" className="w-full" asChild>
@@ -243,13 +253,13 @@ export const Contact: React.FC = () => {
                       <div>
                         <h3 className="font-semibold mb-2">Get in Touch</h3>
                         <div className="space-y-1 text-muted-foreground">
-                          <p>Phone: (555) 123-4567</p>
-                          <p>Email: info@moderncuts.com</p>
+                          <p>Phone: {phoneNumber}</p>
+                          <p>Email: {email}</p>
                           <p>Live Chat Available</p>
                         </div>
                       </div>
                       <Button variant="default" className="w-full" asChild>
-                        <a href="tel:(555)123-4567" className="hover:text-white text-white">
+                        <a href={`tel:${phoneNumber.replace(/[^\d+]/g, '')}`} className="hover:text-white text-white">
                           Call Now
                         </a>
                       </Button>
