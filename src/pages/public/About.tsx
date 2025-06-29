@@ -62,7 +62,7 @@ export const About: React.FC = () => {
   return (
     <div>
       {/* Hero Section */}
-      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
+      <section className="relative flex items-center justify-center overflow-hidden min-h-[100svh] py-24 sm:py-32">
         {/* Background Image with Parallax Effect */}
         <motion.div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"

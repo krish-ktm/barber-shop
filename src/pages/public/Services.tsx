@@ -104,7 +104,7 @@ export const Services: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-background/90">
       {/* Hero Section */}
-      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden shadow-2xl">
+      <section className="relative flex items-center justify-center overflow-hidden shadow-2xl min-h-[100svh] py-24 sm:py-32">
         <motion.div 
           className="absolute inset-0 bg-[url('https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg?auto=compress&cs=tinysrgb&w=1080')] bg-cover bg-center bg-no-repeat"
           initial={{ scale: 1.1 }}
