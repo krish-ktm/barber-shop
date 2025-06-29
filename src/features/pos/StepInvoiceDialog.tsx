@@ -89,13 +89,14 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   
   // Fetch staff members and services when dialog opens
   useEffect(() => {
-    if (open) {
-      // Fetch staff members
+    if (!open) return;
+
+    // Fetch staff only if we don't already have data
+    if (staffMembers.length === 0 && !isLoadingStaff) {
       setIsLoadingStaff(true);
       fetchStaff(1, 100, 'name_asc', undefined, 'available')
         .then(response => {
           if (response.success && response.staff) {
-            // Transform staff data to match the format expected by the form
             const formattedStaff = response.staff.map(member => ({
               id: member.id,
               name: member.user?.name || 'Unknown',
@@ -119,11 +120,11 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
             variant: 'destructive',
           });
         })
-        .finally(() => {
-          setIsLoadingStaff(false);
-        });
-      
-      // Fetch services
+        .finally(() => setIsLoadingStaff(false));
+    }
+
+    // Fetch services only if not already cached
+    if (serviceItems.length === 0 && !isLoadingServices) {
       setIsLoadingServices(true);
       fetchServices(1, 100, 'name_asc')
         .then(response => {
@@ -145,11 +146,9 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
             variant: 'destructive',
           });
         })
-        .finally(() => {
-          setIsLoadingServices(false);
-        });
+        .finally(() => setIsLoadingServices(false));
     }
-  }, [open, fetchStaff, fetchServices, toast]);
+  }, [open, staffMembers.length, serviceItems.length, isLoadingStaff, isLoadingServices, fetchStaff, fetchServices, toast]);
 
   // Add a useEffect to fetch GST rates on component mount
   useEffect(() => {
