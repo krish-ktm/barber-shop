@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
 export const MainLayout: React.FC = () => {
+  // ensure admin theme class on html element so portals (modals) inherit variables
+  useEffect(() => {
+    document.documentElement.classList.add('admin-theme');
+    return () => {
+      document.documentElement.classList.remove('admin-theme');
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="admin min-h-screen flex flex-col">
       <Header />
       
       <div className="flex flex-1">

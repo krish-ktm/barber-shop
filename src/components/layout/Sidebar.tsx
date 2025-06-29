@@ -24,7 +24,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive, 
             className={cn(
               'w-full justify-start gap-2 h-10 rounded-md transition-colors',
               isActive
-                ? 'bg-primary text-primary-foreground font-semibold shadow'
+                ? 'bg-primary text-primary-foreground font-semibold shadow hover:bg-primary hover:text-primary-foreground'
                 : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
             )}
           >
@@ -40,7 +40,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive, 
           className={cn(
             'w-full justify-start gap-2 h-10 rounded-md transition-colors',
             isActive
-              ? 'bg-primary text-primary-foreground font-semibold shadow'
+              ? 'bg-primary text-primary-foreground font-semibold shadow hover:bg-primary hover:text-primary-foreground'
               : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
           )}
         >
