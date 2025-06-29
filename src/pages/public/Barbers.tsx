@@ -96,6 +96,7 @@ export const Barbers: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                 >
                   Book Now
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </motion.a>
               </Button>
 
@@ -144,57 +145,67 @@ export const Barbers: React.FC = () => {
                 whileHover={{ y: -5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
-                <Card className="overflow-hidden h-full">
-                  <div className="aspect-[4/3] relative overflow-hidden">
+                <Card className="group relative flex flex-col h-full overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300">
+                  {/* Image & Overlay */}
+                  <div className="relative h-64 w-full overflow-hidden">
                     <img
                       src={staff.image || 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080'}
                       alt={staff.name || 'Barber'}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       loading="lazy"
                       decoding="async"
                     />
-                  </div>
-                  <CardContent className="p-6 space-y-4">
-                    <div>
-                      <Badge variant="secondary" className="mb-2">
+                    {/* Dark gradient for legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                    {/* Name & role */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col">
+                      <h3 className="text-lg font-semibold text-white truncate">
+                        {staff.name ?? staff.user?.name ?? 'Our Barber'}
+                      </h3>
+                      <span className="text-sm text-primary-foreground/80">
                         {staff.position ?? 'Barber'}
-                      </Badge>
-                      <h3 className="text-xl font-semibold">{staff.name ?? staff.user?.name ?? 'Our Barber'}</h3>
-                      {staff.bio && (
-                        <p className="text-muted-foreground mt-2 line-clamp-3">
-                          {staff.bio}
-                        </p>
-                      )}
+                      </span>
+                    </div>
+                  </div>
 
-                      {Array.isArray(staff.services) && staff.services.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          {staff.services.map((svc) => (
-                            <Badge key={svc.id} variant="outline" className="text-xs">
-                              {svc.name}
-                            </Badge>
-                          ))}
+                  {/* Content section */}
+                  <CardContent className="bg-background p-6 space-y-4 flex flex-col flex-1">
+                    {staff.bio && (
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {staff.bio}
+                      </p>
+                    )}
+
+                    {Array.isArray(staff.services) && staff.services.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {staff.services.map((svc) => (
+                          <Badge
+                            key={svc.id}
+                            variant="outline"
+                            className="text-xs bg-muted/70 border-transparent text-foreground hover:bg-muted/60 transition-colors"
+                          >
+                            {svc.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                      {staff.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          <span>{staff.phone}</span>
+                        </div>
+                      )}
+                      {staff.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          <span>{staff.email}</span>
                         </div>
                       )}
                     </div>
 
-                    {(staff.phone || staff.email) && (
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        {staff.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4" />
-                            <span>{staff.phone}</span>
-                          </div>
-                        )}
-                        {staff.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            <span>{staff.email}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <Button asChild className="w-full">
+                    <Button asChild className="w-full mt-auto group-hover:-translate-y-1 transition-transform">
                       <Link to="/booking" className="hover:text-white">
                         Book Appointment
                         <Calendar className="ml-2 h-4 w-4" />

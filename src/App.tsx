@@ -44,10 +44,12 @@ import { Gallery } from './pages/public/Gallery';
 import { Contact } from './pages/public/Contact';
 import { Booking } from './pages/public/Booking';
 import { Barbers } from './pages/public/Barbers';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthListener />
       <Routes>
         {/* Public Routes */}

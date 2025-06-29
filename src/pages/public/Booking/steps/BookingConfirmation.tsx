@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Calendar, CheckCircle, Clock, Scissors, User } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Scissors, User, ArrowRight } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -9,6 +9,7 @@ import { formatCurrency } from '@/utils';
 import { useBooking } from '../BookingContext';
 import { useToast } from '@/hooks/use-toast';
 import { createBooking, BookingRequest, BookingResponse } from '@/api/services/bookingService';
+import { useNavigate } from 'react-router-dom';
 
 export const BookingConfirmation: React.FC = () => {
   const { toast } = useToast();
@@ -31,6 +32,8 @@ export const BookingConfirmation: React.FC = () => {
 
   // Get client timezone
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const navigate = useNavigate();
 
   const handleSubmitBooking = async () => {
     if (!selectedStaffId || !selectedServices.length || !selectedDate || !selectedTime || !customerDetails) {
@@ -97,8 +100,9 @@ export const BookingConfirmation: React.FC = () => {
   };
 
   const handleStartOver = () => {
-    // Refresh the page and redirect to booking
-    window.location.href = '/booking';
+    // Soft reset: navigate to booking root and scroll to top without full page reload
+    navigate(`/booking?reset=${Date.now()}`, { replace: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Format time for display in 12-hour format
@@ -222,6 +226,7 @@ export const BookingConfirmation: React.FC = () => {
           className="mt-4 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-md"
         >
           Book Another Appointment
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </motion.div>
     );

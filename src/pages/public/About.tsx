@@ -119,6 +119,8 @@ export const About: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                 >
                   Book Now
+                  <ArrowRight className="ml-2 h-5 w-5" />
+
                 </motion.a>
               </Button>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BookingProvider, useBooking } from './BookingContext';
 import { ServiceStaffTabs } from './steps/ServiceStaffTabs';
@@ -9,6 +9,8 @@ import { BookingConfirmation } from './steps/BookingConfirmation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar, CheckCircle2, Info, Scissors, Users } from 'lucide-react';
 import { formatCurrency } from '@/utils';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useLocation } from 'react-router-dom';
 
 const BookingContent: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -22,6 +24,15 @@ const BookingContent: React.FC = () => {
     selectedTime,
     customerDetails
   } = useBooking();
+
+  const isMobile = useMediaQuery('(max-width: 639px)');
+
+  // Scroll to top when step changes on mobile
+  useEffect(() => {
+    if (isMobile) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentStep, isMobile]);
 
   const steps = [
     { 
@@ -280,8 +291,9 @@ const BookingContent: React.FC = () => {
 };
 
 export const Booking: React.FC = () => {
+  const location = useLocation();
   return (
-    <BookingProvider>
+    <BookingProvider key={location.key}>
       <BookingContent />
     </BookingProvider>
   );

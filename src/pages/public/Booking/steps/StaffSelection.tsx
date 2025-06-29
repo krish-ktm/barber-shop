@@ -114,7 +114,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
         </Alert>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {availableStaff.map((staff) => {
           const isSelected = selectedStaffId === staff.id;
           return (
@@ -125,7 +125,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
             >
               <Button
                 variant="ghost"
-                className={`group w-full h-auto p-4 sm:p-5 text-left flex items-start gap-4 rounded-xl border transition-all duration-200 ${
+                className={`group w-full h-auto p-3 sm:p-4 text-left flex items-center gap-3 sm:gap-4 rounded-xl border transition-all duration-200 ${
                   isSelected
                     ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg border-primary hover:bg-gradient-to-r hover:from-primary hover:to-primary/90 hover:text-primary-foreground"
                     : "bg-accent/10 border-accent/30 text-foreground shadow-sm hover:border-accent/50 hover:bg-accent/20 hover:shadow-md"
@@ -137,18 +137,18 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                 }}
                 type="button" // Explicitly set type to button
               >
-                <Avatar className={`h-12 w-12 shrink-0 mt-0.5 ${isSelected ? "ring-2 ring-primary-foreground/30" : ""}`}>
+                <Avatar className={`h-14 w-14 sm:h-12 sm:w-12 shrink-0 ${isSelected ? "ring-2 ring-primary-foreground/30" : ""}`}>
                   <AvatarImage src={staff.image} alt={staff.name} />
                   <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center justify-between gap-2 w-full">
                     <span className={`font-medium truncate ${isSelected ? "text-primary-foreground" : ""}`}>
                       {staff.name}
                     </span>
                     <Badge
                       variant="default"
-                      className={`text-xs shrink-0 border-0 ${
+                      className={`text-[10px] px-2 py-0.5 shrink-0 border-0 ${
                         isSelected
                           ? "bg-white/20 text-white group-hover:bg-white/20"
                           : "bg-muted/40 text-foreground group-hover:bg-muted/50"
@@ -164,7 +164,7 @@ export const StaffSelection: React.FC<StaffSelectionProps> = ({ hideHeading = fa
                   }`}>
                     {staff.position}
                   </span>
-                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                  <div className="flex gap-1 mt-1 flex-wrap">
                     <Badge
                       variant="default"
                       className={`text-xs py-0 h-5 px-1.5 flex items-center gap-1 border-0 ${

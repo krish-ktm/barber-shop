@@ -72,7 +72,7 @@ export const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden shadow-2xl">
+      <section className="relative min-h-[75vh] sm:min-h-[90vh] flex items-center justify-center overflow-hidden shadow-2xl">
         <motion.div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
@@ -95,7 +95,7 @@ export const Home: React.FC = () => {
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-8 flex flex-col h-full"
+            className="space-y-6 sm:space-y-8 flex flex-col h-full"
           >
             <motion.h1 
               variants={fadeIn}
@@ -166,13 +166,13 @@ export const Home: React.FC = () => {
                     className="text-white/90 text-center"
                     whileHover={{ scale: 1.05 }}
                   >
-                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">{item.value}</div>
-                    <div className="text-xs sm:text-sm md:text-base text-white/70">{item.label}</div>
+                    <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-1">{item.value}</div>
+                    <div className="text-sm sm:text-base md:text-lg text-white/80">{item.label}</div>
                   </motion.div>
                 ) : (
                   <motion.div
                     key={index}
-                    className="flex justify-center"
+                    className="flex justify-center col-span-2 md:col-span-1"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     whileHover={{ scale: 1.05 }}
@@ -181,7 +181,7 @@ export const Home: React.FC = () => {
                       <img
                         src="/logo/logo-tran.png"
                         alt="Gentlemen's House Logo"
-                        className="h-[10.5rem] w-auto drop-shadow-md"
+                        className="h-32 sm:h-36 md:h-40 w-auto drop-shadow-md"
                       />
                   </motion.div>
                 )
@@ -191,7 +191,7 @@ export const Home: React.FC = () => {
         </div>
 
         <motion.div
-          className="absolute bottom-0 left-0 w-full h-[16rem] bg-gradient-to-t from-black/90 via-black/70 to-transparent"
+          className="absolute bottom-0 left-0 w-full h-[12rem] sm:h-[16rem] bg-gradient-to-t from-black/90 via-black/70 to-transparent"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}

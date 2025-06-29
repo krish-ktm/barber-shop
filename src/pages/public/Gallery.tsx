@@ -207,7 +207,7 @@ export const Gallery: React.FC = () => {
               </div>
 
               {/* Category Filters */}
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="flex flex-wrap sm:flex-nowrap justify-center gap-2 overflow-x-auto scrollbar-none py-1 px-1">
                 {categories.map((cat) => (
                   <Button
                     key={cat}
@@ -226,7 +226,7 @@ export const Gallery: React.FC = () => {
               variants={staggerContainer}
               initial="initial"
               animate="animate"
-              className="grid auto-rows-[200px] md:auto-rows-[250px] gap-4 md:grid-cols-3 lg:grid-cols-4"
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-3 md:gap-4 auto-rows-[220px] sm:auto-rows-[200px] md:auto-rows-[250px]"
             >
               {filteredImages.map((image, index) => (
                 <motion.div
@@ -239,7 +239,7 @@ export const Gallery: React.FC = () => {
                   onClick={() => setSelectedImage(image.url)}
                   className={getSpanClasses(index)}
                 >
-                  <Card className="group h-full w-full overflow-hidden border-2 hover:border-primary/50 transition-colors cursor-pointer flex flex-col">
+                  <Card className="group h-full w-full overflow-hidden sm:border-2 border border-border sm:hover:border-primary/50 transition-colors cursor-pointer flex flex-col rounded-lg">
                     <div className="relative flex-1 overflow-hidden">
                       <img
                         src={image.url}

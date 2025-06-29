@@ -184,12 +184,6 @@ export const ReviewsSection: React.FC = () => {
               </CardContent>
             </Card>
           </motion.div>
-          
-          <motion.div variants={fadeIn} className="text-center mt-10">
-            <Badge className="px-4 py-2 text-base">
-              Join our happy customers today!
-            </Badge>
-          </motion.div>
         </motion.div>
       </div>
     </section>
