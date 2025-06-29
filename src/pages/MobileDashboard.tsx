@@ -3,7 +3,6 @@ import {
   Calendar,
   DollarSign,
   BarChart,
-  Loader2,
   Activity,
 } from 'lucide-react';
 
@@ -146,14 +145,14 @@ export const MobileDashboard: React.FC = () => {
   if (isLoading && !dataToShow) {
     return (
       <div className="flex justify-center items-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-3">Loading dashboard data...</span>
+        <Skeleton className="h-8 w-8 rounded-full" />
+        <span className="ml-3">Loading dashboard…</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-20">{/* Extra bottom padding for safe-areas */}
+    <div className="space-y-4 pb-20">
       <PageHeader title="Dashboard" description="Quick overview of your shop" />
 
       {/* Period Tabs */}

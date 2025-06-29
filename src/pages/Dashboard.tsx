@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, DollarSign, Loader2, BarChart } from 'lucide-react';
+import { Calendar, DollarSign, BarChart } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { AppointmentList, SimpleAppointment } from '@/components/dashboard/AppointmentList';
@@ -200,6 +202,43 @@ export const Dashboard: React.FC = () => {
     createdAt: apt.createdAt || new Date().toISOString(),
     updatedAt: apt.updatedAt || apt.createdAt || new Date().toISOString()
   })) || [];
+
+  if (isLoading && !dataToShow) {
+    return (
+      <div className="space-y-6">
+        <PageHeader 
+          title="Loading dashboard..."
+          description="Please wait while we load your dashboard data"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-8 w-1/2 mb-2" />
+                <Skeleton className="h-6 w-1/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, idx) => (
+            <Card key={idx}>
+              <CardHeader>
+                <Skeleton className="h-6 w-1/3" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {[...Array(3)].map((__, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
