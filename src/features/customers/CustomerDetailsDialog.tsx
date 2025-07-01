@@ -117,7 +117,7 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95%] w-full sm:max-w-2xl p-0 max-h-[90vh] overflow-y-auto rounded-xl mx-auto flex flex-col">
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl p-0 max-h-[90vh] overflow-y-auto rounded-xl mx-auto flex flex-col">
         {/* Sticky header */}
         <DialogHeader className="px-5 py-4 border-b sticky top-0 z-10 bg-card rounded-t-xl text-center">
           <DialogTitle className="text-base font-semibold">Customer Details</DialogTitle>
