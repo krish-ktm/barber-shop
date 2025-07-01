@@ -13,6 +13,7 @@ import { useApi } from '@/hooks/useApi';
 import { createInvoice } from '@/api/services/invoiceService';
 import { getAllStaff } from '@/api/services/staffService';
 import { getAllServices } from '@/api/services/serviceService';
+import { getAllProducts } from '@/api/services/productService';
 import { getGSTRates } from '@/api/services/settingsService';
 import { Customer } from '@/api/services/customerService';
 import { Loader2 } from 'lucide-react';
@@ -54,8 +55,16 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
     category: string;
     description?: string;
   }>>([]);
+  const [productItems, setProductItems] = useState<Array<{
+    id: string;
+    name: string;
+    price: number;
+    category: string;
+    description?: string;
+  }>>([]);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   
   // Use the API hook for creating invoices and fetching data
   const {
@@ -70,6 +79,10 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   const {
     execute: fetchServices
   } = useApi(getAllServices);
+
+  const {
+    execute: fetchProducts
+  } = useApi(getAllProducts);
 
   // Add API hook for creating customers
   const {
@@ -148,7 +161,33 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         })
         .finally(() => setIsLoadingServices(false));
     }
-  }, [open, staffMembers.length, serviceItems.length, isLoadingStaff, isLoadingServices, fetchStaff, fetchServices, toast]);
+
+    // Fetch products only if not already cached
+    if (productItems.length === 0 && !isLoadingProducts) {
+      setIsLoadingProducts(true);
+      fetchProducts(1, 100, 'name_asc')
+        .then(response => {
+          if (response.success && response.products) {
+            setProductItems(response.products);
+          } else {
+            toast({
+              title: 'Error',
+              description: 'Failed to load products',
+              variant: 'destructive',
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching products:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load products',
+            variant: 'destructive',
+          });
+        })
+        .finally(() => setIsLoadingProducts(false));
+    }
+  }, [open, staffMembers.length, serviceItems.length, isLoadingStaff, isLoadingServices, fetchStaff, fetchServices, fetchProducts, toast]);
 
   // Add a useEffect to fetch GST rates on component mount
   useEffect(() => {
@@ -236,8 +275,33 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         }
       });
       
+      // Prepare products data
+      const productsWithDetails = (formData.products || []).map(product => {
+        const productDetails = productItems.find(p => p.id === product.productId);
+
+        if (productDetails) {
+          return {
+            product_id: productDetails.id,
+            product_name: productDetails.name,
+            price: productDetails.price,
+            quantity: 1,
+            total: productDetails.price
+          };
+        } else {
+          return {
+            product_id: product.productId,
+            product_name: 'Unknown Product',
+            price: 0,
+            quantity: 1,
+            total: 0
+          };
+        }
+      });
+      
       // Calculate subtotal - ensure values are numbers
-      const subtotal = servicesWithDetails.reduce((sum, service) => sum + (Number(service.total) || 0), 0);
+      const subtotalServices = servicesWithDetails.reduce((sum, service) => sum + (Number(service.total) || 0), 0);
+      const subtotalProducts = productsWithDetails.reduce((sum, product) => sum + (Number(product.total) || 0), 0);
+      const subtotal = subtotalServices + subtotalProducts;
       
       // Get the GST rate data
       const gstRateData = gstRates.find(rate => rate.id === formData.gstRates[0]);
@@ -323,6 +387,8 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         date: new Date().toISOString().split('T')[0],
         services: servicesWithDetails, // Keep for backward compatibility
         invoiceServices: servicesWithDetails, // Use the correct property name to match backend alias
+        products: productsWithDetails,
+        invoiceProducts: productsWithDetails,
         subtotal: subtotal,
         tax: taxRate,
         tax_amount: taxAmount,
@@ -369,6 +435,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       
       console.log('Sending invoice data:', JSON.stringify(invoiceData, null, 2));
       console.log('Services being sent:', JSON.stringify(servicesWithDetails, null, 2));
+      console.log('Products being sent:', JSON.stringify(productsWithDetails, null, 2));
       console.log('Services array length:', servicesWithDetails.length);
       console.log('First service:', servicesWithDetails[0] ? JSON.stringify(servicesWithDetails[0], null, 2) : 'No services found');
       
@@ -466,6 +533,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
 
   // Global loading state while fetching initial data
   const isInitialLoading = isLoadingStaff || isLoadingServices || isLoadingGSTRates;
+  const isInitialLoadingAll = isInitialLoading || isLoadingProducts;
 
   return (
     <Sheet open={open} onOpenChange={isSubmitting ? undefined : onOpenChange}>
@@ -479,7 +547,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
           </SheetHeader>
         </div>
 
-        {isInitialLoading ? (
+        {isInitialLoadingAll ? (
           <div className="flex items-center justify-center h-[calc(100%-80px)]">
             <div className="text-center">
               <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
@@ -510,6 +578,8 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
             isLoadingStaff={isLoadingStaff}
             serviceData={serviceItems}
             isLoadingServices={isLoadingServices}
+            productData={productItems}
+            isLoadingProducts={isLoadingProducts}
             gstRatesData={gstRates}
           />
         </div>

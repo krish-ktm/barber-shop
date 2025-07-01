@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Invoice } from '@/api/services/invoiceService';
+import { Invoice, InvoiceProduct } from '@/api/services/invoiceService';
 import { formatCurrency } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import { sendInvoice } from '@/api/services/invoiceService';
@@ -179,12 +179,13 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             <Separator />
 
             {/* Services */}
+            { (invoice.invoiceServices || invoice.services || []).length > 0 && (
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Services</h4>
               <div className="space-y-2">
                 {(invoice.invoiceServices || invoice.services || []).map((service, index) => (
                   <div
-                    key={`${service.service_id}-${index}`}
+                    key={`svc-${service.service_id}-${index}`}
                     className="flex justify-between text-sm"
                   >
                     <div>
@@ -197,7 +198,29 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                   </div>
                 ))}
               </div>
-            </div>
+            </div>) }
+
+            {/* Products */}
+            { (invoice.invoiceProducts || invoice.products || []).length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Products</h4>
+              <div className="space-y-2">
+                {(invoice.invoiceProducts || invoice.products || []).map((product: InvoiceProduct, index: number) => (
+                  <div
+                    key={`prd-${product.product_id}-${index}`}
+                    className="flex justify-between text-sm"
+                  >
+                    <div>
+                      <span>{product.product_name}</span>
+                      {product.quantity > 1 && (
+                        <span className="text-muted-foreground"> × {product.quantity}</span>
+                      )}
+                    </div>
+                    <span>{formatCurrency(product.total)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>) }
 
             <Separator />
 

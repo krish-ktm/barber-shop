@@ -9,6 +9,14 @@ export interface InvoiceService {
   total: number;
 }
 
+export interface InvoiceProduct {
+  product_id: string;
+  product_name: string;
+  price: number;
+  quantity: number;
+  total: number;
+}
+
 export interface TaxComponent {
   name: string;
   rate: number;
@@ -36,6 +44,8 @@ export interface Invoice {
   notes?: string;
   services?: InvoiceService[]; // For backward compatibility
   invoiceServices?: InvoiceService[]; // Correct alias from the backend
+  products?: InvoiceProduct[]; // Backward compatibility
+  invoiceProducts?: InvoiceProduct[]; // Preferred alias
   tax_components?: TaxComponent[];
   created_at?: string;
   updated_at?: string;

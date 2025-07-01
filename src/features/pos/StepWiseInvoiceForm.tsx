@@ -6,7 +6,6 @@ import {
   ArrowLeft, 
   ArrowRight, 
   Check,
-  Trash,
   Percent,
   ChevronDown,
   ChevronRight,
@@ -93,6 +92,7 @@ export interface InvoiceFormData {
   gstRates: string[];
   notes?: string;
   services: Array<{ id: string; serviceId: string }>;
+  products: Array<{ id: string; productId: string }>;
   customerName: string;
   isNewCustomer: boolean;
   isGuestUser: boolean;
@@ -124,6 +124,14 @@ interface StepWiseInvoiceFormProps {
     description?: string;
   }>;
   isLoadingServices?: boolean;
+  productData?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    category: string;
+    description?: string;
+  }>;
+  isLoadingProducts?: boolean;
   gstRatesData?: Array<{
     id: string;
     name: string;
@@ -141,11 +149,14 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   isLoadingStaff = false,
   serviceData = [],
   isLoadingServices = false,
+  productData = [],
+  isLoadingProducts = false,
   gstRatesData = []
 }) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('customer');
   const [services, setServices] = useState<Array<{ id: string; serviceId: string }>>([]);
+  const [products, setProducts] = useState<Array<{ id: string; productId: string }>>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
   // We'll manage our own search state for UI, but use the API state for actual loading
   const [isSearching, setIsSearching] = useState(false);
@@ -286,6 +297,15 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     }
   };
 
+  const handleProductSelection = (productId: string) => {
+    const isSelected = products.some(p => p.productId === productId);
+    if (isSelected) {
+      setProducts(products.filter(p => p.productId !== productId));
+    } else {
+      setProducts([...products, { id: Date.now().toString(), productId }]);
+    }
+  };
+
   const getSelectedServicesCount = (category: string) => {
     return services.filter(service => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
@@ -293,8 +313,16 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     }).length;
   };
 
+  const getSelectedProductsCount = (category: string) => {
+    return products.filter(product => {
+      const selectedProduct = productData.find(p => p.id === product.productId);
+      return selectedProduct?.category === category;
+    }).length;
+  };
+
   // Get unique categories from services
   const categories = Array.from(new Set(serviceData.map(service => service.category)));
+  const productCategories = Array.from(new Set(productData.map(product => product.category)));
 
   const toggleCategory = (category: string) => {
     setOpenCategories(prev => ({
@@ -309,7 +337,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       case 'customer':
         // Check if there's any customer info provided
         if (activeTab === 'search') {
-          if (!selectedCustomer) {
+          if (!selectedCustomer && !isGuestUser) {
             // No customer selected in search tab - use guest user
             setIsGuestUser(true);
             setIsNewCustomer(false);
@@ -338,11 +366,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         }
         break;
       case 'services':
-        // Validate services selection before proceeding
-        if (services.length === 0) {
+        // Validate services or products selection before proceeding
+        if (services.length === 0 && products.length === 0) {
           toast({
-            title: 'Services required',
-            description: 'Please select at least one service.',
+            title: 'Selection required',
+            description: 'Please select at least one service or product.',
             variant: 'destructive',
           });
           return;
@@ -416,10 +444,10 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         nextStep();
         break;
       case 'services':
-        if (services.length === 0) {
+        if (services.length === 0 && products.length === 0) {
           toast({
-            title: 'Services required',
-            description: 'Please select at least one service.',
+            title: 'Selection required',
+            description: 'Please select at least one service or product.',
             variant: 'destructive',
           });
           return;
@@ -469,6 +497,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         onSubmit({
           ...formValues,
           services,
+          products,
           customerName: selectedCustomer?.name || customerDetails?.name || 'Guest',
           isNewCustomer,
           isGuestUser,
@@ -742,11 +771,18 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 
   // Render the payment step with enhanced UI for tips and discounts
   const renderPaymentStep = () => {
-    // Calculate subtotal
-    const subtotal = services.reduce((sum, service) => {
+    // Calculate subtotal including products
+    const subtotalServices = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
       return sum + (Number(selectedService?.price) || 0);
     }, 0);
+
+    const subtotalProducts = products.reduce((sum, product) => {
+      const selectedProduct = productData.find(p => p.id === product.productId);
+      return sum + (Number(selectedProduct?.price) || 0);
+    }, 0);
+
+    const subtotal = subtotalServices + subtotalProducts;
     
     // Calculate discount amount
     let discountAmount = 0;
@@ -954,13 +990,18 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     const selectedGstRateId = form.getValues().gstRates[0];
     const selectedGstRate = gstRatesData.find(rate => rate.id === selectedGstRateId);
     
-    // Calculate subtotal
-    const subtotal = services.reduce((sum, service) => {
+    // Calculate subtotal including products
+    const subtotalServices = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
-      // Ensure price is a valid number
-      const price = selectedService?.price ? Number(selectedService.price) : 0;
-      return sum + price;
+      return sum + (Number(selectedService?.price) || 0);
     }, 0);
+
+    const subtotalProducts = products.reduce((sum, product) => {
+      const selectedProduct = productData.find(p => p.id === product.productId);
+      return sum + (Number(selectedProduct?.price) || 0);
+    }, 0);
+
+    const subtotal = subtotalServices + subtotalProducts;
     
     // Calculate discount
     let discountAmount = 0;
@@ -1029,7 +1070,29 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             
             <div className="flex justify-between font-medium pt-2">
               <span>Subtotal</span>
-              <span>{formatCurrency(subtotal)}</span>
+              <span>{formatCurrency(subtotalServices)}</span>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-2">
+            <h4 className="font-medium">Products</h4>
+            {products.map((product) => {
+              const selectedProduct = productData.find(p => p.id === product.productId);
+              if (!selectedProduct) return null;
+              
+              return (
+                <div key={product.id} className="flex justify-between">
+                  <span>{selectedProduct.name}</span>
+                  <span>{formatCurrency(Number(selectedProduct.price) || 0)}</span>
+                </div>
+              );
+            })}
+            
+            <div className="flex justify-between font-medium pt-2">
+              <span>Subtotal</span>
+              <span>{formatCurrency(subtotalProducts)}</span>
             </div>
           </div>
           
@@ -1356,38 +1419,69 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                       );
                     })}
                     
-                    {services.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        <div className="text-sm font-medium">Selected Services</div>
-                        {services.map((service) => {
-                          const selectedService = serviceData.find(s => s.id === service.serviceId);
-                          if (!selectedService) return null;
-                          
-                          return (
-                            <div key={service.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <span>{selectedService.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {selectedService.category}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <span className="text-sm font-medium">
-                                  {formatCurrency(Number(selectedService.price) || 0)}
-                                </span>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleServiceSelection(service.serviceId)}
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                    {/* Product Categories */}
+                    {productCategories.length > 0 && (
+                      <>
+                        <h3 className="text-lg font-medium pt-4">Select Products</h3>
+                        {isLoadingProducts ? (
+                          <div className="flex justify-center p-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>
+                        ) : (
+                          productCategories.map((category) => {
+                            const selectedCount = getSelectedProductsCount(category);
+                            return (
+                              <Collapsible
+                                key={`product-${category}`}
+                                open={openCategories[category]}
+                                onOpenChange={() => toggleCategory(category)}
+                                className="border rounded-lg"
+                              >
+                                <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-muted/50">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">
+                                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                                    </span>
+                                    {selectedCount > 0 && (
+                                      <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                                        {selectedCount}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {openCategories[category] ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="p-2">
+                                  <div className="grid gap-2">
+                                    {productData
+                                      .filter(p => p.category === category)
+                                      .map((p) => {
+                                        const isSelected = products.some(product => product.productId === p.id);
+                                        return (
+                                          <Button
+                                            key={p.id}
+                                            type="button"
+                                            variant={isSelected ? "default" : "outline"}
+                                            className="w-full justify-between group"
+                                            onClick={() => handleProductSelection(p.id)}
+                                          >
+                                            <span>{p.name}</span>
+                                            <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
+                                              {formatCurrency(Number(p.price) || 0)}
+                                            </span>
+                                          </Button>
+                                        );
+                                      })}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            );
+                          })
+                        )}
+                      </>
                     )}
                   </div>
                 )}
