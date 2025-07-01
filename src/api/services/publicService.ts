@@ -2,17 +2,21 @@ import { get, post } from '../apiClient';
 import { Service } from './serviceService';
 
 // Type definitions
+export interface BusinessHour {
+  day_of_week: string;
+  open_time: string | null;
+  close_time: string | null;
+}
+
 export interface BusinessInfo {
   name: string;
   address: string;
   phone: string;
   email: string;
   logo?: string;
-  business_hours: {
-    day_of_week: string;
-    open_time: string;
-    close_time: string;
-  }[];
+  // For compatibility we support both keys but strongly type 'hours'
+  hours?: BusinessHour[];
+  business_hours?: BusinessHour[];
 }
 
 export interface GalleryImage {

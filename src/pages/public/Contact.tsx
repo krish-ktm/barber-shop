@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useSettings } from '@/hooks/useSettings';
+import { useBusinessInfo } from '@/hooks/useBusinessInfo';
 import { submitContactForm } from '@/api/services/publicService';
+import type { BusinessHour } from '@/api/services/publicService';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -51,11 +52,25 @@ const cardVariant = {
 
 export const Contact: React.FC = () => {
   const { toast } = useToast();
-  const { settings } = useSettings();
+  const { businessInfo } = useBusinessInfo();
 
-  const addressLines = settings?.address?.split('\n') || ['123 Main Street', 'New York, NY 10001'];
-  const phoneNumber = settings?.phone || '(555) 123-4567';
-  const email = settings?.email || 'info@moderncuts.com';
+  const addressLines = businessInfo?.address?.split('\n') || ['123 Main Street', 'New York, NY 10001'];
+  const phoneNumber = businessInfo?.phone || '(555) 123-4567';
+  const email = businessInfo?.email || 'info@moderncuts.com';
+
+  const hours = (businessInfo?.hours ?? (businessInfo as unknown as { business_hours?: BusinessHour[] })?.business_hours ?? []) as BusinessHour[];
+
+  const formatTime = (time: string) => {
+    if (!time) return '';
+    const [hourStr, minuteStr] = time.split(':');
+    const hour = parseInt(hourStr, 10);
+    const minute = minuteStr;
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const formattedHour = hour % 12 === 0 ? 12 : hour % 12;
+    return `${formattedHour}:${minute} ${ampm}`;
+  };
+
+  const capitalize = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
 
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -211,8 +226,8 @@ export const Contact: React.FC = () => {
                 viewport={{ once: true }}
               >
                 <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
-                  <CardContent className="pt-6 p-6">
-                    <div className="flex flex-col items-center text-center space-y-4">
+                  <CardContent className="p-8 flex flex-col h-full text-center">
+                    <div className="flex flex-col items-center text-center space-y-3 flex-1">
                       <div className="p-3 bg-primary/5 rounded-full">
                         <MapPin className="h-6 w-6 text-primary" />
                       </div>
@@ -227,7 +242,7 @@ export const Contact: React.FC = () => {
                           ))}
                         </p>
                       </div>
-                      <Button variant="default" className="w-full" asChild>
+                      <Button variant="default" className="w-full mt-auto" asChild>
                         <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="hover:text-white text-white">
                           Get Directions
                         </a>
@@ -243,20 +258,31 @@ export const Contact: React.FC = () => {
                 viewport={{ once: true }}
               >
                 <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
-                  <CardContent className="pt-6 p-6">
-                    <div className="flex flex-col items-center text-center space-y-4">
+                  <CardContent className="p-8 flex flex-col h-full text-center">
+                    <div className="flex flex-col items-center text-center space-y-3 flex-1">
                       <div className="p-3 bg-primary/5 rounded-full">
                         <Clock className="h-6 w-6 text-primary" />
                       </div>
                       <div>
                         <h3 className="font-semibold mb-2">Business Hours</h3>
-                        <div className="space-y-1 text-muted-foreground">
-                          <p>Monday - Friday: 9:00 AM - 8:00 PM</p>
-                          <p>Saturday: 10:00 AM - 6:00 PM</p>
-                          <p>Sunday: Closed</p>
+                        <div className="space-y-1 text-muted-foreground max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
+                          {hours.length > 0 ? (
+                            hours.map((h: BusinessHour) => (
+                              <p key={h.day_of_week}>
+                                {capitalize(h.day_of_week)}:{' '}
+                                {h.open_time && h.close_time ? `${formatTime(h.open_time)} - ${formatTime(h.close_time)}` : 'Closed'}
+                              </p>
+                            ))
+                          ) : (
+                            <>
+                              <p>Monday - Friday: 9:00 AM - 8:00 PM</p>
+                              <p>Saturday: 10:00 AM - 6:00 PM</p>
+                              <p>Sunday: Closed</p>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <Button variant="default" className="w-full" asChild>
+                      <Button variant="default" className="w-full mt-auto" asChild>
                         <a href="/booking" className="hover:text-white text-white">
                           Book Now
                         </a>
@@ -272,8 +298,8 @@ export const Contact: React.FC = () => {
                 viewport={{ once: true }}
               >
                 <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
-                  <CardContent className="pt-6 p-6">
-                    <div className="flex flex-col items-center text-center space-y-4">
+                  <CardContent className="p-8 flex flex-col h-full text-center">
+                    <div className="flex flex-col items-center text-center space-y-3 flex-1">
                       <div className="p-3 bg-primary/5 rounded-full">
                         <Phone className="h-6 w-6 text-primary" />
                       </div>
@@ -285,7 +311,7 @@ export const Contact: React.FC = () => {
                           <p>Live Chat Available</p>
                         </div>
                       </div>
-                      <Button variant="default" className="w-full" asChild>
+                      <Button variant="default" className="w-full mt-auto" asChild>
                         <a href={`tel:${phoneNumber.replace(/[^\d+]/g, '')}`} className="hover:text-white text-white">
                           Call Now
                         </a>
