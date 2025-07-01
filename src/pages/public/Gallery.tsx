@@ -200,9 +200,6 @@ export const Gallery: React.FC = () => {
                       </div>
                     </div>
                     <div className="p-4">
-                      <Badge className="mb-2">
-                        {image.category}
-                      </Badge>
                       <h3 className="font-semibold group-hover:text-primary transition-colors">
                         {image.title}
                       </h3>
@@ -241,24 +238,16 @@ export const Gallery: React.FC = () => {
 
       {/* Image Lightbox */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-0">
+        <DialogContent className="p-0 overflow-hidden bg-transparent border-0 w-auto max-w-[90vw]">
           {/* Visually hidden title for accessibility */}
           <DialogHeader className="sr-only">
             <DialogTitle>Preview image</DialogTitle>
           </DialogHeader>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 z-50 text-white hover:bg-white/20"
-            onClick={() => setSelectedImage(null)}
-          >
-            <Plus className="h-6 w-6 rotate-45" />
-          </Button>
           {selectedImage && (
             <img
               src={selectedImage}
               alt="Gallery preview"
-              className="w-full h-auto max-h-[80vh] object-contain"
+              className="w-auto max-w-full h-auto max-h-[80vh] object-contain"
               loading="lazy"
               decoding="async"
             />
