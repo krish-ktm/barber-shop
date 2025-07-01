@@ -45,6 +45,8 @@ import { Contact } from './pages/public/Contact';
 import { Booking } from './pages/public/Booking';
 import { Barbers } from './pages/public/Barbers';
 import ScrollToTop from './components/ScrollToTop';
+import AdminGalleryImages from './pages/AdminGalleryImages';
+import AdminContactRequests from './pages/AdminContactRequests';
 
 function App() {
   return (
@@ -90,6 +92,8 @@ function App() {
           <Route path="settings" element={<AdminSettings />} />
           <Route path="gst-settings" element={<GSTSettings />} />
           <Route path="reviews" element={<AdminReviews />} />
+          <Route path="gallery-images" element={<AdminGalleryImages />} />
+          <Route path="contact-requests" element={<AdminContactRequests />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 

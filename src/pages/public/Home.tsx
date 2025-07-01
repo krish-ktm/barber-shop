@@ -12,11 +12,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { staffData, serviceData } from '@/mocks';
+import { serviceData } from '@/mocks';
 import { ReviewsSection } from '@/features/public/ReviewsSection';
 import { useApi } from '@/hooks/useApi';
 import { getAllServices, Service } from '@/api/services/serviceService';
 import { ServicesShadCarousel } from '@/components/ServicesShadCarousel';
+import { usePublicStaff } from '@/hooks/usePublicStaff';
+import { Loader } from '@/components/ui/loader';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -62,13 +64,27 @@ export const Home: React.FC = () => {
     execute: fetchServices
   } = useApi(getAllServices);
 
+  const { staff, loading: staffLoading, error: staffError } = usePublicStaff();
+
   // Fetch first 8 services on mount
   useEffect(() => {
     fetchServices(1, 8, 'name_asc');
   }, [fetchServices]);
 
   const featuredServices: Service[] = (fetchedServices?.services || serviceData).slice(0, 8);
-  const featuredStaff = staffData.slice(0, 3);
+  const featuredStaff = staff.slice(0, 3);
+
+  if (staffLoading) {
+    return <Loader className="min-h-screen" size={48} />;
+  }
+
+  if (staffError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-destructive">Failed to load staff: {staffError.message}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -350,11 +366,11 @@ export const Home: React.FC = () => {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     </div>
                     <CardContent className="p-6 relative">
-                      <Badge variant={staff.isAvailable ? "default" : "outline"} className="mb-3">
-                        {staff.isAvailable ? 'Available' : 'Unavailable'}
+                      <Badge variant={staff.isAvailable ?? staff.is_available ? "default" : "outline"} className="mb-3">
+                        {staff.isAvailable ?? staff.is_available ? 'Available' : 'Unavailable'}
                       </Badge>
                       <h3 className="text-lg font-semibold mb-1">{staff.name}</h3>
-                      <p className="text-muted-foreground text-sm mb-3">{staff.role}</p>
+                      <p className="text-muted-foreground text-sm mb-3">{staff.position ?? staff.role}</p>
                       <p className="text-sm text-muted-foreground line-clamp-2">{staff.bio}</p>
                     </CardContent>
                   </Card>

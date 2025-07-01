@@ -28,13 +28,16 @@ export type PublicService = Omit<Service, 'created_at' | 'updated_at'>;
 export interface PublicStaff {
   id: string;
   name: string;
-  position: string;
+  position?: string;
+  role?: string;
   bio?: string;
   image?: string;
   phone?: string;
   email?: string;
   services: { id: string; name: string }[];
   user?: { name?: string; email?: string };
+  isAvailable?: boolean;
+  is_available?: boolean;
 }
 
 export interface Review {
@@ -50,6 +53,7 @@ export interface ContactForm {
   name: string;
   email: string;
   phone?: string;
+  subject?: string;
   message: string;
 }
 

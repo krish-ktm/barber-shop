@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/hooks/useSettings';
+import { submitContactForm } from '@/api/services/publicService';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -56,12 +57,37 @@ export const Contact: React.FC = () => {
   const phoneNumber = settings?.phone || '(555) 123-4567';
   const email = settings?.email || 'info@moderncuts.com';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast({
-      title: 'Message sent',
-      description: 'We\'ll get back to you as soon as possible.',
-    });
+
+    const formData = new FormData(e.currentTarget);
+
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const phone = formData.get('phone') as string | undefined;
+    const subject = formData.get('subject') as string | undefined;
+    const message = formData.get('message') as string;
+
+    try {
+      setSubmitting(true);
+      await submitContactForm({ name, email, phone, message, subject });
+      toast({
+        title: 'Message sent',
+        description: "We'll get back to you as soon as possible.",
+      });
+      e.currentTarget.reset();
+    } catch (error: unknown) {
+      const errMsg = error && typeof error === 'object' && 'message' in error ? (error as { message: string }).message : undefined;
+      toast({
+        title: 'Submission failed',
+        description: errMsg || 'Unable to submit your message. Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -303,22 +329,22 @@ export const Contact: React.FC = () => {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="name">Full Name</Label>
-                        <Input id="name" placeholder="Enter your name" required />
+                        <Input id="name" name="name" placeholder="Enter your name" required />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="Enter your email" required />
+                        <Input id="email" name="email" type="email" placeholder="Enter your email" required />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" placeholder="Enter your phone number" />
+                        <Input id="phone" name="phone" placeholder="Enter your phone number" />
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="subject">Subject</Label>
-                        <Input id="subject" placeholder="What's this about?" required />
+                        <Input id="subject" name="subject" placeholder="What's this about?" required />
                       </div>
                     </div>
 
@@ -326,15 +352,20 @@ export const Contact: React.FC = () => {
                       <Label htmlFor="message">Message</Label>
                       <Textarea
                         id="message"
+                        name="message"
                         placeholder="Your message..."
                         className="min-h-[150px] resize-none"
                         required
                       />
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full hover:text-white">
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Message
+                    <Button type="submit" size="lg" className="w-full hover:text-white" disabled={submitting}>
+                      {submitting ? (
+                        <Send className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      {submitting ? 'Sending...' : 'Send Message'}
                     </Button>
                   </form>
                 </CardContent>

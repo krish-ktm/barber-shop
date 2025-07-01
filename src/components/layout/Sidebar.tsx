@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BarChart3, Calendar, CreditCard, Home, Scissors, Settings, Users, Clock, ListCheck as ListChecklist, Percent, Package, Star, CalendarX, UserCog } from 'lucide-react';
+import { BarChart3, Calendar, CreditCard, Home, Scissors, Settings, Users, Clock, ListCheck as ListChecklist, Percent, Package, Star, CalendarX, UserCog, Image, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -133,6 +133,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isInSheet = false }) => {
       icon: <UserCog size={18} />,
       label: 'User Management',
       href: '/admin/users',
+    },
+    {
+      icon: <Image size={18} />,
+      label: 'Gallery',
+      href: '/admin/gallery-images',
+    },
+    {
+      icon: <Mail size={18} />,
+      label: 'Contact Requests',
+      href: '/admin/contact-requests',
     },
   ];
 

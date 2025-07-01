@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useGalleryImages } from '@/hooks/useGalleryImages';
+import { Loader } from '@/components/ui/loader';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -47,61 +49,21 @@ const imageCard = {
 export const Gallery: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const { images: galleryImages, loading, error } = useGalleryImages();
 
-  const galleryImages = [
-    {
-      url: 'https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Haircuts',
-      title: 'Classic Fade',
-    },
-    {
-      url: 'https://images.pexels.com/photos/1570807/pexels-photo-1570807.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Styling',
-      title: 'Modern Quiff',
-    },
-    {
-      url: 'https://images.pexels.com/photos/1813272/pexels-photo-1813272.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Beard',
-      title: 'Beard Grooming',
-    },
-    {
-      url: 'https://images.pexels.com/photos/3998429/pexels-photo-3998429.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Shop',
-      title: 'Our Space',
-    },
-    {
-      url: 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Tools',
-      title: 'Professional Equipment',
-    },
-    {
-      url: 'https://images.pexels.com/photos/1453005/pexels-photo-1453005.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Haircuts',
-      title: 'Textured Crop',
-    },
-    {
-      url: 'https://images.pexels.com/photos/1319461/pexels-photo-1319461.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Styling',
-      title: 'Pompadour',
-    },
-    {
-      url: 'https://images.pexels.com/photos/1634843/pexels-photo-1634843.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Shop',
-      title: 'Barber Station',
-    },
-    {
-      url: 'https://images.pexels.com/photos/1805600/pexels-photo-1805600.jpeg?auto=compress&cs=tinysrgb&w=1080',
-      category: 'Haircuts',
-      title: 'Skin Fade',
-    },
-  ];
+  const filteredImages = galleryImages;
 
-  const categories = ['All', ...Array.from(new Set(galleryImages.map((img) => img.category)))] as const;
+  if (loading) {
+    return <Loader className="min-h-screen" size={48} />;
+  }
 
-  const filteredImages = selectedCategory === 'All'
-    ? galleryImages
-    : galleryImages.filter((img) => img.category === selectedCategory);
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-destructive">Failed to load gallery: {error.message}</p>
+      </div>
+    );
+  }
 
   // Determine grid span classes for a patterned masonry effect
   const getSpanClasses = (index: number) => {
@@ -204,21 +166,6 @@ export const Gallery: React.FC = () => {
                 <p className="text-muted-foreground">
                   Browse through our collection of premium cuts and styles
                 </p>
-              </div>
-
-              {/* Category Filters */}
-              <div className="flex flex-wrap sm:flex-nowrap justify-center gap-2 overflow-x-auto scrollbar-none py-1 px-1">
-                {categories.map((cat) => (
-                  <Button
-                    key={cat}
-                    size="sm"
-                    variant={selectedCategory === cat ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategory(cat)}
-                    className="px-4 py-1 text-sm"
-                  >
-                    {cat}
-                  </Button>
-                ))}
               </div>
             </motion.div>
 

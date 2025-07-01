@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, DollarSign, BarChart } from 'lucide-react';
+import { Calendar, DollarSign, BarChart, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { StatsCard } from '@/components/dashboard/StatsCard';
