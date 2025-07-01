@@ -10,7 +10,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useForm } from 'react-hook-form';
@@ -22,8 +21,6 @@ import { Image as ImageIcon } from 'lucide-react';
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   url: z.string().url('Invalid URL').min(1, 'URL is required'),
-  description: z.string().optional(),
-  display_order: z.coerce.number().min(0).optional(),
   is_active: z.boolean().optional().default(true),
 });
 
@@ -43,8 +40,6 @@ export const GalleryImageDialog: React.FC<Props> = ({ open, initialData, onSubmi
     defaultValues: {
       title: initialData?.title || '',
       url: initialData?.url || '',
-      description: initialData?.description || '',
-      display_order: initialData?.display_order ?? 0,
       is_active: initialData?.is_active ?? true,
     },
   });
@@ -142,34 +137,6 @@ export const GalleryImageDialog: React.FC<Props> = ({ open, initialData, onSubmi
                           </div>
                         )}
                       </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Optional description" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="display_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Order</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -80,7 +80,7 @@ export const GalleryImagesPage: React.FC = () => {
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = async (values: Partial<Omit<GalleryImage, 'id' | 'created_at' | 'updated_at'>>) => {
+  const handleSubmit = async (values: { title: string; url: string; is_active?: boolean }) => {
     try {
       if (selectedImage) {
         await executeUpdate(selectedImage.id, values);
@@ -125,12 +125,13 @@ export const GalleryImagesPage: React.FC = () => {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : (
-            <Table>
+            <>
+            {/* Desktop Table */}
+            <Table className="hidden md:table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Preview</TableHead>
                   <TableHead>Title</TableHead>
-                  <TableHead>Order</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -139,33 +140,73 @@ export const GalleryImagesPage: React.FC = () => {
                 {images.map((img) => (
                   <TableRow key={img.id}>
                     <TableCell>
-                      <Avatar className="h-10 w-10">
+                      <Avatar className="h-10 w-10 rounded-md">
                         <AvatarImage src={img.url} alt={img.title} />
-                        <AvatarFallback>
+                        <AvatarFallback className="rounded-md">
                           <ImageIcon className="h-4 w-4" />
                         </AvatarFallback>
                       </Avatar>
                     </TableCell>
                     <TableCell>{img.title}</TableCell>
-                    <TableCell>{img.display_order}</TableCell>
                     <TableCell>{img.is_active ? 'Active' : 'Inactive'}</TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button size="icon" variant="outline" onClick={() => handleEdit(img)}>
+                    <div className="flex justify-end gap-2">
+                    <Button size="icon" variant="ghost" onClick={() => handleEdit(img)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="destructive" onClick={() => handleDeleteClick(img)}>
+                      <Button size="icon" variant="ghost" onClick={() => handleDeleteClick(img)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </TableCell>
+
+                    </div>
+                  </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+
+            {/* Mobile list */}
+            <div className="space-y-3 md:hidden">
+              {images.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No images available.</p>
+              ) : (
+                images.map((img) => (
+                  <div key={img.id} className="flex items-center justify-between bg-card rounded-lg p-3 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 rounded-md">
+                        {img.url ? (
+                          <AvatarImage src={img.url} alt={img.title} />
+                        ) : (
+                          <AvatarFallback className="rounded-md bg-muted">
+                            <ImageIcon className="h-4 w-4" />
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div>
+                        <p className="font-medium leading-none line-clamp-1 max-w-[140px]">{img.title}</p>
+                        <p className="text-xs text-muted-foreground">{img.is_active ? 'Active' : 'Inactive'}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(img)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(img)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            </>
           )}
         </CardContent>
       </Card>
 
       <GalleryImageDialog
+        key={selectedImage?.id ?? 'new'}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         initialData={selectedImage}

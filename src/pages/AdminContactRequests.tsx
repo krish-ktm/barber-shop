@@ -3,5 +3,5 @@ import { ContactRequestsPage } from '@/features/admin/contact-requests/ContactRe
 export const AdminContactRequests: React.FC = () => {
   return <ContactRequestsPage />;
 };
-
+ 
 export default AdminContactRequests; 

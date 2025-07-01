@@ -73,8 +73,8 @@ export const Contact: React.FC = () => {
     try {
       setSubmitting(true);
       await submitContactForm({ name, email, phone, message, subject });
-      toast({
-        title: 'Message sent',
+    toast({
+      title: 'Message sent',
         description: "We'll get back to you as soon as possible.",
       });
       e.currentTarget.reset();
@@ -84,7 +84,7 @@ export const Contact: React.FC = () => {
         title: 'Submission failed',
         description: errMsg || 'Unable to submit your message. Please try again later.',
         variant: 'destructive',
-      });
+    });
     } finally {
       setSubmitting(false);
     }
@@ -363,7 +363,7 @@ export const Contact: React.FC = () => {
                       {submitting ? (
                         <Send className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
-                        <Send className="h-4 w-4 mr-2" />
+                      <Send className="h-4 w-4 mr-2" />
                       )}
                       {submitting ? 'Sending...' : 'Send Message'}
                     </Button>
