@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Star, Scissors, Users, Award, ArrowRight } from 'lucide-react';
+import { Clock, Star, Users, Award, ArrowRight, Smile } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { staffData, reviewsData } from '@/mocks';
+// import { reviewsData } from '@/mocks';
+import { usePublicExperts } from '@/hooks/usePublicExperts';
+import { Loader } from '@/components/ui/loader';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -44,20 +46,31 @@ const cardVariant = {
   }
 };
 
-export const About: React.FC = () => {
-  // Dynamic values
-  const foundationYear = 2010;
-  const yearsExperience = new Date().getFullYear() - foundationYear;
-  const averageRating = (
-    reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length
-  ).toFixed(1);
+const AboutPageStats = (teamCount: number) => ([
+  { icon: Users, value: `${teamCount}+`, label: 'Expert Barbers' },
+  { icon: Smile, value: '5000+', label: 'Happy Clients' },
+  { icon: Award, value: '15+', label: 'Years Experience' },
+  { icon: Star, value: '4.9', label: 'Rating' },
+]);
 
-  const stats = [
-    { icon: Clock, value: `${yearsExperience}+`, label: 'Years Experience' },
-    { icon: Users, value: `${staffData.length}+`, label: 'Expert Barbers' },
-    { icon: Scissors, value: '5000+', label: 'Happy Clients' },
-    { icon: Star, value: averageRating, label: 'Average Rating' },
-  ];
+export const About: React.FC = () => {
+  const { experts, loading: staffLoading, error: staffError } = usePublicExperts();
+
+  const stats = AboutPageStats(experts.length || 10);
+
+  const staff = experts.length ? experts : [];
+
+  if (staffLoading) {
+    return <Loader className="min-h-screen" size={48} />;
+  }
+
+  if (staffError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-destructive">Failed to load team: {staffError.message}</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -300,7 +313,7 @@ export const About: React.FC = () => {
             </motion.div>
 
             <motion.div className="grid md:grid-cols-3 gap-8">
-              {staffData.map((staff) => (
+              {staff.map((staff) => (
                 <motion.div
                   key={staff.id}
                   variants={cardVariant}
@@ -323,10 +336,9 @@ export const About: React.FC = () => {
                     </div>
                     <CardContent className="p-6 relative">
                       <Badge variant={staff.isAvailable ? "default" : "outline"} className="mb-4">
-                        {staff.isAvailable ? 'Available' : 'Unavailable'}
+                        {staff.position}
                       </Badge>
                       <h3 className="text-xl font-semibold mb-1">{staff.name}</h3>
-                      <p className="text-muted-foreground mb-4">{staff.position}</p>
                       <p className="text-sm text-muted-foreground line-clamp-3">{staff.bio}</p>
                     </CardContent>
                   </Card>

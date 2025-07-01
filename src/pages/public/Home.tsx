@@ -373,10 +373,9 @@ export const Home: React.FC = () => {
                     </div>
                     <CardContent className="p-6 relative">
                       <Badge variant={staff.is_active ? "default" : "outline"} className="mb-3">
-                        {staff.is_active ? 'Available' : 'Unavailable'}
+                      {staff.position}
                       </Badge>
                       <h3 className="text-lg font-semibold mb-1">{staff.name}</h3>
-                      <p className="text-muted-foreground text-sm mb-3">{staff.position}</p>
                       <p className="text-sm text-muted-foreground line-clamp-2">{staff.bio}</p>
                     </CardContent>
                   </Card>
