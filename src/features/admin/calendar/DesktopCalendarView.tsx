@@ -22,6 +22,7 @@ import {
   CalendarDays, 
   LayoutGrid, 
   LayoutList,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,12 +37,14 @@ interface DesktopCalendarViewProps {
   appointments: Appointment[];
   onSelectDate?: (date: Date) => void;
   onViewAppointment: (appointmentId: string) => void;
+  onAddAppointment?: (date: Date) => void;
 }
 
 export const DesktopCalendarView = ({
   appointments,
   onSelectDate,
   onViewAppointment,
+  onAddAppointment,
 }: DesktopCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('month');
@@ -262,7 +265,7 @@ export const DesktopCalendarView = ({
                 setView('day');
               }}
             >
-              <div className="flex justify-between">
+              <div className="flex justify-between items-start">
                 <span
                   className={cn(
                     "text-sm font-medium rounded-full w-6 h-6 flex items-center justify-center",
@@ -272,6 +275,17 @@ export const DesktopCalendarView = ({
                 >
                   {format(cloneDay, 'd')}
                 </span>
+                {onAddAppointment && (
+                  <button
+                    className="p-0.5 rounded-full text-primary hover:bg-primary/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddAppointment(cloneDay);
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               
               {/* Render appointments */}
@@ -396,7 +410,21 @@ export const DesktopCalendarView = ({
                     )}
                   >
                     {dayAppointments.length === 0 ? (
-                      <div className="h-full w-full"></div>
+                      <div className="h-full w-full relative">
+                        {onAddAppointment && (
+                          <button
+                            className="absolute bottom-1 right-1 rounded-full p-1 text-primary bg-primary/10 hover:bg-primary/20"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const slotDate = new Date(day);
+                              slotDate.setHours(hour, 0, 0, 0);
+                              onAddAppointment(slotDate);
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
                     ) : (
                       dayAppointments.map((appointment, index) => (
                         <div
@@ -469,10 +497,20 @@ export const DesktopCalendarView = ({
               });
               
               return (
-                <div key={hour} className={cn(
-                  "h-28 relative hover:bg-muted/10 transition-colors",
-                  index === 0 ? "rounded-tr-lg" : "border-t",
-                )}>
+                <div
+                  key={hour}
+                  className={cn(
+                    "h-28 relative hover:bg-muted/10 transition-colors",
+                    index === 0 ? "rounded-tr-lg" : "border-t",
+                  )}
+                  onClick={() => {
+                    if (hourAppointments.length === 0 && onAddAppointment) {
+                      const slotDate = new Date(currentDate);
+                      slotDate.setHours(hour, 0, 0, 0);
+                      onAddAppointment(slotDate);
+                    }
+                  }}
+                >
                   {hourAppointments.map((appointment, idx) => {
                     // Calculate width based on number of appointments in this hour
                     const width = Math.min(100 / Math.max(hourAppointments.length, 2), 50);

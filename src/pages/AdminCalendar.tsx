@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { Appointment } from '@/types';
 import { toast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Staff as ApiStaff, Service as ApiService } from '@/api/services/appointmentService';
+import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
 
 export const AdminCalendar: React.FC = () => {
   // State for appointment details dialog
@@ -19,6 +22,11 @@ export const AdminCalendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   // simple cache: monthKey -> appointments array
   const [appointmentsCache, setAppointmentsCache] = useState<Record<string, Appointment[]>>({});
+  const [staffList, setStaffList] = useState<ApiStaff[]>([]);
+  const [serviceList, setServiceList] = useState<ApiService[]>([]);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('all');
+  const [showNewAppointmentDialog, setShowNewAppointmentDialog] = useState(false);
+  const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
 
   // Memoized key representing the viewed month (YYYY-MM). When this changes we refetch.
   const monthKey = format(currentDate, 'yyyy-MM');
@@ -68,6 +76,8 @@ export const AdminCalendar: React.FC = () => {
       }));
       
       setAppointments(formattedAppointments);
+      setStaffList(response.staff || []);
+      setServiceList(response.services || []);
       // store in cache
       setAppointmentsCache(prev => ({ ...prev, [monthKey]: formattedAppointments }));
       
@@ -117,9 +127,16 @@ export const AdminCalendar: React.FC = () => {
     );
   };
 
+  const handleAddAppointment = (date: Date) => {
+    setNewAppointmentDate(date);
+    setShowNewAppointmentDialog(true);
+  };
+
   const selectedAppointment = selectedAppointmentId 
     ? appointments.find(app => app.id === selectedAppointmentId) 
     : null;
+
+  const filteredAppointments = selectedStaffId === 'all' ? appointments : appointments.filter(a => a.staffId === selectedStaffId);
 
   return (
     <div className="space-y-6">
@@ -141,11 +158,25 @@ export const AdminCalendar: React.FC = () => {
         </div>
       ) : (
         <div className="mb-6 relative">
+          <div className="flex justify-end mb-4">
+            <Select value={selectedStaffId} onValueChange={(value) => setSelectedStaffId(value)}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Filter by Staff" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Staff</SelectItem>
+                {staffList.map((staff) => (
+                  <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           {/* Calendar */}
           <CalendarLayout 
-            appointments={appointments}
+            appointments={filteredAppointments}
             onSelectDate={handleSelectDate}
             onViewAppointment={handleViewAppointment}
+            onAddAppointment={handleAddAppointment}
           />
 
           {/* Loading overlay */}
@@ -167,6 +198,18 @@ export const AdminCalendar: React.FC = () => {
           onAppointmentUpdated={fetchAppointments}
         />
       )}
+
+      <NewAppointmentDialog 
+        open={showNewAppointmentDialog}
+        onOpenChange={setShowNewAppointmentDialog}
+        selectedDate={newAppointmentDate}
+        staffList={staffList}
+        serviceList={serviceList}
+        onAppointmentCreated={() => {
+          setShowNewAppointmentDialog(false);
+          fetchAppointments();
+        }}
+      />
     </div>
   );
 }; 

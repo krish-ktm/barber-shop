@@ -18,8 +18,12 @@ export const ServicePicker: React.FC<ServicePickerProps> = ({
 }) => {
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
-  // For the API services that don't have categories, we'll group them all as "Other"
-  const categories = ['Other']; // Default to a single category if no categories are defined
+  const getCategory = (service: Service): string => {
+    const cat = (service as unknown as { category?: string }).category;
+    return cat && cat.trim() !== '' ? cat : 'Other';
+  };
+
+  const categories = Array.from(new Set(serviceList.map(getCategory))).sort();
 
   const toggleCategory = (category: string) => {
     setOpenCategories(prev => ({
@@ -28,13 +32,11 @@ export const ServicePicker: React.FC<ServicePickerProps> = ({
     }));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getSelectedServicesCount = (category: string) => {
-    // For this implementation, we return the total count regardless of category
-    // since we're not using categories from the API
     return selectedServices.filter(serviceId => {
       const selectedService = serviceList.find(s => s.id === serviceId);
-      return selectedService !== undefined;
+      const cat = selectedService ? getCategory(selectedService) : 'Other';
+      return cat === category;
     }).length;
   };
 
@@ -69,23 +71,28 @@ export const ServicePicker: React.FC<ServicePickerProps> = ({
               </CollapsibleTrigger>
               <CollapsibleContent className="p-2">
                 <div className="grid gap-2">
-                  {serviceList.map((s) => {
-                    const isSelected = selectedServices.includes(s.id);
-                    return (
-                      <Button
-                        key={s.id}
-                        type="button"
-                        variant={isSelected ? "default" : "outline"}
-                        className="w-full justify-between group"
-                        onClick={() => onServiceSelect(s.id)}
-                      >
-                        <span>{s.name}</span>
-                        <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
-                          {formatCurrency(s.price)}
-                        </span>
-                      </Button>
-                    );
-                  })}
+                  {serviceList
+                    .filter((s) => {
+                      const cat = getCategory(s);
+                      return cat === category;
+                    })
+                    .map((s) => {
+                      const isSelected = selectedServices.includes(s.id);
+                      return (
+                        <Button
+                          key={s.id}
+                          type="button"
+                          variant={isSelected ? "default" : "outline"}
+                          className="w-full justify-between group"
+                          onClick={() => onServiceSelect(s.id)}
+                        >
+                          <span>{s.name}</span>
+                          <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
+                            {formatCurrency(s.price)}
+                          </span>
+                        </Button>
+                      );
+                    })}
                 </div>
               </CollapsibleContent>
             </Collapsible>

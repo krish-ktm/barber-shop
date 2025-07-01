@@ -8,12 +8,14 @@ interface CalendarLayoutProps {
   appointments: Appointment[];
   onSelectDate: (date: Date) => void;
   onViewAppointment: (appointmentId: string) => void;
+  onAddAppointment?: (date: Date) => void;
 }
 
 export const CalendarLayout: React.FC<CalendarLayoutProps> = ({
   appointments,
   onSelectDate,
   onViewAppointment,
+  onAddAppointment,
 }) => {
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 0);
 
@@ -37,6 +39,7 @@ export const CalendarLayout: React.FC<CalendarLayoutProps> = ({
           appointments={appointments}
           onSelectDate={onSelectDate}
           onViewAppointment={onViewAppointment}
+          onAddAppointment={onAddAppointment}
         />
       );
     } else if (windowWidth >= 640 && windowWidth < 1024) {
@@ -45,6 +48,7 @@ export const CalendarLayout: React.FC<CalendarLayoutProps> = ({
           appointments={appointments}
           onSelectDate={onSelectDate}
           onViewAppointment={onViewAppointment}
+          onAddAppointment={onAddAppointment}
         />
       );
     } else {
@@ -53,6 +57,7 @@ export const CalendarLayout: React.FC<CalendarLayoutProps> = ({
           appointments={appointments}
           onSelectDate={onSelectDate}
           onViewAppointment={onViewAppointment}
+          onAddAppointment={onAddAppointment}
         />
       );
     }

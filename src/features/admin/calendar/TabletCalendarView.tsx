@@ -37,13 +37,19 @@ interface TabletCalendarViewProps {
   appointments: Appointment[];
   onSelectDate: (date: Date) => void;
   onViewAppointment: (appointmentId: string) => void;
+  onAddAppointment?: (date: Date) => void;
 }
 
 export const TabletCalendarView = ({
   appointments,
   onSelectDate,
   onViewAppointment,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onAddAppointment: _onAddAppointment,
 }: TabletCalendarViewProps): JSX.Element => {
+  // Silence unused variable warning
+  void _onAddAppointment;
+
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('month');

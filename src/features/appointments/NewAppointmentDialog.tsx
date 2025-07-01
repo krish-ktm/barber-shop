@@ -37,10 +37,9 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { createTimeSlots } from '@/utils/dates';
 import { useToast } from '@/hooks/use-toast';
 import { ServicePicker } from './ServicePicker';
-import { Staff, Service, createAppointment, Appointment } from '@/api/services/appointmentService';
+import { Staff, Service, createAppointment, Appointment, getAvailableSlots } from '@/api/services/appointmentService';
 import { createCustomer, getAllCustomers } from '@/api/services/customerService';
 import { useApi } from '@/hooks/useApi';
 
@@ -108,6 +107,13 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   useEffect(() => {
     if (open && selectedDate) {
       form.setValue('date', selectedDate);
+      // If the selectedDate contains a specific hour (used when coming from Week/Day calendar cells)
+      const hrs = selectedDate.getHours();
+      const mins = selectedDate.getMinutes();
+      if (hrs !== 0 || mins !== 0) {
+        const timeStr = format(selectedDate, 'HH:mm');
+        form.setValue('time', timeStr);
+      }
     }
   }, [open, selectedDate, form]);
 
@@ -151,15 +157,36 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
     return () => clearTimeout(timeoutId);
   }, [customerPhone, searchCustomers, form, toast]);
 
-  // Get available time slots
-  const timeSlots = createTimeSlots(
-    '09:00', 
-    '20:00', 
-    30, 
-    [{ start: '12:00', end: '13:00' }],
-    [],
-    formattedDate
-  );
+  // -------------------- Time slot generation --------------------
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
+  const selectedStaffId = form.watch('staffId');
+  const watchedServices = form.watch('services');
+
+  useEffect(() => {
+    const fetchSlots = async () => {
+      if (!formattedDate || !selectedStaffId || watchedServices.length === 0) {
+        setTimeSlots([]);
+        return;
+      }
+
+      try {
+        // Use the first selected service to determine duration
+        const serviceId = watchedServices[0];
+        const resp = await getAvailableSlots(formattedDate, selectedStaffId, serviceId);
+        if (resp.success) {
+          const available = resp.slots.filter(s => s.available).map(s => s.time);
+          setTimeSlots(available);
+        } else {
+          setTimeSlots([]);
+        }
+      } catch (err) {
+        console.error('Error fetching slots', err);
+        setTimeSlots([]);
+      }
+    };
+
+    fetchSlots();
+  }, [formattedDate, selectedStaffId, JSON.stringify(watchedServices)]);
 
   // Calculate total duration and price
   const calculateTotals = () => {

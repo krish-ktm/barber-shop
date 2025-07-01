@@ -38,6 +38,7 @@ interface MobileCalendarViewProps {
   appointments: Appointment[];
   onSelectDate?: (date: Date) => void;
   onViewAppointment?: (appointmentId: string) => void; // not used to avoid duplicate dialogs
+  onAddAppointment?: (date: Date) => void;
 }
 
 /**
@@ -50,12 +51,17 @@ interface MobileCalendarViewProps {
 export const MobileCalendarView = ({
   appointments,
   onSelectDate,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onAddAppointment: _onAddAppointment,
 }: MobileCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('month');
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
+
+  // Silence unused variable
+  void _onAddAppointment;
 
   // Add CSS for custom scrollbar when component mounts
   useEffect(() => {
