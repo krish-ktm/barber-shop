@@ -4,7 +4,7 @@ import { ArrowRight, Calendar, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { usePublicStaff } from '@/hooks/usePublicStaff';
+import { usePublicExperts } from '@/hooks/usePublicExperts';
 import { Link } from 'react-router-dom';
 import { Loader } from '@/components/ui/loader';
 
@@ -29,7 +29,7 @@ const staggerContainer = {
 };
 
 export const Barbers: React.FC = () => {
-  const { staff, loading: staffLoading, error: staffError } = usePublicStaff();
+  const { experts: staff, loading: staffLoading, error: staffError } = usePublicExperts();
 
   const isFetching = staffLoading || staff.length === 0;
 

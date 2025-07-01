@@ -17,7 +17,7 @@ import { ReviewsSection } from '@/features/public/ReviewsSection';
 import { useApi } from '@/hooks/useApi';
 import { getAllServices, Service } from '@/api/services/serviceService';
 import { ServicesShadCarousel } from '@/components/ServicesShadCarousel';
-import { usePublicStaff } from '@/hooks/usePublicStaff';
+import { usePublicExperts } from '@/hooks/usePublicExperts';
 import { Loader } from '@/components/ui/loader';
 
 const fadeIn = {
@@ -64,7 +64,7 @@ export const Home: React.FC = () => {
     execute: fetchServices
   } = useApi(getAllServices);
 
-  const { staff, loading: staffLoading, error: staffError } = usePublicStaff();
+  const { experts, loading: staffLoading, error: staffError } = usePublicExperts();
 
   // Fetch first 8 services on mount
   useEffect(() => {
@@ -72,7 +72,7 @@ export const Home: React.FC = () => {
   }, [fetchServices]);
 
   const featuredServices: Service[] = (fetchedServices?.services || serviceData).slice(0, 8);
-  const featuredStaff = staff.slice(0, 3);
+  const featuredStaff = experts.slice(0, 3);
 
   if (staffLoading) {
     return <Loader className="min-h-screen" size={48} />;
@@ -356,21 +356,27 @@ export const Home: React.FC = () => {
                 >
                   <Card className="h-full overflow-hidden border-2 hover:border-primary/50 transition-colors">
                     <div className="aspect-[4/3] relative overflow-hidden">
-                      <img
-                        src={`${(staff.image || (staff as unknown as { user?: { image?: string } }).user?.image || 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg') }?auto=compress&cs=tinysrgb&w=1080`}
-                        alt={staff.name}
-                        loading="lazy"
-                        decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                      />
+                      {(() => {
+                        const customImage = staff.image || (staff as unknown as { user?: { image?: string } }).user?.image;
+                        const fallback = 'https://images.pexels.com/photos/3992874/pexels-photo-3992874.jpeg?auto=compress&cs=tinysrgb&w=1080';
+                        return (
+                          <img
+                            src={customImage || fallback}
+                            alt={staff.name}
+                            loading="lazy"
+                            decoding="async"
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          />
+                        );
+                      })()}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     </div>
                     <CardContent className="p-6 relative">
-                      <Badge variant={staff.isAvailable ?? staff.is_available ? "default" : "outline"} className="mb-3">
-                        {staff.isAvailable ?? staff.is_available ? 'Available' : 'Unavailable'}
+                      <Badge variant={staff.is_active ? "default" : "outline"} className="mb-3">
+                        {staff.is_active ? 'Available' : 'Unavailable'}
                       </Badge>
                       <h3 className="text-lg font-semibold mb-1">{staff.name}</h3>
-                      <p className="text-muted-foreground text-sm mb-3">{staff.position ?? staff.role}</p>
+                      <p className="text-muted-foreground text-sm mb-3">{staff.position}</p>
                       <p className="text-sm text-muted-foreground line-clamp-2">{staff.bio}</p>
                     </CardContent>
                   </Card>

@@ -90,6 +90,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isInSheet = false }) => {
       href: '/admin/staff-management',
     },
     {
+      icon: <Users size={18} />,
+      label: 'Experts',
+      href: '/admin/experts',
+    },
+    {
       icon: <ListChecklist size={18} />,
       label: 'Services',
       href: '/admin/services',
