@@ -62,7 +62,8 @@ export const Contact: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const formData = new FormData(e.currentTarget);
+    const formEl = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(formEl);
 
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
@@ -73,11 +74,11 @@ export const Contact: React.FC = () => {
     try {
       setSubmitting(true);
       await submitContactForm({ name, email, phone, message, subject });
-    toast({
-      title: 'Message sent',
+      toast({
+        title: 'Message sent',
         description: "We'll get back to you as soon as possible.",
       });
-      e.currentTarget.reset();
+      formEl.reset();
     } catch (error: unknown) {
       const errMsg = error && typeof error === 'object' && 'message' in error ? (error as { message: string }).message : undefined;
       toast({

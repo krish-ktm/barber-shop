@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Card,
   CardHeader,
@@ -13,15 +13,20 @@ import {
   TableCell,
   TableBody,
 } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { getAllContactRequests, ContactRequest } from '@/api/services/contactRequestService';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { ContactRequestDialog } from './ContactRequestDialog';
 
 export const ContactRequestsPage: React.FC = () => {
   const { toast } = useToast();
 
   const { data, loading, error, execute } = useApi(getAllContactRequests);
+
+  const [selectedRequest, setSelectedRequest] = useState<ContactRequest | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     execute();
@@ -56,6 +61,7 @@ export const ContactRequestsPage: React.FC = () => {
                   <TableHead>Subject</TableHead>
                   <TableHead>Message</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -67,6 +73,11 @@ export const ContactRequestsPage: React.FC = () => {
                     <TableCell>{req.subject}</TableCell>
                     <TableCell className="max-w-xs truncate" title={req.message}>{req.message}</TableCell>
                     <TableCell>{new Date(req.created_at).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => { setSelectedRequest(req); setDialogOpen(true); }}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -74,6 +85,8 @@ export const ContactRequestsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <ContactRequestDialog open={dialogOpen} data={selectedRequest} onOpenChange={setDialogOpen} />
     </div>
   );
 }; 
