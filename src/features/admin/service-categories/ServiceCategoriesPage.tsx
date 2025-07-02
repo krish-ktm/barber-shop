@@ -17,6 +17,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export const ServiceCategoriesPage: React.FC = () => {
   const { toast } = useToast();
@@ -63,7 +71,7 @@ export const ServiceCategoriesPage: React.FC = () => {
     setDeleteDialogOpen(true);
   };
 
-  const handleSubmit = async (values: { name: string; description?: string }) => {
+  const handleSubmit = async (values: { name: string; description?: string; imageUrl?: string }) => {
     try {
       if (selectedCategory) {
         await executeUpdateCategory(selectedCategory.id, values);
@@ -106,34 +114,101 @@ export const ServiceCategoriesPage: React.FC = () => {
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-          {categories.length === 0 ? (
-            <p className="col-span-full text-center text-muted-foreground">No categories found.</p>
-          ) : (
-            categories.map((cat) => (
-              <Card key={cat.id} className="relative group">
-                <CardHeader>
-                  <CardTitle className="capitalize text-lg flex items-center justify-between">
-                    {cat.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-3 min-h-[60px]">{cat.description || 'No description'}</p>
-                </CardContent>
+        <>
+          {/* Mobile / small-screen card view */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:hidden">
+            {categories.length === 0 ? (
+              <p className="col-span-full text-center text-muted-foreground">No categories found.</p>
+            ) : (
+              categories.map((cat) => (
+                <Card key={cat.id} className="relative group overflow-hidden">
+                  {cat.imageUrl ? (
+                    <img src={cat.imageUrl} alt={cat.name} className="w-full h-36 object-cover" />
+                  ) : (
+                    <div className="w-full h-36 flex items-center justify-center bg-muted">
+                      <Plus className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <CardHeader>
+                    <CardTitle className="capitalize text-lg flex items-center justify-between">
+                      {cat.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground line-clamp-3 min-h-[60px]">{cat.description || 'No description'}</p>
+                  </CardContent>
 
-                {/* Action buttons on hover */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                  <Button size="icon" variant="ghost" onClick={() => handleEdit(cat)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(cat)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
+                  {/* Hover actions for md+ (hidden on small) */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 md:flex">
+                    <Button size="icon" variant="ghost" onClick={() => handleEdit(cat)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(cat)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Action buttons for mobile stacked below */}
+                  <div className="flex md:hidden justify-end gap-2 p-3">
+                    <Button variant="secondary" size="sm" onClick={() => handleEdit(cat)} className="w-full">
+                      <Pencil className="h-4 w-4 mr-1" /> Edit
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(cat)} className="w-full">
+                      <Trash2 className="h-4 w-4 mr-1" /> Delete
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden md:block">
+            {categories.length === 0 ? (
+              <p className="text-center text-muted-foreground">No categories found.</p>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[60px]">Image</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map((cat) => (
+                      <TableRow key={cat.id}>
+                        <TableCell>
+                          {cat.imageUrl ? (
+                            <img src={cat.imageUrl} alt={cat.name} className="h-10 w-10 object-cover rounded" />
+                          ) : (
+                            <div className="h-10 w-10 flex items-center justify-center bg-muted rounded">
+                              <Plus className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="capitalize font-medium">{cat.name}</TableCell>
+                        <TableCell className="truncate max-w-xs">{cat.description || '—'}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button size="icon" variant="ghost" onClick={() => handleEdit(cat)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(cat)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Add/Edit dialog */}

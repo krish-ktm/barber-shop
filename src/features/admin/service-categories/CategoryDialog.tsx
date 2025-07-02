@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { ServiceCategory } from '@/api/services/categoryService';
+import { Image } from 'lucide-react';
 
 const schema = z.object({
   name: z.string().min(2, 'Name is required'),
   description: z.string().optional(),
+  imageUrl: z.string().optional(),
 });
 
 type CategoryFormValues = z.infer<typeof schema>;
@@ -33,8 +35,19 @@ export const CategoryDialog: React.FC<CategoryDialogProps> = ({ open, onOpenChan
     defaultValues: {
       name: initialData?.name || '',
       description: initialData?.description || '',
+      imageUrl: initialData?.imageUrl || '',
     },
   });
+
+  // Reset form when initialData changes (for edit mode)
+  React.useEffect(() => {
+    form.reset({
+      name: initialData?.name || '',
+      description: initialData?.description || '',
+      imageUrl: initialData?.imageUrl || '',
+    });
+    setImagePreview(initialData?.imageUrl);
+  }, [initialData, form]);
 
   const handleSubmit = async (values: CategoryFormValues) => {
     setSubmitting(true);
@@ -44,6 +57,29 @@ export const CategoryDialog: React.FC<CategoryDialogProps> = ({ open, onOpenChan
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const [imagePreview, setImagePreview] = useState<string | undefined>(initialData?.imageUrl);
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_SIZE_BYTES) {
+      // We don't have toast in this file; optionally we could import useToast, but keep simple alert
+      alert('Please select an image smaller than 5 MB.');
+      e.currentTarget.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const url = event.target?.result as string;
+      setImagePreview(url);
+      form.setValue('imageUrl', url);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -78,6 +114,41 @@ export const CategoryDialog: React.FC<CategoryDialogProps> = ({ open, onOpenChan
                     <Textarea placeholder="Optional description" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Image upload */}
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category Image</FormLabel>
+                  <FormControl>
+                    <div className="flex flex-col items-center">
+                      {imagePreview ? (
+                        <div className="relative mb-2 w-full max-w-[220px]">
+                          <img src={imagePreview} alt="Preview" className="object-cover w-full h-full border rounded" />
+                          <Button type="button" variant="outline" size="sm" className="absolute bottom-2 right-2" onClick={() => { setImagePreview(undefined); form.setValue('imageUrl', ''); }}>
+                            Remove
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="w-full max-w-[220px]">
+                          <label htmlFor="category-image-upload" className="flex flex-col items-center justify-center w-full h-[180px] border-2 border-dashed rounded-md cursor-pointer bg-muted/20 hover:bg-muted/30">
+                            <div className="flex flex-col items-center justify-center p-4 text-center">
+                              <Image className="w-8 h-8 mb-2 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span></p>
+                              <p className="text-xs text-muted-foreground mt-1">PNG, JPG or GIF</p>
+                            </div>
+                            <input id="category-image-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                            <input type="hidden" {...field} />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
                 </FormItem>
               )}
             />
