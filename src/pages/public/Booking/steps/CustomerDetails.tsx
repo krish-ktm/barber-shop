@@ -21,6 +21,23 @@ export const CustomerDetails: React.FC = () => {
     ? 'text-destructive'
     : 'text-muted-foreground';
 
+  // ------------------
+  // Field validations
+  // ------------------
+  const phoneDigits = customerDetails.phone.replace(/\D/g, '');
+  const phoneError = phoneDigits.length === 0
+    ? 'Phone number is required.'
+    : phoneDigits.length !== 10
+    ? 'Phone number must be exactly 10 digits.'
+    : '';
+
+  const nameError = customerDetails.name.trim() === '' ? 'Full name is required.' : '';
+
+  const emailTrimmed = customerDetails.email.trim();
+  const emailError = emailTrimmed !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)
+    ? 'Enter a valid email address.'
+    : '';
+
   // Effect to watch phone input and lookup when 10 digits reached
   useEffect(() => {
     const digits = customerDetails.phone.replace(/\D/g, '');
@@ -116,6 +133,11 @@ export const CustomerDetails: React.FC = () => {
           <p className="mt-1 text-xs text-muted-foreground">
             Enter your 10-digit phone number. We'll search our records and auto-fill your details if you've booked before.
           </p>
+          {phoneError && (
+            <p className="mt-1 text-xs text-destructive flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> {phoneError}
+            </p>
+          )}
           {lookupStatus && (
             <p className={`mt-1 flex items-center gap-1 text-xs ${statusColor}`}>
               {lookupStatus.type === 'success' && <CheckCircle2 className="h-3 w-3" />}
@@ -141,6 +163,11 @@ export const CustomerDetails: React.FC = () => {
             placeholder="Enter your full name"
             required
           />
+          {nameError && (
+            <p className="mt-1 text-xs text-destructive flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> {nameError}
+            </p>
+          )}
         </motion.div>
 
         <motion.div
@@ -159,6 +186,11 @@ export const CustomerDetails: React.FC = () => {
             }
             placeholder="Enter your email address"
           />
+          {emailError && (
+            <p className="mt-1 text-xs text-destructive flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> {emailError}
+            </p>
+          )}
         </motion.div>
 
         <motion.div

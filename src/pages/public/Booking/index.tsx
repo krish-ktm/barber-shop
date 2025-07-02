@@ -90,9 +90,33 @@ const BookingContent: React.FC = () => {
   const CurrentStepComponent = steps[currentStep].component;
 
   const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
+    // On the customer details step we need to ensure we validate using the *latest* input values,
+    // even if React state has not yet re-rendered. We grab the values straight from the DOM.
+    const immediateValidation = () => {
+      if (currentStep !== 3) {
+        return canProceed();
+      }
+
+      const phoneInput = document.getElementById('phone') as HTMLInputElement | null;
+      const nameInput = document.getElementById('name') as HTMLInputElement | null;
+      const emailInput = document.getElementById('email') as HTMLInputElement | null;
+
+      const name = nameInput?.value.trim() || '';
+      const phoneDigits = (phoneInput?.value || '').replace(/\D/g, '');
+      const email = emailInput?.value.trim() || '';
+
+      const nameValid = name !== '';
+      const phoneValid = phoneDigits.length === 10;
+      const emailValid = email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+      return nameValid && phoneValid && emailValid;
+    };
+
+    setTimeout(() => {
+      if (currentStep < steps.length - 1 && immediateValidation()) {
+        setCurrentStep((prev) => prev + 1);
+      }
+    }, 0);
   };
 
   const handleBack = () => {
@@ -116,7 +140,16 @@ const BookingContent: React.FC = () => {
       case 2: // DateTimeSelection
         return selectedDate && selectedTime;
       case 3: // CustomerDetails
-        return customerDetails.name.trim() !== '' && customerDetails.phone.trim() !== '';
+        {
+          const nameValid = customerDetails.name.trim() !== '';
+          // Allow only numeric digits and require exactly 10
+          const phoneDigits = customerDetails.phone.replace(/\D/g, '');
+          const phoneValid = phoneDigits.length === 10;
+          // Email is optional but if provided must be valid
+          const emailTrimmed = customerDetails.email.trim();
+          const emailValid = emailTrimmed === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed);
+          return nameValid && phoneValid && emailValid;
+        }
       case 4: // BookingConfirmation
         return true;
       default:
