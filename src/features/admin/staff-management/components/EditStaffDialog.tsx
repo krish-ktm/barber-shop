@@ -58,7 +58,11 @@ const formSchema = z.object({
   id: z.string(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  phone: z
+    .string()
+    .min(10, 'Phone number must be 10 digits')
+    .max(10, 'Phone number must be 10 digits')
+    .regex(/^\d{10}$/, 'Phone number must contain exactly 10 digits'),
   bio: z.string().optional(),
   services: z.array(z.string()).min(1, 'Please select at least one service'),
   commissionPercentage: z.number().min(0).max(100),
@@ -108,6 +112,31 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       password: '',
     },
   });
+
+  // Reset form values whenever the selected staff changes or the dialog is opened again
+  useEffect(() => {
+    if (staff && open) {
+      form.reset({
+        id: staff.id || '',
+        name: staff.name || '',
+        email: staff.email || '',
+        phone: staff.phone || '',
+        bio: staff.bio || '',
+        services: [], // this will be handled by the services effect below
+        commissionPercentage: staff.commissionPercentage || 0,
+        isActive: staff.isAvailable || false,
+        image: staff.image || '',
+        password: '',
+      });
+
+      // Update image preview
+      setImagePreview(staff.image);
+
+      // Clear previously selected service IDs (will be re-set below)
+      setSelectedServiceIds([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staff, open]);
 
   // Initialize selected services from staff data when component mounts or staff/services change
   useEffect(() => {
@@ -311,7 +340,13 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                       <FormItem>
                         <FormLabel>Phone</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter phone number" {...field} />
+                          <Input
+                            placeholder="Enter phone number"
+                            {...field}
+                            inputMode="numeric"
+                            pattern="[0-9]{10}"
+                            maxLength={10}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
