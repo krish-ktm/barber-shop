@@ -128,6 +128,8 @@ export const AddCustomerDialog: React.FC<AddCustomerDialogProps> = ({
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl>
                     <Input 
+                      maxLength={10}
+                      type="tel"
                       placeholder="Enter phone number" 
                       disabled={isSubmitting} 
                       {...field} 
