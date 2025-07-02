@@ -159,31 +159,6 @@ export const ReviewsSection: React.FC = () => {
             ))}
           </motion.div>) }
           
-          {/* Review form placed after existing testimonials */}
-          <motion.div variants={fadeIn} className="max-w-xl mx-auto w-full">
-            <Card className="mt-10">
-              <CardHeader>
-                <CardTitle>Leave a Review</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Input className="mb-3" placeholder="Your Name" value={name} onChange={(e)=>setName(e.target.value)} />
-                <Textarea className="mb-3" rows={4} placeholder="Your review" value={text} onChange={(e)=>setText(e.target.value)} />
-                <div className="mb-4">
-                  <p className="text-sm mb-1 text-muted-foreground">Your Rating</p>
-                  <div className="flex items-center space-x-1">
-                    {[1,2,3,4,5].map((num)=>(
-                      <Star key={num}
-                        onClick={()=>setRatingInput(num)}
-                        className={`h-6 w-6 cursor-pointer transition-colors ${num<=ratingInput?'fill-yellow-400 text-yellow-400':'text-gray-300 hover:text-yellow-500'}`} />
-                    ))}
-                  </div>
-                </div>
-                <Button onClick={submitReview} disabled={submitting} className="w-full">
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
         </motion.div>
       </div>
     </section>
