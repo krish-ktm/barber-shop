@@ -39,7 +39,7 @@ export interface PublicStaff {
   phone?: string;
   email?: string;
   services: { id: string; name: string }[];
-  user?: { name?: string; email?: string };
+  user?: { name?: string; email?: string; image?: string };
   isAvailable?: boolean;
   is_available?: boolean;
 }
@@ -146,7 +146,8 @@ export const getPublicStaff = async (): Promise<StaffResponse> => {
  * Get public barbers
  */
 export const getPublicBarbers = async (): Promise<StaffResponse> => {
-  return get<StaffResponse>('/public/barbers', { skipAuth: true });
+  // Alias to staff endpoint for compatibility
+  return get<StaffResponse>('/public/staff', { skipAuth: true });
 };
 
 /**

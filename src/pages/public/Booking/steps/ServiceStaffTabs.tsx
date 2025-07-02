@@ -65,6 +65,17 @@ export const ServiceStaffTabs: React.FC = () => {
     }
   }, [activeTab, selectedServices, selectedStaffId, setBookingFlow]);
 
+  // When there is a pre-selected staff or services (e.g., from navigation state), make sure the correct tab is active
+  useEffect(() => {
+    if (selectedStaffId && activeTab !== 'staff') {
+      setActiveTab('staff');
+    } else if (!selectedStaffId && selectedServices.length > 0 && activeTab !== 'services') {
+      setActiveTab('services');
+    }
+    // We intentionally omit activeTab from deps to avoid infinite loop; only switch when selections change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStaffId, selectedServices.length]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

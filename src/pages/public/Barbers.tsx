@@ -4,7 +4,7 @@ import { ArrowRight, Calendar, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { usePublicExperts } from '@/hooks/usePublicExperts';
+import { usePublicStaff } from '@/hooks/usePublicStaff';
 import { Link } from 'react-router-dom';
 import { Loader } from '@/components/ui/loader';
 
@@ -29,7 +29,7 @@ const staggerContainer = {
 };
 
 export const Barbers: React.FC = () => {
-  const { experts: staff, loading: staffLoading, error: staffError } = usePublicExperts();
+  const { staff, loading: staffLoading, error: staffError } = usePublicStaff();
 
   const isFetching = staffLoading || staff.length === 0;
 
@@ -209,7 +209,15 @@ export const Barbers: React.FC = () => {
                     </div>
 
                     <Button asChild className="w-full mt-auto group-hover:-translate-y-1 transition-transform">
-                      <Link to="/booking" className="hover:text-white">
+                      <Link
+                        to="/booking"
+                        state={{
+                          staffId: staff.id,
+                          staffName: staff.name ?? staff.user?.name ?? 'Barber',
+                          staffPosition: staff.position ?? 'Barber',
+                        }}
+                        className="hover:text-white"
+                      >
                         Book Appointment
                         <Calendar className="ml-2 h-4 w-4" />
                       </Link>

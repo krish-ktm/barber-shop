@@ -21,8 +21,29 @@ const BookingContent: React.FC = () => {
     selectedStaffId,
     selectedDate,
     selectedTime,
-    customerDetails
+    customerDetails,
+    setSelectedStaffId,
+    setSelectedStaffName,
+    setSelectedStaffPosition,
+    setFirstSelection
   } = useBooking();
+
+  // Access router state to preselect staff (if coming from Barbers page)
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!selectedStaffId && location.state && typeof location.state === 'object') {
+      const { staffId, staffName, staffPosition } = location.state as Record<string, string>;
+      if (staffId) {
+        setSelectedStaffId(staffId);
+        if (staffName) setSelectedStaffName(staffName);
+        if (staffPosition) setSelectedStaffPosition(staffPosition);
+        setFirstSelection('staff');
+        setBookingFlow('staff-first');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, selectedStaffId]);
 
   // Scroll to top when step changes (all viewports)
   useEffect(() => {
