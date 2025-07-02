@@ -46,7 +46,7 @@ export const ServicesShadCarousel: React.FC<ServicesShadCarouselProps> = ({ serv
               <Card className="h-full group rounded-xl overflow-hidden shadow-sm ring-1 ring-primary/10 hover:shadow-lg hover:ring-primary/50 transition-all duration-300 flex flex-col bg-white">
                 <div className="aspect-[4/3] bg-muted/50 relative overflow-hidden">
                   <img
-                    src={service.imageUrl || `https://source.unsplash.com/600x450/?barbershop,${service.name}&sig=${service.id}`}
+                    src={service.imageUrl || `/logo/logo-tran.png`}
                     alt={service.name}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
