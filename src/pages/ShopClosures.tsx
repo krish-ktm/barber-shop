@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, Trash, Plus, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Trash, Plus, Loader2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { getGeneric as get, postGeneric as post, delGeneric as del } from '@/api/apiClient';
+import { format, addDays } from 'date-fns';
+import { getGeneric as get, postGeneric as post, delGeneric as del, putGeneric } from '@/api/apiClient';
 import { PageHeader } from '@/components/layout';
 import {
   Dialog,
@@ -52,9 +52,13 @@ const ShopClosures: React.FC = () => {
   const [closures, setClosures] = useState<ShopClosure[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingClosure, setEditingClosure] = useState<ShopClosure | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const tomorrowDefault = addDays(new Date(), 1);
+
   const [formData, setFormData] = useState<ShopClosure>({
-    date: format(new Date(), 'yyyy-MM-dd'),
+    date: format(tomorrowDefault, 'yyyy-MM-dd'),
     reason: '',
     is_full_day: true,
     start_time: '09:00',
@@ -62,7 +66,7 @@ const ShopClosures: React.FC = () => {
   });
   
   // Date state for the Calendar component
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(tomorrowDefault);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ShopClosure | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -116,6 +120,40 @@ const ShopClosures: React.FC = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Update existing shop closure
+  const updateClosure = async () => {
+    if (!editingClosure) return;
+    setIsSubmitting(true);
+    try {
+      const payload = { ...formData };
+      if (formData.is_full_day) {
+        delete payload.start_time;
+        delete payload.end_time;
+      }
+
+      const response = await putGeneric<{ success: boolean; closure: ShopClosure }>(`/shop-closures/${editingClosure.id}`, payload);
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: 'Shop closure updated successfully',
+        });
+        setClosures(closures.map(c => (c.id === editingClosure.id ? response.closure : c)));
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Error updating shop closure:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update shop closure',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+      setIsEditMode(false);
+      setEditingClosure(null);
     }
   };
 
@@ -181,22 +219,87 @@ const ShopClosures: React.FC = () => {
 
   // Reset form
   const resetForm = () => {
-    const today = new Date();
-    setSelectedDate(today);
+    const tomorrow = addDays(new Date(), 1);
+    setSelectedDate(tomorrow);
     setFormData({
-      date: format(today, 'yyyy-MM-dd'),
+      date: format(tomorrow, 'yyyy-MM-dd'),
       reason: '',
       is_full_day: true,
       start_time: '09:00',
       end_time: '17:00',
     });
     setShowForm(false);
+    setIsEditMode(false);
+    setEditingClosure(null);
   };
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addClosure();
+
+    // Front-end validations
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(formData.date);
+    if (selected <= today) {
+      toast({
+        title: 'Invalid date',
+        description: 'Please choose a future date for the shop closure.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Duplicate check (only when adding or changing date)
+    const duplicate = closures.find(c => c.date === formData.date && (!isEditMode || c.id !== editingClosure?.id));
+    if (duplicate) {
+      toast({
+        title: 'Duplicate date',
+        description: 'A closure already exists for this date.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.is_full_day) {
+      if (!formData.start_time || !formData.end_time) {
+        toast({
+          title: 'Invalid time',
+          description: 'Start and end times are required for a partial day closure.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (formData.start_time >= formData.end_time) {
+        toast({
+          title: 'Invalid time range',
+          description: 'Start time must be earlier than end time.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    if (isEditMode) {
+      updateClosure();
+    } else {
+      addClosure();
+    }
+  };
+
+  // Open edit dialog with existing data
+  const handleEditClick = (closure: ShopClosure) => {
+    setIsEditMode(true);
+    setEditingClosure(closure);
+    setShowForm(true);
+    setSelectedDate(new Date(closure.date));
+    setFormData({
+      date: closure.date,
+      reason: closure.reason,
+      is_full_day: closure.is_full_day,
+      start_time: closure.start_time || '09:00',
+      end_time: closure.end_time || '17:00',
+    });
   };
 
   // Load shop closures on component mount
@@ -211,7 +314,20 @@ const ShopClosures: React.FC = () => {
         description="Manage days when your shop will be closed"
         action={{
           label: "Add Closure",
-          onClick: () => setShowForm(true),
+          onClick: () => {
+            const tomorrow = addDays(new Date(), 1);
+            setIsEditMode(false);
+            setEditingClosure(null);
+            setSelectedDate(tomorrow);
+            setFormData({
+              date: format(tomorrow, 'yyyy-MM-dd'),
+              reason: '',
+              is_full_day: true,
+              start_time: '09:00',
+              end_time: '17:00',
+            });
+            setShowForm(true);
+          },
           icon: <Plus className="mr-2 h-4 w-4" />,
         }}
       />
@@ -220,7 +336,7 @@ const ShopClosures: React.FC = () => {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-[95%] w-full sm:max-w-[500px] p-0 max-h-[90vh] overflow-y-auto rounded-xl mx-auto [&>button]:hidden">
           <DialogHeader className="px-5 py-4 border-b sticky top-0 z-10 bg-card rounded-t-xl flex justify-center">
-            <DialogTitle className="text-base font-semibold text-center">Add New Shop Closure</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-center">{isEditMode ? 'Edit Shop Closure' : 'Add New Shop Closure'}</DialogTitle>
           </DialogHeader>
           
           <form onSubmit={handleSubmit} className="space-y-5 p-5">
@@ -251,6 +367,11 @@ const ShopClosures: React.FC = () => {
                     selected={selectedDate}
                     onSelect={handleDateChange}
                     initialFocus
+                    disabled={(date: Date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date <= today; // disable past and today
+                    }}
                   />
                 </PopoverContent>
               </Popover>
@@ -325,7 +446,7 @@ const ShopClosures: React.FC = () => {
               </DialogClose>
               <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isSubmitting ? 'Saving...' : 'Save Closure'}
+                {isSubmitting ? (isEditMode ? 'Updating...' : 'Saving...') : (isEditMode ? 'Update Closure' : 'Save Closure')}
               </Button>
             </DialogFooter>
           </form>
@@ -342,7 +463,20 @@ const ShopClosures: React.FC = () => {
             <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium">No shop closures found</p>
             <p className="text-sm text-muted-foreground">Add a closure to get started</p>
-            <Button onClick={() => setShowForm(true)} className="mt-4">
+            <Button onClick={() => {
+              const tomorrow = addDays(new Date(), 1);
+              setIsEditMode(false);
+              setEditingClosure(null);
+              setSelectedDate(tomorrow);
+              setFormData({
+                date: format(tomorrow, 'yyyy-MM-dd'),
+                reason: '',
+                is_full_day: true,
+                start_time: '09:00',
+                end_time: '17:00',
+              });
+              setShowForm(true);
+            }} className="mt-4">
               <Plus className="mr-2 h-4 w-4" /> Add Closure
             </Button>
           </CardContent>
@@ -357,14 +491,24 @@ const ShopClosures: React.FC = () => {
                     <CalendarIcon className="mr-2 h-5 w-5" />
                     <span className="font-medium text-sm sm:text-base">{format(new Date(closure.date), 'MMM dd, yyyy')}</span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteTarget(closure)}
-                    className="text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/20"
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditClick(closure)}
+                      className="text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/20"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteTarget(closure)}
+                      className="text-primary-foreground hover:text-primary-foreground hover:bg-primary-foreground/20"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               <CardContent className="p-4">
