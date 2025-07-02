@@ -75,7 +75,7 @@ export const ServicesShadCarousel: React.FC<ServicesShadCarouselProps> = ({ serv
                       href="/booking"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="flex items-center justify-center gap-1"
+                      className="flex items-center justify-center gap-1 text-white hover:text-white"
                     >
                       Book
                       <Scissors className="h-4 w-4" />
