@@ -28,11 +28,6 @@ export const AppointmentDetailsModalMobile: React.FC<AppointmentDetailsModalMobi
 }) => {
   if (!appointment) return null;
 
-  // Get total duration
-  const getTotalServiceDuration = (appointment: Appointment) => {
-    return appointment.services.reduce((total, service) => total + service.duration, 0);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95%] sm:max-w-md p-0 h-[85vh] sm:h-[80vh] flex flex-col rounded-xl mx-auto">
@@ -107,23 +102,13 @@ export const AppointmentDetailsModalMobile: React.FC<AppointmentDetailsModalMobi
                 {appointment.services.map((service) => (
                   <div key={service.serviceId} className="flex justify-between text-sm">
                     <span>{service.serviceName}</span>
-                    <div>
-                      <span className="text-muted-foreground">${Number(service.price).toFixed(2)}</span>
-                      <span className="text-muted-foreground mx-2">·</span>
-                      <span className="text-muted-foreground">{service.duration} min</span>
-                    </div>
+                    <span className="text-muted-foreground">${Number(service.price).toFixed(2)}</span>
                   </div>
                 ))}
                 
-                <div className="border-t pt-3 mt-3">
-                  <div className="flex justify-between font-medium">
-                    <span>Total</span>
-                    <div>
-                      <span>${Number(appointment.totalAmount).toFixed(2)}</span>
-                      <span className="text-muted-foreground mx-2">·</span>
-                      <span className="text-muted-foreground">{getTotalServiceDuration(appointment)} min</span>
-                    </div>
-                  </div>
+                <div className="flex justify-between text-sm font-medium pt-2 border-t mt-2">
+                  <span>Total</span>
+                  <span>${appointment.services.reduce((sum, svc) => sum + Number(svc.price), 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>

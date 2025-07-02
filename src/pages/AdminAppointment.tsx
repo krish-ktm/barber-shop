@@ -6,8 +6,7 @@ import {
   ChevronRight,
   Filter,
   Search,
-  Loader2,
-  Sliders
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { AppointmentList } from '@/features/appointments/AppointmentList';
@@ -47,14 +46,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   RadioGroup,
@@ -359,11 +350,6 @@ export const AdminAppointment: React.FC = () => {
     // Close the dialog
     setShowRescheduleDialog(false);
     setAppointmentToReschedule(null);
-    
-    toast({
-      title: 'Appointment Rescheduled',
-      description: 'The appointment has been successfully rescheduled.',
-    });
   };
   
   // Handle cancel complete
@@ -392,11 +378,6 @@ export const AdminAppointment: React.FC = () => {
     // Close the dialog
     setShowCancelDialog(false);
     setAppointmentToCancel(null);
-    
-    toast({
-      title: 'Appointment Cancelled',
-      description: 'The appointment has been successfully cancelled.',
-    });
   };
 
   // Get the actual data from API or use empty arrays if not loaded
@@ -492,7 +473,11 @@ export const AdminAppointment: React.FC = () => {
         price: service.price,
         duration: service.duration
       })) : [],
-      totalAmount: apiAppointment.total_amount,
+      // Calculate totalAmount on the fly to avoid relying on potentially stale back-end values
+      totalAmount: (apiAppointment.appointmentServices || apiAppointment.services || []).reduce(
+        (sum, svc) => sum + Number(svc.price),
+        0
+      ),
       notes: apiAppointment.notes || '',
       createdAt: apiAppointment.created_at || new Date().toISOString(),
       updatedAt: apiAppointment.updated_at || new Date().toISOString()
@@ -626,7 +611,7 @@ export const AdminAppointment: React.FC = () => {
     if (serviceFilter !== 'all') count++;
     
     if (useAdvancedFilters) {
-      if (dateRange?.from) count++;
+      if (tempDateRange?.from) count++;
       if (timeRange && (timeRange[0] !== '09:00' || timeRange[1] !== '18:00')) count++;
       if (priceRange && (priceRange[0] > 0 || priceRange[1] < 100)) count++;
       if (durationRange && (durationRange[0] > 15 || durationRange[1] < 120)) count++;

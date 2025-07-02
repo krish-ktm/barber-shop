@@ -258,7 +258,7 @@ export const AppointmentDetailsDialog: React.FC<AppointmentDetailsDialogProps> =
                   ))}
                   <div className="flex justify-between font-medium mt-2">
                     <span>Total</span>
-                    <span>${Number(appointment.totalAmount).toFixed(2)}</span>
+                    <span>${appointment.services.reduce((sum, svc) => sum + Number(svc.price), 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>

@@ -327,7 +327,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                 ))}
                 <div className="flex justify-between text-sm font-medium pt-2 border-t mt-2">
                   <span>Total</span>
-                  <span>{formatCurrency(Number(appointment.totalAmount))}</span>
+                  <span>{formatCurrency(appointment.services.reduce((sum, svc) => sum + Number(svc.price), 0))}</span>
                 </div>
               </div>
             </div>
