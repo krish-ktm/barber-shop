@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -31,6 +31,8 @@ import { Loader2, Image } from 'lucide-react';
 import { Service } from '@/api/services/serviceService';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useToast } from '@/hooks/use-toast';
+import { getAllCategories, ServiceCategory } from '@/api/services/categoryService';
+import { useApi } from '@/hooks/useApi';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -68,6 +70,18 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
   });
 
   const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+  const {
+    data: categoryData,
+    execute: fetchCategories,
+  } = useApi(getAllCategories);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const dynamicCategories = (categoryData?.categories || []).map((c: ServiceCategory) => c.name.toLowerCase());
+  const categoryOptions = dynamicCategories.length > 0 ? dynamicCategories : ['haircut','beard','shave','color','treatment','combo'];
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,12 +152,11 @@ export const AddServiceDialog: React.FC<AddServiceDialogProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="haircut">Haircut</SelectItem>
-                      <SelectItem value="beard">Beard</SelectItem>
-                      <SelectItem value="shave">Shave</SelectItem>
-                      <SelectItem value="color">Color</SelectItem>
-                      <SelectItem value="treatment">Treatment</SelectItem>
-                      <SelectItem value="combo">Combo</SelectItem>
+                      {categoryOptions.map((cat) => (
+                        <SelectItem key={cat} value={cat} className="capitalize">
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

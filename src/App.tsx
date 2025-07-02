@@ -48,6 +48,7 @@ import ScrollToTop from './components/ScrollToTop';
 import AdminGalleryImages from './pages/AdminGalleryImages';
 import AdminContactRequests from './pages/AdminContactRequests';
 import AdminExperts from './pages/AdminExperts';
+import { AdminServiceCategories } from './pages/AdminServiceCategories';
 
 function App() {
   return (
@@ -96,6 +97,7 @@ function App() {
           <Route path="gallery-images" element={<AdminGalleryImages />} />
           <Route path="contact-requests" element={<AdminContactRequests />} />
           <Route path="experts" element={<AdminExperts />} />
+          <Route path="service-categories" element={<AdminServiceCategories />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 

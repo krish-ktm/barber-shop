@@ -100,6 +100,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isInSheet = false }) => {
       href: '/admin/services',
     },
     {
+      icon: <ListChecklist size={18} />,
+      label: 'Service Categories',
+      href: '/admin/service-categories',
+    },
+    {
       icon: <Package size={18} />,
       label: 'Products',
       href: '/admin/products',

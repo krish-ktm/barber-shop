@@ -31,6 +31,8 @@ import { Loader2, Image } from 'lucide-react';
 import { Service } from '@/api/services/serviceService';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useToast } from '@/hooks/use-toast';
+import { getAllCategories, ServiceCategory } from '@/api/services/categoryService';
+import { useApi } from '@/hooks/useApi';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -94,6 +96,27 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
     reader.readAsDataURL(file);
   };
 
+  // Fetch categories
+  const {
+    data: categoryData,
+    execute: fetchCategories,
+  } = useApi(getAllCategories);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const defaultCategories = (categoryData?.categories || []).map((c: ServiceCategory) => c.name.toLowerCase());
+  const fallbackCategories = ['haircut','beard','shave','color','treatment','combo'];
+  const categoriesList = defaultCategories.length > 0 ? defaultCategories : fallbackCategories;
+
+  const currentCat = (service?.category || '').toLowerCase();
+  const categories = categoriesList.includes(currentCat)
+    ? categoriesList
+    : currentCat
+      ? [...categoriesList, currentCat]
+      : categoriesList;
+
   useEffect(() => {
     if (service) {
       form.reset({
@@ -122,15 +145,6 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
       onOpenChange(false);
     }
   };
-
-  // Prepare category options (include any API-provided category)
-  const defaultCategories = ['haircut','beard','shave','color','treatment','combo'];
-  const currentCat = (service?.category || '').toLowerCase();
-  const categories = defaultCategories.includes(currentCat)
-    ? defaultCategories
-    : currentCat
-      ? [...defaultCategories, currentCat]
-      : defaultCategories;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
