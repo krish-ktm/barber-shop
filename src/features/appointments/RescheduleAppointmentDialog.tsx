@@ -72,14 +72,14 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
       setError(null);
 
       try {
-        // Use the first service from the appointment for fetching slots
-        const serviceId = appointment.services[0]?.serviceId || '';
+        // Gather all service IDs for multi-service appointments
+        const serviceIds = appointment.services.map(service => service.serviceId);
         
         // Get available slots from the booking API
         const response = await getBookingSlots(
           formattedDate,
           appointment.staffId,
-          serviceId
+          serviceIds
         );
 
         if (response.success) {
@@ -208,11 +208,11 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
     
     setIsLoadingSlots(true);
     try {
-      const serviceId = appointment.services[0]?.serviceId || '';
+      const serviceIds = appointment.services.map(service => service.serviceId);
       const response = await getBookingSlots(
         formattedDate,
         appointment.staffId,
-        serviceId
+        serviceIds
       );
       
       if (response.success) {
@@ -238,11 +238,11 @@ export const RescheduleAppointmentDialog: React.FC<RescheduleAppointmentDialogPr
         const fetchInitialSlots = async () => {
           setIsLoadingSlots(true);
           try {
-            const serviceId = appointment.services[0]?.serviceId || '';
+            const serviceIds = appointment.services.map(service => service.serviceId);
             const response = await getBookingSlots(
               formattedDate,
               appointment.staffId,
-              serviceId
+              serviceIds
             );
             
             if (response.success) {

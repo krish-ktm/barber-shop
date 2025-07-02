@@ -53,13 +53,13 @@ export const DateTimeSelection: React.FC = () => {
       setError(null);
 
       try {
-        // Use the first service for now
-        const serviceId = selectedServices[0].id;
+        // Send all selected service IDs to support multi-service bookings
+        const serviceIds = selectedServices.map(service => service.id);
         
         const response = await getBookingSlots(
           formattedDate,
           selectedStaffId,
-          serviceId
+          serviceIds
         );
 
         if (response.success) {
