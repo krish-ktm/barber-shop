@@ -179,7 +179,11 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     
     const buttons = [];
     
-    // Confirm button for scheduled appointments
+    // Determine if the appointment start date-time is still in the future
+    const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+    const isFutureAppointment = appointmentDateTime.getTime() > Date.now();
+    
+    // Confirm button for scheduled appointments (allowed even for future dates)
     if (appointment.status === 'scheduled') {
       buttons.push(
         <TooltipProvider key="confirm">
@@ -203,8 +207,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       );
     }
     
-    // Complete button for scheduled/confirmed appointments
-    if (appointment.status === 'scheduled' || appointment.status === 'confirmed') {
+    // Complete button should only be shown once the appointment time has passed
+    if (!isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed')) {
       buttons.push(
         <TooltipProvider key="complete">
           <Tooltip>
@@ -227,8 +231,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       );
     }
     
-    // No-show button for scheduled/confirmed appointments
-    if (appointment.status === 'scheduled' || appointment.status === 'confirmed') {
+    // No-show button should only be shown once the appointment time has passed
+    if (!isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed')) {
       buttons.push(
         <TooltipProvider key="no-show">
           <Tooltip>

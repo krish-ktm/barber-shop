@@ -88,6 +88,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     
     const isLoading = loadingAppointmentIds[appointment.id] || false;
     
+    // Prevent final status changes for appointments scheduled in the future
+    const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+    const isFutureAppointment = appointmentDateTime.getTime() > Date.now();
+    
     // Show a single loading indicator when action is in progress
     if (isLoading) {
       return (
@@ -123,8 +127,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       );
     }
     
-    // Complete button for scheduled/confirmed appointments
-    if ((appointment.status === 'scheduled' || appointment.status === 'confirmed') && onStatusChange) {
+    // Complete button only allowed after the scheduled start time
+    if (!isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed') && onStatusChange) {
       buttons.push(
         <TooltipProvider key="complete">
           <Tooltip>
@@ -147,8 +151,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       );
     }
     
-    // No-show button for scheduled/confirmed appointments
-    if ((appointment.status === 'scheduled' || appointment.status === 'confirmed') && onStatusChange) {
+    // No-show button only allowed after the scheduled start time
+    if (!isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed') && onStatusChange) {
       buttons.push(
         <TooltipProvider key="no-show">
           <Tooltip>
