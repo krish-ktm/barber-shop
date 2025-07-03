@@ -13,6 +13,7 @@ import { AppointmentList, SimpleAppointment } from '@/components/dashboard/Appoi
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
+import { CompleteAppointmentDialog } from '@/features/appointments/CompleteAppointmentDialog';
 import { Appointment } from '@/types';
 import { Appointment as ApiAppointment } from '@/api/services/appointmentService';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,8 @@ const StaffDashboardDesktop: React.FC = () => {
   // State for reschedule dialog
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [appointmentToComplete, setAppointmentToComplete] = useState<ApiAppointment | null>(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -108,6 +111,27 @@ const StaffDashboardDesktop: React.FC = () => {
       title: 'Appointment Rescheduled',
       description: `Appointment for ${updatedAppointment.customer_name} has been rescheduled.`
     });
+  };
+
+  // Handle complete done
+  const handleCompleteDone = (_updated: ApiAppointment) => {
+    void _updated; // mark as used
+    fetchDashboardData();
+    setShowCompleteDialog(false);
+    setAppointmentToComplete(null);
+  };
+
+  // Handle complete appointment open
+  const handleCompleteAppointment = (appointment: SimpleAppointment) => {
+    // Find full appointment if available
+    const source = dashboardData?.todayAppointments.concat(dashboardData?.upcomingAppointments || []) || [];
+    const found = source.find(a => a.id === appointment.id);
+    if (found) {
+      setAppointmentToComplete(found as unknown as ApiAppointment);
+    } else {
+      setAppointmentToComplete({ id: appointment.id } as unknown as ApiAppointment);
+    }
+    setShowCompleteDialog(true);
   };
 
   if (loading && !cachedData) {
@@ -273,6 +297,7 @@ const StaffDashboardDesktop: React.FC = () => {
             allowCompletion={true}
             onRefresh={fetchDashboardData}
             onReschedule={handleRescheduleAppointment}
+            onCompleteAppointment={handleCompleteAppointment}
           />
           {todayAppointments.length > 0 && (
             <div className="mt-4 flex justify-end">
@@ -394,6 +419,15 @@ const StaffDashboardDesktop: React.FC = () => {
           open={showRescheduleDialog}
           onOpenChange={setShowRescheduleDialog}
           onRescheduleComplete={handleRescheduleComplete}
+        />
+      )}
+
+      {appointmentToComplete && (
+        <CompleteAppointmentDialog
+          appointment={appointmentToComplete}
+          open={showCompleteDialog}
+          onOpenChange={setShowCompleteDialog}
+          onCompleted={handleCompleteDone}
         />
       )}
     </div>
