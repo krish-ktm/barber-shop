@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Image } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Service } from '@/api/services/serviceService';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +42,7 @@ const formSchema = z.object({
   duration: z.coerce.number().min(5, 'Duration must be at least 5 minutes'),
   category: z.string().min(1, 'Please select a category'),
   imageUrl: z.string().optional(),
+  is_active: z.boolean().default(true),
 });
 
 interface EditServiceDialogProps {
@@ -68,6 +70,7 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
       duration: 30,
       category: '',
       imageUrl: '',
+      is_active: true,
     },
   });
 
@@ -126,6 +129,7 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
         duration: service.duration,
         category: (service.category || '').toLowerCase(),
         imageUrl: service.imageUrl || '',
+        is_active: service.is_active ?? true,
       });
       setImagePreview(service.imageUrl);
     }
@@ -274,6 +278,19 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between">
+                      <FormLabel>Active</FormLabel>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* Right column - image */}

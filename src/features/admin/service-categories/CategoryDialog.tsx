@@ -10,11 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { ServiceCategory } from '@/api/services/categoryService';
 import { Image } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const schema = z.object({
   name: z.string().min(2, 'Name is required'),
   description: z.string().optional(),
   imageUrl: z.string().optional(),
+  is_active: z.boolean().default(true),
 });
 
 type CategoryFormValues = z.infer<typeof schema>;
@@ -36,6 +38,7 @@ export const CategoryDialog: React.FC<CategoryDialogProps> = ({ open, onOpenChan
       name: initialData?.name || '',
       description: initialData?.description || '',
       imageUrl: initialData?.imageUrl || '',
+      is_active: initialData?.is_active ?? true,
     },
   });
 
@@ -45,6 +48,7 @@ export const CategoryDialog: React.FC<CategoryDialogProps> = ({ open, onOpenChan
       name: initialData?.name || '',
       description: initialData?.description || '',
       imageUrl: initialData?.imageUrl || '',
+      is_active: initialData?.is_active ?? true,
     });
     setImagePreview(initialData?.imageUrl);
   }, [initialData, form]);
@@ -148,6 +152,19 @@ export const CategoryDialog: React.FC<CategoryDialogProps> = ({ open, onOpenChan
                         </div>
                       )}
                     </div>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="is_active"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between">
+                  <FormLabel>Active</FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={submitting} />
                   </FormControl>
                 </FormItem>
               )}
