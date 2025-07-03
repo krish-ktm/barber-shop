@@ -270,6 +270,7 @@ const StaffDashboardDesktop: React.FC = () => {
             appointments={todayAppointments}
             className=""
             showActions={true}
+            allowCompletion={true}
             onRefresh={fetchDashboardData}
             onReschedule={handleRescheduleAppointment}
           />
@@ -289,6 +290,7 @@ const StaffDashboardDesktop: React.FC = () => {
             appointments={upcomingAppointments}
             className=""
             showActions={true}
+            allowCompletion={false}
             onRefresh={fetchDashboardData}
             onReschedule={handleRescheduleAppointment}
           />

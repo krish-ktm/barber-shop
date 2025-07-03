@@ -220,12 +220,14 @@ export const StaffMobileDashboard: React.FC = () => {
             title="Today"
             appointments={todayAppts}
             showActions
+            allowCompletion={true}
             onRefresh={fetchData}
           />
           <AppointmentList
             title="Upcoming"
             appointments={upcomingAppts}
             showActions
+            allowCompletion={false}
             onRefresh={fetchData}
           />
         </div>

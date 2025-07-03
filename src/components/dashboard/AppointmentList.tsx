@@ -48,6 +48,7 @@ interface AppointmentListProps {
   showActions?: boolean;
   onRefresh?: () => void;
   onReschedule?: (appointment: SimpleAppointment) => void;
+  allowCompletion?: boolean;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
@@ -56,7 +57,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   className,
   showActions = true,
   onRefresh,
-  onReschedule
+  onReschedule,
+  allowCompletion = true,
 }) => {
   const { toast } = useToast();
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
@@ -180,8 +182,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     const buttons = [];
     
     // Determine if the appointment falls on a future date (ignore time-of-day)
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isFutureAppointment = appointment.date > todayStr;
+    const todayDateObj = new Date();
+    const todayStr = `${todayDateObj.getFullYear()}-${(todayDateObj.getMonth() + 1).toString().padStart(2, '0')}-${todayDateObj.getDate().toString().padStart(2, '0')}`;
+    const appointmentDateStr = appointment.date.split('T')[0];
+    const isFutureAppointment = appointmentDateStr > todayStr;
     
     // Confirm button for scheduled appointments (allowed even for future dates)
     if (appointment.status === 'scheduled') {
@@ -207,8 +211,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       );
     }
     
-    // Complete button should only be shown once the appointment time has passed
-    if (!isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed')) {
+    // Complete button should only be shown once the appointment date is today/past and completion is allowed
+    if (allowCompletion && !isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed')) {
       buttons.push(
         <TooltipProvider key="complete">
           <Tooltip>
@@ -231,8 +235,8 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       );
     }
     
-    // No-show button should only be shown once the appointment time has passed
-    if (!isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed')) {
+    // No-show button only when completion allowed and date is today/past
+    if (allowCompletion && !isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed')) {
       buttons.push(
         <TooltipProvider key="no-show">
           <Tooltip>

@@ -257,6 +257,7 @@ export const Dashboard: React.FC = () => {
                 title="Today's Appointments" 
                 appointments={todayAppointments}
                 showActions={true}
+                allowCompletion={true}
                 onRefresh={fetchTodayAppointments}
                 onReschedule={handleRescheduleAppointment}
               />
@@ -273,6 +274,7 @@ export const Dashboard: React.FC = () => {
                 title="Upcoming Appointments" 
                 appointments={mappedAppointments}
                 showActions={true}
+                allowCompletion={false}
                 onRefresh={refetch}
                 onReschedule={handleRescheduleAppointment}
               />
