@@ -13,6 +13,7 @@ import { AppointmentList } from '@/features/appointments/AppointmentList';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
 import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
 import { CancelAppointmentDialog } from '@/features/appointments/CancelAppointmentDialog';
+import { CompleteAppointmentDialog } from '@/features/appointments/CompleteAppointmentDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -123,7 +124,6 @@ export const AdminAppointment: React.FC = () => {
   
   // UI state
   const [showFilters, setShowFilters] = useState(false);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   // Appointment details state
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
@@ -136,6 +136,10 @@ export const AdminAppointment: React.FC = () => {
   // Add state for cancel dialog
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<UIAppointment | null>(null);
+
+  // Complete dialog state
+  const [appointmentToComplete, setAppointmentToComplete] = useState<UIAppointment | null>(null);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   // Fetch data only when necessary - this one is needed for initial data loading
   useEffect(() => {
@@ -653,6 +657,15 @@ export const AdminAppointment: React.FC = () => {
     return `${format(dateRange.start, 'MMM d')} - ${format(dateRange.end, 'MMM d, yyyy')}`;
   };
 
+  // Handle appointment completion (after dialog)
+  const handleCompleteDone = (updatedAppt: ApiAppointment) => {
+    if (!adminData) return;
+    const updated = adminData.appointments.map(a => a.id === updatedAppt.id ? updatedAppt : a);
+    setAdminData({ ...adminData, appointments: updated });
+    setShowCompleteDialog(false);
+    setAppointmentToComplete(null);
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <PageHeader
@@ -1001,6 +1014,10 @@ export const AdminAppointment: React.FC = () => {
                 onRescheduleAppointment={handleRescheduleAppointment}
                 onCancelAppointment={handleCancelAppointment}
                 loadingAppointmentIds={loadingAppointmentIds}
+                onCompleteAppointment={(appt) => {
+                  setAppointmentToComplete(appt);
+                  setShowCompleteDialog(true);
+                }}
               />
             </div>
           )}
@@ -1281,6 +1298,16 @@ export const AdminAppointment: React.FC = () => {
           open={showCancelDialog}
           onOpenChange={setShowCancelDialog}
           onCancelComplete={handleCancelComplete}
+        />
+      )}
+      
+      {/* Complete Appointment Dialog */}
+      {appointmentToComplete && (
+        <CompleteAppointmentDialog
+          appointment={appointmentToComplete as unknown as ApiAppointment}
+          open={showCompleteDialog}
+          onOpenChange={setShowCompleteDialog}
+          onCompleted={handleCompleteDone}
         />
       )}
     </div>

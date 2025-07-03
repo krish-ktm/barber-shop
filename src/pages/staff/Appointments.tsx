@@ -49,6 +49,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
 import { AppointmentDetailsModalMobile } from '@/features/appointments/AppointmentDetailsModalMobile';
+import { CompleteAppointmentDialog } from '@/features/appointments/CompleteAppointmentDialog';
 import { useToast } from '@/hooks/use-toast';
 import { getStaffAppointments, updateAppointmentStatus } from '@/api/services/appointmentService';
 import { Appointment as ApiAppointment, Service } from '@/api/services/appointmentService';
@@ -85,6 +86,8 @@ export const StaffAppointments: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [appointmentToComplete, setAppointmentToComplete] = useState<ApiAppointment | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [staffData, setStaffData] = useState<{
     appointments: ApiAppointment[];
@@ -341,6 +344,38 @@ export const StaffAppointments: React.FC = () => {
         variant: 'destructive'
       });
     }
+  };
+
+  // Handle complete appointment via modal
+  const handleCompleteAppointment = (appointment: UIAppointment) => {
+    const apiAppt = staffData?.appointments.find(a => a.id === appointment.id);
+    if (apiAppt) {
+      setAppointmentToComplete(apiAppt);
+    } else {
+      // Fallback minimal object; dialog will refetch details
+      setAppointmentToComplete({ id: appointment.id } as unknown as ApiAppointment);
+    }
+    setShowCompleteDialog(true);
+  };
+
+  const handleCompleteDone = (_updated: ApiAppointment) => {
+    void _updated; // Mark as used to satisfy linter
+    // Refresh data after completion
+    const startDateString = format(dateRange.start, 'yyyy-MM-dd');
+    const endDateString = format(dateRange.end, 'yyyy-MM-dd');
+    fetchStaffData(
+      1,
+      100,
+      'time_asc',
+      startDateString,
+      endDateString,
+      undefined,
+      statusFilter !== 'all' ? statusFilter : undefined,
+      searchQuery.trim() !== '' ? searchQuery : undefined,
+      timeOfDayFilter !== 'all' ? timeOfDayFilter : undefined,
+      serviceFilter.length > 0 ? serviceFilter : undefined
+    );
+    setShowCompleteDialog(false);
   };
 
   // Convert API appointments to UI format for the appointment list
@@ -843,6 +878,7 @@ export const StaffAppointments: React.FC = () => {
             showActions={true}
             onViewAppointment={handleViewAppointment}
             onStatusChange={handleStatusChange}
+            onCompleteAppointment={handleCompleteAppointment}
           />
         )}
       </div>
@@ -863,6 +899,15 @@ export const StaffAppointments: React.FC = () => {
             onStatusChange={handleStatusChange}
           />
         )
+      )}
+
+      {appointmentToComplete && (
+        <CompleteAppointmentDialog
+          appointment={appointmentToComplete}
+          open={showCompleteDialog}
+          onOpenChange={setShowCompleteDialog}
+          onCompleted={handleCompleteDone}
+        />
       )}
     </div>
   );

@@ -49,6 +49,7 @@ interface AppointmentListProps {
   onRefresh?: () => void;
   onReschedule?: (appointment: SimpleAppointment) => void;
   allowCompletion?: boolean;
+  onCompleteAppointment?: (appointment: SimpleAppointment) => void;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
@@ -59,6 +60,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   onRefresh,
   onReschedule,
   allowCompletion = true,
+  onCompleteAppointment,
 }) => {
   const { toast } = useToast();
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
@@ -143,7 +145,11 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   };
 
   const handleComplete = (appointment: SimpleAppointment) => {
-    handleStatusChange(appointment.id, 'completed');
+    if (onCompleteAppointment) {
+      onCompleteAppointment(appointment);
+    } else {
+      handleStatusChange(appointment.id, 'completed');
+    }
   };
 
   const handleCancel = (appointment: SimpleAppointment) => {

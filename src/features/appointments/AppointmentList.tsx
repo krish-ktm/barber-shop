@@ -36,6 +36,7 @@ interface AppointmentListProps {
   onRescheduleAppointment?: (appointment: Appointment) => void;
   onCancelAppointment?: (appointment: Appointment) => void;
   loadingAppointmentIds?: Record<string, boolean>; // Track loading state per appointment ID
+  onCompleteAppointment?: (appointment: Appointment) => void;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
@@ -48,6 +49,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   onRescheduleAppointment,
   onCancelAppointment,
   loadingAppointmentIds = {},
+  onCompleteAppointment,
 }) => {
   const getStaffImage = (staffId: string) => {
     const staff = staffList.find(s => s.id === staffId);
@@ -134,7 +136,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     }
     
     // Complete button only allowed after the scheduled start time
-    if (!isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed') && onStatusChange) {
+    if (!isFutureAppointment && (appointment.status === 'scheduled' || appointment.status === 'confirmed')) {
       buttons.push(
         <TooltipProvider key="complete">
           <Tooltip>
@@ -145,7 +147,11 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
                 className="h-7 w-7 mr-1" 
                 onClick={(e) => {
                   e.stopPropagation();
-                  onStatusChange(appointment.id, 'completed');
+                  if (onCompleteAppointment) {
+                    onCompleteAppointment(appointment);
+                  } else if (onStatusChange) {
+                    onStatusChange(appointment.id, 'completed');
+                  }
                 }}
               >
                 <CheckCheck className="h-3.5 w-3.5" />

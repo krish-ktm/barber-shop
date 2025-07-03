@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
 import { getAdminAppointments, Appointment as ApiAppointment } from '@/api/services/appointmentService';
+import { CompleteAppointmentDialog } from '@/features/appointments/CompleteAppointmentDialog';
 
 export const Dashboard: React.FC = () => {
   const { toast } = useToast();
@@ -29,6 +30,10 @@ export const Dashboard: React.FC = () => {
   // State for reschedule dialog
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
+
+  // State for complete dialog
+  const [appointmentToComplete, setAppointmentToComplete] = useState<ApiAppointment | null>(null);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   // Handle error
   useEffect(() => {
@@ -134,6 +139,14 @@ export const Dashboard: React.FC = () => {
       title: 'Appointment Rescheduled',
       description: `Appointment for ${updatedAppointment.customer_name} has been rescheduled.`
     });
+  };
+
+  // Handle complete done
+  const handleCompleteDone = (_updated: ApiAppointment) => {
+    // Refresh data or patch state as needed; simplest: refetch dashboard
+    refetch();
+    setShowCompleteDialog(false);
+    setAppointmentToComplete(null);
   };
 
   // keep last successful payload to avoid UI blink
@@ -260,6 +273,7 @@ export const Dashboard: React.FC = () => {
                 allowCompletion={true}
                 onRefresh={fetchTodayAppointments}
                 onReschedule={handleRescheduleAppointment}
+                onCompleteAppointment={(appt)=>{setAppointmentToComplete(appt as unknown as ApiAppointment); setShowCompleteDialog(true);}}
               />
               {loadingTodayAppointments && (
                 <div className="flex justify-center items-center h-20">
@@ -277,6 +291,7 @@ export const Dashboard: React.FC = () => {
                 allowCompletion={false}
                 onRefresh={refetch}
                 onReschedule={handleRescheduleAppointment}
+                onCompleteAppointment={(appt)=>{setAppointmentToComplete(appt as unknown as ApiAppointment); setShowCompleteDialog(true);}}
               />
             </div>
           </div>
@@ -517,6 +532,16 @@ export const Dashboard: React.FC = () => {
               open={showRescheduleDialog}
               onOpenChange={setShowRescheduleDialog}
               onRescheduleComplete={handleRescheduleComplete}
+            />
+          )}
+          
+          {/* Complete Dialog */}
+          {appointmentToComplete && (
+            <CompleteAppointmentDialog
+              appointment={appointmentToComplete}
+              open={showCompleteDialog}
+              onOpenChange={setShowCompleteDialog}
+              onCompleted={handleCompleteDone}
             />
           )}
         </>
