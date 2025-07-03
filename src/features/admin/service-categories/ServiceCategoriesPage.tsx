@@ -3,7 +3,6 @@ import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import { CategoryDialog } from './CategoryDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useApi } from '@/hooks/useApi';
@@ -65,15 +64,6 @@ export const ServiceCategoriesPage: React.FC = () => {
   const handleEdit = (category: ServiceCategory) => {
     setSelectedCategory(category);
     setDialogOpen(true);
-  };
-
-  const handleToggleActive = async (category: ServiceCategory) => {
-    try {
-      await executeUpdateCategory(category.id, { is_active: !category.is_active });
-      fetchCategories();
-    } catch (error) {
-      console.error('Toggle active error', error);
-    }
   };
 
   const handleDelete = (category: ServiceCategory) => {
@@ -184,7 +174,6 @@ export const ServiceCategoriesPage: React.FC = () => {
                       <TableHead className="w-[60px]">Image</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -202,9 +191,6 @@ export const ServiceCategoriesPage: React.FC = () => {
                         </TableCell>
                         <TableCell className="capitalize font-medium">{cat.name}</TableCell>
                         <TableCell className="truncate max-w-xs">{cat.description || '—'}</TableCell>
-                        <TableCell>
-                          <Switch checked={cat.is_active} onCheckedChange={() => handleToggleActive(cat)} />
-                        </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             <Button size="icon" variant="ghost" onClick={() => handleEdit(cat)}>

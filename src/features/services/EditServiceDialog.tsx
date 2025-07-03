@@ -283,7 +283,7 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
                   control={form.control}
                   name="is_active"
                   render={({ field }) => (
-                    <FormItem className="flex items-center justify-between">
+                    <FormItem className="flex items-center gap-3">
                       <FormLabel>Active</FormLabel>
                       <FormControl>
                         <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
