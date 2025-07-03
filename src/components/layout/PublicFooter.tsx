@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
-import { useSettings } from '@/hooks/useSettings';
+import { useBusinessInfo } from '@/hooks/useBusinessInfo';
 
 export const PublicFooter: React.FC = () => {
-  const { settings } = useSettings();
-  const shopName = settings?.name || 'Modern Cuts';
-  const address = settings?.address || '123 Main Street\nNew York, NY 10001';
-  const phone = settings?.phone || '(555) 123-4567';
-  const email = settings?.email || 'info@moderncuts.com';
+  const { businessInfo } = useBusinessInfo();
+  const shopName = businessInfo?.name || 'Modern Cuts';
+  const address = businessInfo?.address || '123 Main Street\nNew York, NY 10001';
+  const phone = businessInfo?.phone || '(555) 123-4567';
+  const email = businessInfo?.email || 'info@moderncuts.com';
 
   const navigation = [
     { name: 'Home', href: '/' },

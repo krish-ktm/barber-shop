@@ -191,7 +191,9 @@ export const Services: React.FC = () => {
                       variants={imageVariants}
                     >
                       {(() => {
-                        const coverImage = (services[0] && services[0].imageUrl) ? services[0].imageUrl : '/logo/logo-tran.png';
+                        const coverImage = categoryImages[category as keyof typeof categoryImages] 
+                          || (services[0] && services[0].imageUrl) 
+                          || '/logo/logo-tran.png';
                         return (
                           <img 
                             src={coverImage}
