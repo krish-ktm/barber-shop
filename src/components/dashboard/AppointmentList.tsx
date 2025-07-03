@@ -179,9 +179,9 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     
     const buttons = [];
     
-    // Determine if the appointment start date-time is still in the future
-    const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
-    const isFutureAppointment = appointmentDateTime.getTime() > Date.now();
+    // Determine if the appointment falls on a future date (ignore time-of-day)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isFutureAppointment = appointment.date > todayStr;
     
     // Confirm button for scheduled appointments (allowed even for future dates)
     if (appointment.status === 'scheduled') {

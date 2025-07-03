@@ -88,9 +88,9 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
     
     const isLoading = loadingAppointmentIds[appointment.id] || false;
     
-    // Prevent final status changes for appointments scheduled in the future
-    const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
-    const isFutureAppointment = appointmentDateTime.getTime() > Date.now();
+    // Prevent final status changes for appointments that fall on a future date (ignore time-of-day)
+    const todayStr = new Date().toISOString().split('T')[0]; // e.g. "2025-07-03"
+    const isFutureAppointment = appointment.date > todayStr;
     
     // Show a single loading indicator when action is in progress
     if (isLoading) {
