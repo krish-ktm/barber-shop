@@ -8,6 +8,7 @@ export interface ServiceCategory {
   imageUrl?: string;
   created_at?: string;
   updated_at?: string;
+  is_active?: boolean;
 }
 
 interface CategoryListResponse {
