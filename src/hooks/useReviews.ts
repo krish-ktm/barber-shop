@@ -112,29 +112,41 @@ export const useReviews = () => {
     setState(prev => ({ ...prev, page }));
   }, []);
 
-  // Change filters
-  const setFilters = useCallback(({
-    approved,
-    staffId,
-    sort,
-    limit,
-    query
-  }: {
+  // Change filters – only update keys that are explicitly provided so that
+  // other active filters remain intact. This allows, for example, submitting
+  // an empty search (query = undefined) without resetting the approval / sort
+  // filters currently in place.
+  const setFilters = useCallback((filters: {
     approved?: boolean;
     staffId?: string;
     sort?: string;
     limit?: number;
     query?: string;
   }) => {
-    setState(prev => ({
-      ...prev,
-      approved,
-      staffId,
-      sort: sort || prev.sort,
-      query: query !== undefined ? query : prev.query,
-      limit: limit || prev.limit,
-      page: 1 // Reset to first page when filters change
-    }));
+    setState(prev => {
+      const nextState = { ...prev };
+
+      if (Object.prototype.hasOwnProperty.call(filters, 'approved')) {
+        nextState.approved = filters.approved;
+      }
+      if (Object.prototype.hasOwnProperty.call(filters, 'staffId')) {
+        nextState.staffId = filters.staffId;
+      }
+      if (Object.prototype.hasOwnProperty.call(filters, 'sort')) {
+        // If sort is undefined we keep previous sort, otherwise apply new one
+        nextState.sort = filters.sort !== undefined ? filters.sort : prev.sort;
+      }
+      if (Object.prototype.hasOwnProperty.call(filters, 'limit')) {
+        nextState.limit = filters.limit !== undefined ? filters.limit : prev.limit;
+      }
+      if (Object.prototype.hasOwnProperty.call(filters, 'query')) {
+        nextState.query = filters.query;
+      }
+
+      // Whenever any filter changes, reset to first page
+      nextState.page = 1;
+      return nextState;
+    });
   }, []);
 
   // Approve a review
