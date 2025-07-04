@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
@@ -168,14 +168,6 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const [customGstRate, setCustomGstRate] = useState<string>('');
   const [customGstValue, setCustomGstValue] = useState<number>(0);
   
-  // API hook for customer search
-  const {
-    execute: executeCustomerSearch
-  } = useApi(getCustomerByPhone);
-
-  // Get default active GST rate
-  const defaultGstRate = gstRatesData.length > 0 ? gstRatesData.find(rate => rate.isActive) || gstRatesData[0] : null;
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -185,23 +177,21 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       discountValue: 0,
       tipAmount: 0,
       paymentMethod: 'cash',
-      gstRates: defaultGstRate ? [defaultGstRate.id] : [],
+      gstRates: gstRatesData.length > 0 ? [gstRatesData[0].id] : [],
       notes: '',
     },
   });
 
-  // Set default GST rate automatically when form loads or when gstRatesData changes
-  React.useEffect(() => {
-    // Find the active/default GST rate
-    if (defaultGstRate) {
-      form.setValue('gstRates', [defaultGstRate.id]);
-      setCustomGstRate(`${defaultGstRate.name} - Custom`);
-    } else if (gstRatesData.length > 0) {
-      // If no active rate, use the first one
-      form.setValue('gstRates', [gstRatesData[0].id]);
-      setCustomGstRate(`${gstRatesData[0].name} - Custom`);
-    }
-  }, [gstRatesData]);
+  // Ref to keep track of last searched phone number to avoid duplicate searches
+  const lastSearchedPhoneRef = React.useRef<string>('');
+
+  // API hook for customer search
+  const {
+    execute: executeCustomerSearch
+  } = useApi(getCustomerByPhone);
+
+  // Get default active GST rate
+  const defaultGstRate = gstRatesData.length > 0 ? gstRatesData.find(rate => rate.isActive) || gstRatesData[0] : null;
 
   const newCustomerForm = useForm<z.infer<typeof newCustomerSchema>>({
     resolver: zodResolver(newCustomerSchema),
@@ -211,8 +201,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     },
   });
 
-  // Keep track of the last phone number we searched for to avoid duplicate calls
-  const lastSearchedPhoneRef = React.useRef<string>('');
+  /* -------------------------------------------------------------
+   * Reactive watched values (defined after both forms are initialised)
+   * -----------------------------------------------------------*/
+  const watchedCustomerPhone = useWatch({ control: form.control, name: 'customerPhone' });
+  const watchedNewCustomerName = useWatch({ control: newCustomerForm.control, name: 'name' });
 
   // Automatically trigger customer search when exactly 10 digits are entered
   const customerPhoneValue = form.watch('customerPhone');
@@ -540,8 +533,16 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         <Tabs value={activeTab} onValueChange={(value) => {
           const newTab = value as 'search' | 'new';
           setActiveTab(newTab);
+
           if (newTab === 'new') {
+            // Switching to New Customer tab
             setIsNewCustomer(true);
+            setIsGuestUser(false);
+          } else {
+            // Switching back to Search tab – clear any phone entered in New Customer tab
+            form.setValue('customerPhone', '');
+            setSelectedCustomer(undefined);
+            setIsNewCustomer(false);
             setIsGuestUser(false);
           }
         }}>
@@ -1342,19 +1343,27 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     );
   };
 
-  // Determine if the "Continue" button should be disabled based on current step validation
-  const isContinueDisabled = React.useMemo(() => {
+  /* -------------------------------------------------------------
+   * Determine if the "Continue" button should be disabled
+   * -----------------------------------------------------------*/
+  const isContinueDisabled = (() => {
     switch (currentStep) {
       case 'customer': {
-        const phoneDigits = form.watch('customerPhone')?.replace(/[^0-9]/g, '') || '';
+        const phoneDigits = (watchedCustomerPhone || '').replace(/[^0-9]/g, '');
+
         if (activeTab === 'search') {
-          // Disable if no selected customer and phone digits < 10 and not guest
-          return !selectedCustomer && !isGuestUser && phoneDigits.length < 10;
+          // Guest flow: if no phone digits at all, allow continue (button enabled).
+          if (phoneDigits.length === 0) return false;
+
+          // Otherwise disable until full 10-digit number AND a customer has been selected
+          return phoneDigits.length < 10 || !selectedCustomer;
         }
+
         if (activeTab === 'new') {
-          const newCustomerName = newCustomerForm.watch('name')?.trim();
-          return !(phoneDigits.length === 10 && newCustomerName.length > 0);
+          const nameTrimmed = (watchedNewCustomerName || '').trim();
+          return !(phoneDigits.length === 10 && nameTrimmed.length > 0);
         }
+
         return false;
       }
       case 'services':
@@ -1366,7 +1375,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       default:
         return false;
     }
-  }, [currentStep, activeTab, selectedCustomer, isGuestUser, form, newCustomerForm, services.length, products.length]);
+  })();
 
   return (
     <div className="flex flex-col h-full">
