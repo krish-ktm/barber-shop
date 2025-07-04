@@ -14,7 +14,7 @@ import {
   Edit,
   Plus,
   Loader2,
-  DollarSign
+  X
 } from 'lucide-react';
 import {
   Form,
@@ -53,6 +53,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import { formatCurrency, formatPhoneNumber } from '@/utils';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useApi } from '@/hooks/useApi';
 import { Customer, getCustomerByPhone } from '@/api/services/customerService';
@@ -167,6 +168,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const [showGstOptions, setShowGstOptions] = useState(false);
   const [customGstRate, setCustomGstRate] = useState<string>('');
   const [customGstValue, setCustomGstValue] = useState<number>(0);
+  /* Tip editing state (summary step) */
+  const [isTipEditing, setIsTipEditing] = useState(false);
+  const [tipInputValue, setTipInputValue] = useState<string>('');
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -799,9 +803,6 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Ensure discount amount is a valid number
     discountAmount = isNaN(discountAmount) ? 0 : discountAmount;
     
-    // Get tip amount
-    const tipAmount = Number(form.watch('tipAmount')) || 0;
-    
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-medium">Payment Details</h3>
@@ -927,59 +928,8 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
           </div>
         </Card>
         
-        {/* Tip Section */}
-        <Card>
-          <div className="p-4 border-b">
-            <h4 className="font-medium flex items-center">
-              <DollarSign className="h-4 w-4 mr-2 text-green-600" />
-              Tip
-            </h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              Add a tip to this invoice
-            </p>
-          </div>
-          <div className="p-4">
-            <FormField
-              control={form.control}
-              name="tipAmount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tip Amount</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      min="0"
-                      placeholder="0"
-                      value={field.value === 0 ? '' : field.value}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
-                        field.onChange(value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Tip summary */}
-            {tipAmount > 0 && (
-              <div className="p-3 bg-green-50 rounded-md mt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium">Tip amount:</span>
-                  <span className="font-medium">{formatCurrency(tipAmount)}</span>
-                </div>
-                {subtotal > 0 && discountAmount <= subtotal && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {(((tipAmount || 0) / Math.max(subtotal - discountAmount, 0.01)) * 100).toFixed(1)}% of post-discount total
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </Card>
-        
+        {/* Tip Section moved to summary page */}
+
         {/* GST Rate Selection */}
         {renderGSTRateSelection()}
       </div>
@@ -1031,17 +981,25 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     const total = taxableAmount + validTaxAmount + tipAmount;
     
     return (
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Review Invoice</h3>
+      <div className="space-y-6">
+        {/* Invoice Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-semibold">Invoice</h3>
+            <p className="text-sm text-muted-foreground">#DRAFT</p>
+          </div>
+          <div className="text-right text-sm">
+            <p>{format(new Date(), 'dd MMM yyyy')}</p>
+            <p>{staffData?.find(s => s.id === form.getValues().staffId)?.name || '-'}</p>
+          </div>
+        </div>
         
-        <div className="rounded-lg border p-4 space-y-4">
-          <div className="space-y-2">
-            <h4 className="font-medium">Customer</h4>
+        <div className="border rounded-lg shadow-sm divide-y">
+          {/* Customer  */}
+          <div className="p-4 bg-muted/10">
+            <h4 className="font-medium mb-1">Bill To</h4>
             {isGuestUser ? (
-              <div className="flex items-center gap-2">
-                <UserCircle2 className="h-4 w-4 text-muted-foreground" />
-                <p>Guest User</p>
-              </div>
+              <p>Guest User</p>
             ) : (
               <>
                 <p>{selectedCustomer?.name || newCustomerForm.getValues().name}</p>
@@ -1052,107 +1010,105 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               </>
             )}
           </div>
-          
-          <Separator />
-          
-          <div className="space-y-2">
-            <h4 className="font-medium">Services</h4>
-            {services.map((service) => {
-              const selectedService = serviceData.find(s => s.id === service.serviceId);
-              if (!selectedService) return null;
-              
-              return (
-                <div key={service.id} className="flex justify-between">
-                  <span>{selectedService.name}</span>
-                  <span>{formatCurrency(Number(selectedService.price) || 0)}</span>
-                </div>
-              );
-            })}
-            
-            <div className="flex justify-between font-medium pt-2">
-              <span>Subtotal</span>
-              <span>{formatCurrency(subtotalServices)}</span>
-            </div>
+          {/* Items table */}
+          <div className="p-4">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left border-b font-medium">
+                  <th className="py-2">Item</th>
+                  <th className="py-2 text-right">Price</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {services.map((service) => {
+                  const selectedService = serviceData.find(s => s.id === service.serviceId);
+                  if (!selectedService) return null;
+                  return (
+                    <tr key={service.id}>
+                      <td className="py-2">{selectedService.name}</td>
+                      <td className="py-2 text-right">{formatCurrency(Number(selectedService.price) || 0)}</td>
+                    </tr>
+                  );
+                })}
+                {products.map((product) => {
+                  const selectedProduct = productData.find(p => p.id === product.productId);
+                  if (!selectedProduct) return null;
+                  return (
+                    <tr key={product.id}>
+                      <td className="py-2">{selectedProduct.name}</td>
+                      <td className="py-2 text-right">{formatCurrency(Number(selectedProduct.price) || 0)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          
-          <Separator />
-          
-          <div className="space-y-2">
-            <h4 className="font-medium">Products</h4>
-            {products.map((product) => {
-              const selectedProduct = productData.find(p => p.id === product.productId);
-              if (!selectedProduct) return null;
-              
-              return (
-                <div key={product.id} className="flex justify-between">
-                  <span>{selectedProduct.name}</span>
-                  <span>{formatCurrency(Number(selectedProduct.price) || 0)}</span>
-                </div>
-              );
-            })}
-            
-            <div className="flex justify-between font-medium pt-2">
-              <span>Subtotal</span>
-              <span>{formatCurrency(subtotalProducts)}</span>
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div className="space-y-2">
-            <h4 className="font-medium">Payment</h4>
+          {/* Totals */}
+          <div className="p-4 space-y-1 text-sm">
             <div className="flex justify-between">
-              <span>Staff</span>
-              <span>{staffData?.find(s => s.id === form.getValues().staffId)?.name || 'No staff selected'}</span>
+              <span className="text-muted-foreground">Subtotal</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Payment Method</span>
-              <span>{form.getValues().paymentMethod.charAt(0).toUpperCase() + form.getValues().paymentMethod.slice(1)}</span>
-            </div>
-            {form.getValues().discountType !== 'none' && (
+            {discountAmount > 0 && (
               <div className="flex justify-between">
-                <span>Discount</span>
-                <span>
-                  {form.getValues().discountType === 'percentage' 
-                    ? `${form.getValues().discountValue}% (${formatCurrency(discountAmount)})` 
-                    : formatCurrency(form.getValues().discountValue)}
-                </span>
+                <span className="text-muted-foreground">Discount</span>
+                <span>-{formatCurrency(discountAmount)}</span>
               </div>
             )}
-            
-            {/* GST Details */}
             {selectedGstRate && (
-              <div className="pt-2">
-                <div className="flex justify-between">
-                  <span>Tax Rate</span>
-                  <span>{selectedGstRate.name}</span>
-                </div>
-                {selectedGstRate.components.map(comp => (
-                  <div key={comp.id} className="flex justify-between text-sm text-muted-foreground">
-                    <span>{comp.name} ({comp.rate}%)</span>
-                    <span>{formatCurrency((taxableAmount * Number(comp.rate)) / 100)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between font-medium">
-                  <span>Total Tax</span>
-                  <span>{formatCurrency(validTaxAmount)}</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tax ({selectedGstRate.totalRate}%)</span>
+                <span>{formatCurrency(validTaxAmount)}</span>
               </div>
             )}
-            
-            {form.getValues().tipAmount > 0 && (
-              <div className="flex justify-between pt-2">
-                <span>Tip</span>
-                <span>{formatCurrency(tipAmount)}</span>
-              </div>
-            )}
-          </div>
-          
-          <Separator />
-          
-          <div className="flex justify-between font-medium text-lg">
-            <span>Total</span>
-            <span>{formatCurrency(total)}</span>
+            {/* Tip inline edit */}
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Tip</span>
+              {isTipEditing ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    className="h-8 w-24"
+                    value={tipInputValue}
+                    onChange={(e) => setTipInputValue(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    onClick={() => {
+                      const val = tipInputValue === '' ? 0 : parseFloat(tipInputValue) || 0;
+                      form.setValue('tipAmount', val);
+                      setIsTipEditing(false);
+                    }}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" size="icon" variant="ghost" onClick={() => setIsTipEditing(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span>{tipAmount > 0 ? formatCurrency(tipAmount) : '-'}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setTipInputValue(tipAmount === 0 ? '' : String(tipAmount));
+                      setIsTipEditing(true);
+                    }}
+                  >
+                    {tipAmount > 0 ? 'Edit' : 'Add'}
+                  </Button>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between font-medium pt-2 border-t mt-2">
+              <span>Total</span>
+              <span>{formatCurrency(total)}</span>
+            </div>
           </div>
         </div>
       </div>
