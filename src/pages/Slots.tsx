@@ -76,6 +76,79 @@ export const Slots: React.FC = () => {
     delete: []
   });
 
+  // -----------------------------
+  // Real-time validation helpers
+  // -----------------------------
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Convert a HH:MM:SS time string to minutes since midnight
+  const timeToMinutes = (timeStr: string | null): number | null => {
+    if (!timeStr) return null;
+    const [hours, minutes] = timeStr.slice(0, 5).split(":").map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return null;
+    return hours * 60 + minutes;
+  };
+
+  // Re-validate every time hours or breaks change
+  useEffect(() => {
+    const errors: string[] = [];
+
+    businessHours.forEach(hour => {
+      const dayLabel = hour.day_of_week.charAt(0).toUpperCase() + hour.day_of_week.slice(1);
+
+      // Day off – skip further validation
+      if (!hour.open_time && !hour.close_time) return;
+
+      const openMinutes = timeToMinutes(hour.open_time);
+      const closeMinutes = timeToMinutes(hour.close_time);
+
+      if (openMinutes === null || closeMinutes === null) {
+        errors.push(`${dayLabel}: Opening and closing time must be set.`);
+        return;
+      }
+
+      if (openMinutes >= closeMinutes) {
+        errors.push(`${dayLabel}: Opening time must be before closing time.`);
+      }
+
+      // Validate breaks for the current day
+      if (hour.id !== undefined) {
+        const breaks = (localBreaks[hour.id] || []).slice().sort((a, b) => {
+          const aStart = timeToMinutes(a.start_time);
+          const bStart = timeToMinutes(b.start_time);
+          return (aStart ?? 0) - (bStart ?? 0);
+        });
+
+        breaks.forEach((br, idx) => {
+          const start = timeToMinutes(br.start_time);
+          const end = timeToMinutes(br.end_time);
+
+          if (start === null || end === null) {
+            errors.push(`${dayLabel} ${br.name}: Start and end time must be set.`);
+            return;
+          }
+
+          if (start >= end) {
+            errors.push(`${dayLabel} ${br.name}: Start time must be before end time.`);
+          }
+
+          if (start < openMinutes || end > closeMinutes) {
+            errors.push(`${dayLabel} ${br.name}: Break must be within business hours.`);
+          }
+
+          if (idx > 0) {
+            const prevEnd = timeToMinutes(breaks[idx - 1].end_time);
+            if (prevEnd !== null && start < prevEnd) {
+              errors.push(`${dayLabel}: Breaks must not overlap.`);
+            }
+          }
+        });
+      }
+    });
+
+    setValidationErrors(errors);
+  }, [businessHours, localBreaks]);
+
   // Fetch data on component mount
   useEffect(() => {
     fetchHours();
@@ -404,7 +477,7 @@ export const Slots: React.FC = () => {
           ) : (
             <Save className="h-4 w-4 mr-2" />
           ),
-          disabled: isLoading,
+          disabled: isLoading || validationErrors.length > 0,
         }}
       />
 
@@ -439,6 +512,21 @@ export const Slots: React.FC = () => {
               Fix Breaks
             </Button>
           </div>
+        </Alert>
+      )}
+
+      {/* Validation errors */}
+      {validationErrors.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Validation Errors</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc pl-5 space-y-1">
+              {validationErrors.map((err, idx) => (
+                <li key={idx}>{err}</li>
+              ))}
+            </ul>
+          </AlertDescription>
         </Alert>
       )}
 
