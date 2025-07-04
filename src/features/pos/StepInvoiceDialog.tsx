@@ -60,6 +60,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
     name: string;
     price: number;
     category: string;
+    image?: string;
     description?: string;
   }>>([]);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
@@ -168,7 +169,22 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       fetchProducts(1, 100, 'name_asc')
         .then(response => {
           if (response.success && response.products) {
-            setProductItems(response.products);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const mapped = response.products.map((p: any) => {
+              let img = p.image || p.image_url || p.imageUrl || p.photo || '';
+              if (img && !img.startsWith('http') && !img.startsWith('data:')) {
+                img = `data:image/jpeg;base64,${img}`;
+              }
+              return {
+                id: p.id,
+                name: p.name,
+                price: p.price,
+                category: p.category,
+                description: p.description,
+                image: img,
+              };
+            });
+            setProductItems(mapped);
           } else {
             toast({
               title: 'Error',

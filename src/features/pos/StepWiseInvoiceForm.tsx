@@ -61,7 +61,7 @@ import { Customer, getCustomerByPhone } from '@/api/services/customerService';
 // Guest user handled directly in component, no need for a constant
 
 // Define steps for the invoice creation process
-type Step = 'customer' | 'services' | 'staff' | 'payment' | 'summary';
+type Step = 'customer' | 'services' | 'products' | 'staff' | 'payment' | 'summary';
 
 const formSchema = z.object({
   customerPhone: z.string()
@@ -130,6 +130,7 @@ interface StepWiseInvoiceFormProps {
     name: string;
     price: number;
     category: string;
+    image?: string;
     description?: string;
   }>;
   isLoadingProducts?: boolean;
@@ -310,17 +311,10 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     }).length;
   };
 
-  const getSelectedProductsCount = (category: string) => {
-    return products.filter(product => {
-      const selectedProduct = productData.find(p => p.id === product.productId);
-      return selectedProduct?.category === category;
-    }).length;
-  };
-
   // Get unique categories from services
   const categories = Array.from(new Set(serviceData.map(service => service.category)));
-  const productCategories = Array.from(new Set(productData.map(product => product.category)));
 
+  // Product categories no longer needed in Services step; keep toggle for service categories only
   const toggleCategory = (category: string) => {
     setOpenCategories(prev => ({
       ...prev,
@@ -363,16 +357,20 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         }
         break;
       case 'services':
-        // Validate services or products selection before proceeding
-        if (services.length === 0 && products.length === 0) {
+        // Validate at least one service before proceeding
+        if (services.length === 0) {
           toast({
-            title: 'Selection required',
-            description: 'Please select at least one service or product.',
+            title: 'Service required',
+            description: 'Please select at least one service.',
             variant: 'destructive',
           });
           return;
         }
-        
+
+        setCurrentStep('products');
+        break;
+      case 'products':
+        // Products are optional; proceed directly
         setCurrentStep('staff');
         break;
       case 'staff':
@@ -385,7 +383,6 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
           });
           return;
         }
-        
         setCurrentStep('payment');
         break;
       case 'payment':
@@ -401,8 +398,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       case 'services':
         setCurrentStep('customer');
         break;
-      case 'staff':
+      case 'products':
         setCurrentStep('services');
+        break;
+      case 'staff':
+        setCurrentStep('products');
         break;
       case 'payment':
         setCurrentStep('staff');
@@ -441,10 +441,10 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         nextStep();
         break;
       case 'services':
-        if (services.length === 0 && products.length === 0) {
+        if (services.length === 0) {
           toast({
-            title: 'Selection required',
-            description: 'Please select at least one service or product.',
+            title: 'Service required',
+            description: 'Please select at least one service.',
             variant: 'destructive',
           });
           return;
@@ -510,7 +510,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     return (
       <div className="flex items-center justify-between border-t py-4 px-6">
         <div className="flex gap-1 overflow-x-auto flex-wrap max-w-full">
-          {['customer', 'services', 'staff', 'payment', 'summary'].map((step, index) => (
+          {['customer', 'services', 'products', 'staff', 'payment', 'summary'].map((step, index) => (
             <React.Fragment key={step}>
               {index > 0 && (
                 <ChevronRight className="h-4 w-4 text-muted-foreground mx-1" />
@@ -692,6 +692,60 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
           </TabsContent>
         </Tabs>
       </Card>
+    );
+  };
+
+  // Render the products step
+  const renderProductsStep = () => {
+    return (
+      <div className="space-y-6">
+        <h3 className="text-lg font-medium">Select Products</h3>
+        {isLoadingProducts ? (
+          <div className="flex justify-center p-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : productData.length === 0 ? (
+          <div className="text-center p-8 border rounded-lg bg-muted/30">
+            <p>No products found. Please contact the administrator.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {productData.map((p) => {
+              const isSelected = products.some(product => product.productId === p.id);
+              return (
+                <div
+                  key={p.id}
+                  className={
+                    `border rounded-lg cursor-pointer overflow-hidden group transition-all ` +
+                    (isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/50 hover:bg-muted/30')
+                  }
+                  onClick={() => handleProductSelection(p.id)}
+                >
+                  {p.image ? (
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="h-32 w-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <div className="h-32 w-full bg-muted flex items-center justify-center text-sm text-muted-foreground">
+                      No Image
+                    </div>
+                  )}
+                  <div className="p-3 space-y-1">
+                    <div className="text-sm font-medium leading-snug break-words">
+                      {p.name}
+                    </div>
+                    <div className={isSelected ? 'font-semibold text-primary' : 'text-muted-foreground'}>
+                      {formatCurrency(Number(p.price) || 0)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -1323,7 +1377,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         return false;
       }
       case 'services':
-        return services.length === 0 && products.length === 0;
+        return services.length === 0;
       case 'staff':
         return !form.watch('staffId');
       case 'payment':
@@ -1409,83 +1463,21 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                         </Collapsible>
                       );
                     })}
-                    
-                    {/* Product Categories */}
-                    {productCategories.length > 0 && (
-                      <>
-                        <h3 className="text-lg font-medium pt-4">Select Products</h3>
-                        {isLoadingProducts ? (
-                          <div className="flex justify-center p-12">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                          </div>
-                        ) : (
-                          productCategories.map((category) => {
-                            const selectedCount = getSelectedProductsCount(category);
-                            return (
-                              <Collapsible
-                                key={`product-${category}`}
-                                open={openCategories[category]}
-                                onOpenChange={() => toggleCategory(category)}
-                                className="border rounded-lg"
-                              >
-                                <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-muted/50">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">
-                                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                                    </span>
-                                    {selectedCount > 0 && (
-                                      <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                                        {selectedCount}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {openCategories[category] ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="p-2">
-                                  <div className="grid gap-2">
-                                    {productData
-                                      .filter(p => p.category === category)
-                                      .map((p) => {
-                                        const isSelected = products.some(product => product.productId === p.id);
-                                        return (
-                                          <Button
-                                            key={p.id}
-                                            type="button"
-                                            variant={isSelected ? "default" : "outline"}
-                                            className="w-full justify-between group"
-                                            onClick={() => handleProductSelection(p.id)}
-                                          >
-                                            <span>{p.name}</span>
-                                            <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
-                                              {formatCurrency(Number(p.price) || 0)}
-                                            </span>
-                                          </Button>
-                                        );
-                                      })}
-                                  </div>
-                                </CollapsibleContent>
-                              </Collapsible>
-                            );
-                          })
-                        )}
-                      </>
-                    )}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Step 3: Staff Selection */}
+            {/* Step 3: Products Selection */}
+            {currentStep === 'products' && renderProductsStep()}
+
+            {/* Step 4: Staff Selection */}
             {currentStep === 'staff' && renderStaffStep()}
 
-            {/* Step 4: Payment Information */}
+            {/* Step 5: Payment Information */}
             {currentStep === 'payment' && renderPaymentStep()}
 
-            {/* Step 5: Review & Summary */}
+            {/* Step 6: Review & Summary */}
             {currentStep === 'summary' && renderSummaryStep()}
           </form>
         </Form>
