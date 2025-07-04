@@ -1342,6 +1342,32 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     );
   };
 
+  // Determine if the "Continue" button should be disabled based on current step validation
+  const isContinueDisabled = React.useMemo(() => {
+    switch (currentStep) {
+      case 'customer': {
+        const phoneDigits = form.watch('customerPhone')?.replace(/[^0-9]/g, '') || '';
+        if (activeTab === 'search') {
+          // Disable if no selected customer and phone digits < 10 and not guest
+          return !selectedCustomer && !isGuestUser && phoneDigits.length < 10;
+        }
+        if (activeTab === 'new') {
+          const newCustomerName = newCustomerForm.watch('name')?.trim();
+          return !(phoneDigits.length === 10 && newCustomerName.length > 0);
+        }
+        return false;
+      }
+      case 'services':
+        return services.length === 0 && products.length === 0;
+      case 'staff':
+        return !form.watch('staffId');
+      case 'payment':
+        return false; // Always allow proceed from payment to summary
+      default:
+        return false;
+    }
+  }, [currentStep, activeTab, selectedCustomer, isGuestUser, form, newCustomerForm, services.length, products.length]);
+
   return (
     <div className="flex flex-col h-full">
       {renderStepIndicator()}
@@ -1528,7 +1554,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
             )}
           </Button>
         ) : (
-          <Button onClick={nextStep}>
+          <Button onClick={nextStep} disabled={isContinueDisabled}>
             Continue
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>

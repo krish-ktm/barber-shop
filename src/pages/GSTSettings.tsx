@@ -135,7 +135,7 @@ export const GSTSettings: React.FC = () => {
   const [selectedRate, setSelectedRate] = useState<GSTRate | null>(null);
   const [newRate, setNewRate] = useState<Partial<GSTRate>>({
     name: '',
-    components: [{ id: `temp-${Date.now()}`, name: 'GST', rate: 0 }],
+    components: [{ id: `temp-${Date.now()}`, name: '', rate: '' }],
     isActive: false,
   });
 
@@ -213,7 +213,7 @@ export const GSTSettings: React.FC = () => {
         // Reset form
         setNewRate({
           name: '',
-          components: [{ id: `temp-${Date.now()}`, name: 'GST', rate: 0 }],
+          components: [{ id: `temp-${Date.now()}`, name: '', rate: '' }],
           isActive: false,
         });
         
@@ -338,7 +338,7 @@ export const GSTSettings: React.FC = () => {
 
     const newComponent: GSTComponent = {
       id: `temp-${Date.now()}`,
-      name: 'New Component',
+      name: '',
       rate: '',
     };
 
@@ -459,7 +459,7 @@ export const GSTSettings: React.FC = () => {
                       onClick={() => {
                         const newComponent: GSTComponent = {
                           id: `temp-${Date.now()}`,
-                          name: 'New Component',
+                          name: '',
                           rate: '',
                         };
                         setNewRate({

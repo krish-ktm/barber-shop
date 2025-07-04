@@ -71,6 +71,13 @@ const ShopClosures: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<ShopClosure | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Derived validation state for partial day closure times
+  const isTimeRangeValid = React.useMemo(() => {
+    if (formData.is_full_day) return true;
+    if (!formData.start_time || !formData.end_time) return false;
+    return formData.start_time < formData.end_time;
+  }, [formData.is_full_day, formData.start_time, formData.end_time]);
+
   // Fetch shop closures
   const fetchClosures = async () => {
     setIsLoading(true);
@@ -456,13 +463,17 @@ const ShopClosures: React.FC = () => {
               />
             </div>
 
+            {!isTimeRangeValid && (
+              <p className="text-xs text-destructive -mt-2">Start time must be earlier than end time.</p>
+            )}
+
             <DialogFooter className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
+              <Button type="submit" disabled={isSubmitting || !isTimeRangeValid} className="flex items-center gap-2">
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isSubmitting ? (isEditMode ? 'Updating...' : 'Saving...') : (isEditMode ? 'Update Closure' : 'Save Closure')}
               </Button>

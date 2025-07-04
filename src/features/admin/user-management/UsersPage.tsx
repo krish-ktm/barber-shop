@@ -40,8 +40,8 @@ export const UsersPage: React.FC = () => {
 
   // Fetch users on mount & whenever debouncedSearch changes
   useEffect(() => {
-    // Fetch only admin users (exclude staff role)
-    fetchUsers(1, 10, debouncedSearch, 'admin');
+    const LIMIT = 100;
+    fetchUsers(1, LIMIT, debouncedSearch, 'admin');
   }, [fetchUsers, debouncedSearch]);
 
   // Handlers
@@ -51,7 +51,7 @@ export const UsersPage: React.FC = () => {
     try {
       await createUser(payload);
       toast({ title: 'User added' });
-      fetchUsers(1, 10, debouncedSearch, 'admin');
+      fetchUsers(1, 100, debouncedSearch, 'admin');
     } catch (err: unknown) {
       const msg = err && typeof err === 'object' && 'message' in err ? (err as { message: string }).message : 'Failed to create user';
       toast({ variant: 'destructive', title: 'Error', description: msg });
@@ -69,7 +69,7 @@ export const UsersPage: React.FC = () => {
     try {
       await updateUser(selectedUser.id, payload);
       toast({ title: 'User updated' });
-      fetchUsers(1, 10, debouncedSearch, 'admin');
+      fetchUsers(1, 100, debouncedSearch, 'admin');
     } catch (err: unknown) {
       const msg = err && typeof err === 'object' && 'message' in err ? (err as { message: string }).message : 'Failed to update user';
       toast({ variant: 'destructive', title: 'Error', description: msg });
@@ -89,7 +89,7 @@ export const UsersPage: React.FC = () => {
       setDeletingUserId(selectedUser.id);
       await executeDeleteUser(selectedUser.id);
       toast({ title: 'User deleted' });
-      fetchUsers(1, 10, debouncedSearch, 'admin');
+      fetchUsers(1, 100, debouncedSearch, 'admin');
       setShowDeleteDialog(false);
     } catch (err: unknown) {
       const msg = err && typeof err === 'object' && 'message' in err ? (err as { message: string }).message : 'Failed to delete user';
