@@ -173,10 +173,26 @@ export const GSTSettings: React.FC = () => {
   };
 
   const handleAddRate = async () => {
-    if (!newRate.name) {
+    // Validate rate name
+    if (!newRate.name || newRate.name.trim() === '') {
       toast({
         title: 'Missing information',
         description: 'Please provide a name for the GST rate.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate components: no empty names or rates and rates must be numeric
+    const hasInvalidComponent = (newRate.components ?? []).some((comp) => {
+      const numericRate = typeof comp.rate === 'number' ? comp.rate : parseFloat(comp.rate);
+      return !comp.name?.trim() || comp.rate === '' || Number.isNaN(numericRate);
+    });
+
+    if (hasInvalidComponent) {
+      toast({
+        title: 'Invalid component',
+        description: 'Each component must have a name and a numeric rate.',
         variant: 'destructive',
       });
       return;
@@ -244,6 +260,31 @@ export const GSTSettings: React.FC = () => {
 
   const handleEditRate = async () => {
     if (!selectedRate) return;
+
+    // Validate rate name
+    if (!selectedRate.name || selectedRate.name.trim() === '') {
+      toast({
+        title: 'Missing information',
+        description: 'Please provide a name for the GST rate.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate components
+    const hasInvalidComponent = selectedRate.components.some((comp) => {
+      const numericRate = typeof comp.rate === 'number' ? comp.rate : parseFloat(comp.rate);
+      return !comp.name?.trim() || comp.rate === '' || Number.isNaN(numericRate);
+    });
+
+    if (hasInvalidComponent) {
+      toast({
+        title: 'Invalid component',
+        description: 'Each component must have a name and a numeric rate.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
       // Update the selected rate in the local state
