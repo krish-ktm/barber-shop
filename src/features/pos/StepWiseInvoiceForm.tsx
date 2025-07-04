@@ -805,8 +805,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       <div className="space-y-6">
         <h3 className="text-lg font-medium">Payment Details</h3>
         
-        {/* Payment Method Selection */}
-        <Card className="p-4">
+        {/* Payment Method + Discount in a single card */}
+        <Card className="p-4 space-y-6">
+          {/* Payment Method Section */}
           <div className="space-y-4">
             <FormField
               control={form.control}
@@ -831,20 +832,19 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               )}
             />
           </div>
-        </Card>
-        
-        {/* Discount Section */}
-        <Card>
-          <div className="p-4 border-b">
-            <h4 className="font-medium flex items-center">
-              <Percent className="h-4 w-4 mr-2 text-blue-600" />
-              Discount
-            </h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              Apply a discount to this invoice
-            </p>
-          </div>
-          <div className="p-4 space-y-4">
+
+          <Separator />
+
+          {/* Discount Section */}
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium flex items-center mb-2">
+                <Percent className="h-4 w-4 mr-2 text-blue-600" /> Discount
+              </h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Apply a discount to this invoice
+              </p>
+            </div>
             <FormField
               control={form.control}
               name="discountType"
@@ -908,7 +908,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 </FormItem>
               )}
             />
-            
+
             {/* Discount summary */}
             {discountType !== 'none' && discountValue > 0 && (
               <div className="p-3 bg-blue-50 rounded-md mt-2">

@@ -186,14 +186,30 @@ const ShopClosures: React.FC = () => {
     setDeleteTarget(null);
   };
 
-  // Handle form input changes
+  // Ensure time range stays valid while editing the form
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
+
+    setFormData(prev => {
+      const updated: ShopClosure = {
+        ...prev,
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      } as ShopClosure;
+
+      // Real-time guard against reversed time selection
+      if (!updated.is_full_day && updated.start_time && updated.end_time) {
+        // If start_time becomes later than end_time, align the other field automatically
+        if (updated.start_time > updated.end_time) {
+          if (name === 'start_time') {
+            updated.end_time = updated.start_time;
+          } else if (name === 'end_time') {
+            updated.start_time = updated.end_time;
+          }
+        }
+      }
+
+      return updated;
+    });
   };
 
   // Handle date change from Calendar
@@ -402,6 +418,7 @@ const ShopClosures: React.FC = () => {
                       onChange={handleInputChange}
                       className="pl-10"
                       required={!formData.is_full_day}
+                      max={formData.end_time}
                     />
                   </div>
                 </div>
@@ -418,6 +435,7 @@ const ShopClosures: React.FC = () => {
                       onChange={handleInputChange}
                       className="pl-10"
                       required={!formData.is_full_day}
+                      min={formData.start_time}
                     />
                   </div>
                 </div>

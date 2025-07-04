@@ -26,12 +26,17 @@ interface UserResponse {
 export const getAllUsers = async (
   page = 1,
   limit = 10,
-  searchQuery?: string
+  searchQuery?: string,
+  role?: string,
 ): Promise<UserListResponse> => {
   let url = `/users?page=${page}&limit=${limit}`;
 
   if (searchQuery) {
     url += `&search=${encodeURIComponent(searchQuery)}`;
+  }
+
+  if (role) {
+    url += `&role=${encodeURIComponent(role)}`;
   }
 
   return get<UserListResponse>(url);

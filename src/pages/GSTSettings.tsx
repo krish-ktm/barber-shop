@@ -420,7 +420,7 @@ export const GSTSettings: React.FC = () => {
                         />
                         <Input
                           type="number"
-                          value={component.rate === 0 ? '' : component.rate}
+                          value={component.rate}
                           onChange={(e) => {
                             const updatedComponents = [...(newRate.components || [])];
                             updatedComponents[index] = {
@@ -674,7 +674,7 @@ export const GSTSettings: React.FC = () => {
                   />
                   <Input
                     type="number"
-                    value={component.rate === 0 ? '' : component.rate}
+                    value={component.rate}
                     onChange={(e) => handleUpdateComponent(
                       component.id,
                       'rate',
