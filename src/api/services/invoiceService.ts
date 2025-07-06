@@ -39,7 +39,7 @@ export interface Invoice {
   tax: number;
   tax_amount: number;
   total: number;
-  payment_method: 'cash' | 'card' | 'mobile' | 'pending';
+  payment_method: string;
   status: 'paid' | 'pending' | 'cancelled';
   notes?: string;
   services?: InvoiceService[]; // For backward compatibility

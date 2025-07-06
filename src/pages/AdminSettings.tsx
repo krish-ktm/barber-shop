@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { BusinessSettings } from '../api/services/settingsService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageHeader } from '@/components/layout';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Pencil, Trash2, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 
 const AdminSettings: React.FC = () => {
   const { 
@@ -21,6 +22,7 @@ const AdminSettings: React.FC = () => {
   } = useSettings();
   
   const [formData, setFormData] = useState<BusinessSettings | null>(null);
+  const [customMethods, setCustomMethods] = useState<string[]>([]);
   
   // List of common currencies
   const currencies = [
@@ -55,7 +57,7 @@ const AdminSettings: React.FC = () => {
   ];
   
   // Initialize form data when settings are loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (settings) {
       // If the API doesn't return the new fields, set defaults
       const updatedSettings = {
@@ -68,6 +70,23 @@ const AdminSettings: React.FC = () => {
       };
       setFormData(updatedSettings);
     }
+  }, [settings]);
+  
+  // After settings are loaded update customMethods
+  useEffect(() => {
+    if (!settings) return;
+    let arr: string[] = [];
+    if (Array.isArray(settings.custom_payment_methods)) {
+      arr = settings.custom_payment_methods;
+    } else if (typeof settings.custom_payment_methods === 'string') {
+      try {
+        const parsed = JSON.parse(settings.custom_payment_methods);
+        if (Array.isArray(parsed)) arr = parsed;
+      } catch {
+        // ignore parse errors
+      }
+    }
+    setCustomMethods(arr);
   }, [settings]);
   
   // Handle form input changes
@@ -118,6 +137,19 @@ const AdminSettings: React.FC = () => {
     });
   };
   
+  // Add handler functions
+  const handleAddCustomMethod = (name: string) => {
+    if (!name.trim()) return;
+    if (customMethods.includes(name.trim().toLowerCase())) return;
+    setCustomMethods(prev => [...prev, name.trim()]);
+  };
+  const handleEditCustomMethod = (index: number, name: string) => {
+    setCustomMethods(prev => prev.map((m, i)=> i===index ? name.trim() : m));
+  };
+  const handleDeleteCustomMethod = (index:number) => {
+    setCustomMethods(prev => prev.filter((_,i)=> i!==index));
+  };
+  
   // Handle save from header action (no form submission event)
   const handleSaveClick = async (e?: React.FormEvent) => {
     // Prevent default form submission if called from <form onSubmit>
@@ -125,7 +157,11 @@ const AdminSettings: React.FC = () => {
       e.preventDefault();
     }
     if (formData) {
-      await saveBusinessSettings(formData);
+      const payload: BusinessSettings = {
+        ...formData,
+        custom_payment_methods: customMethods,
+      };
+      await saveBusinessSettings(payload);
     }
   };
   
@@ -336,48 +372,27 @@ const AdminSettings: React.FC = () => {
                   <CardTitle>Payment Options</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-2">
-                      <div>
-                        <h3 className="font-medium">Accept Cash Payments</h3>
-                        <p className="text-sm text-muted-foreground">Allow cash payments for services</p>
+                  <div className="space-y-4">
+                    <h3 className="font-medium">Custom Payment Methods</h3>
+                    {customMethods.length===0 && <p className="text-sm text-muted-foreground">No custom methods added.</p>}
+                    {customMethods.map((method,idx)=>(
+                      <div key={method+idx} className="flex items-center justify-between p-2 border rounded-md">
+                        <span>{method}</span>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="icon" onClick={()=>{
+                            const newName = prompt('Edit payment method', method);
+                            if(newName!==null) handleEditCustomMethod(idx,newName);
+                          }}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={()=>handleDeleteCustomMethod(idx)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
                       </div>
-                      <Checkbox
-                        id="accept_cash"
-                        checked={formData.accept_cash}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('accept_cash', checked === true)
-                        }
-                      />
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-2">
-                      <div>
-                        <h3 className="font-medium">Accept Card Payments</h3>
-                        <p className="text-sm text-muted-foreground">Allow credit/debit card payments</p>
-                      </div>
-                      <Checkbox
-                        id="accept_card"
-                        checked={formData.accept_card}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('accept_card', checked === true)
-                        }
-                      />
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-2">
-                      <div>
-                        <h3 className="font-medium">Accept Mobile Payments</h3>
-                        <p className="text-sm text-muted-foreground">Allow payments via mobile apps</p>
-                      </div>
-                      <Checkbox
-                        id="accept_mobile"
-                        checked={formData.accept_mobile}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('accept_mobile', checked === true)
-                        }
-                      />
-                    </div>
+                    ))}
+                    <Button variant="outline" className="mt-2" onClick={()=>{
+                      const name = prompt('New payment method name');
+                      if(name) handleAddCustomMethod(name);
+                    }}>
+                      <Plus className="h-4 w-4 mr-2" /> Add Payment Method
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

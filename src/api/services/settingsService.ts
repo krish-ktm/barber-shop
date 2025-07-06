@@ -18,6 +18,7 @@ export interface BusinessSettings {
   accept_cash: boolean;
   accept_card: boolean;
   accept_mobile: boolean;
+  custom_payment_methods?: string[];
   updated_at?: string;
 }
 

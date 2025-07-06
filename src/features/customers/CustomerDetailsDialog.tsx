@@ -87,18 +87,9 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
     }
   };
 
-  const getPaymentMethodBadge = (method: string) => {
-    switch (method) {
-      case 'cash':
-        return <Badge variant="outline">Cash</Badge>;
-      case 'card':
-        return <Badge variant="outline">Card</Badge>;
-      case 'mobile':
-        return <Badge variant="outline">Mobile</Badge>;
-      default:
-        return <Badge variant="outline">Pending</Badge>;
-    }
-  };
+  const getPaymentMethodBadge = (method: string) => (
+    <Badge variant="outline">{method.charAt(0).toUpperCase() + method.slice(1)}</Badge>
+  );
 
   const handleCopyPhone = () => {
     navigator.clipboard.writeText(customer.phone);

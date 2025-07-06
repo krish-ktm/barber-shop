@@ -111,7 +111,7 @@ export interface Invoice {
   taxAmount: number; // Total tax amount
   taxComponents?: InvoiceTaxComponent[]; // Individual tax components
   total: number;
-  paymentMethod: 'cash' | 'card' | 'mobile' | 'pending';
+  paymentMethod: string;
   status: 'paid' | 'pending' | 'cancelled';
   notes?: string;
   createdAt: string; // ISO date string

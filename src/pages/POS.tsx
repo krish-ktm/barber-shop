@@ -182,16 +182,9 @@ export const POS: React.FC = () => {
 
   // Convert API payment method to UI badge
   const getPaymentMethodBadge = (method: Invoice['payment_method']) => {
-    switch (method) {
-      case 'cash':
-        return <Badge variant="outline">Cash</Badge>;
-      case 'card':
-        return <Badge variant="outline">Card</Badge>;
-      case 'mobile':
-        return <Badge variant="outline">Mobile</Badge>;
-      default:
-        return <Badge variant="outline">Pending</Badge>;
-    }
+    // Capitalize first letter for display
+    const label = method.charAt(0).toUpperCase() + method.slice(1);
+    return <Badge variant="outline">{label}</Badge>;
   };
 
   const handleInvoiceClick = (invoice: Invoice) => {

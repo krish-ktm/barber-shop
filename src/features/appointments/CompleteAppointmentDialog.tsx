@@ -24,7 +24,6 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { Percent, DollarSign } from 'lucide-react';
 import {
   Select,
   SelectTrigger,
@@ -32,6 +31,8 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { DollarSign } from 'lucide-react';
 
 // --- Inline simple ProductPicker -------------------------------------------
 interface ProductPickerProps {
@@ -98,7 +99,8 @@ export const CompleteAppointmentDialog: React.FC<CompleteAppointmentDialogProps>
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [tipAmount, setTipAmount] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile'>('cash');
+  const { paymentMethods } = usePaymentMethods();
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [discountType, setDiscountType] = useState<'none'|'percentage'|'fixed'>('none');
   const [discountValue, setDiscountValue] = useState<number>(0);
   const totalSteps = 3;
@@ -232,14 +234,14 @@ export const CompleteAppointmentDialog: React.FC<CompleteAppointmentDialogProps>
                         {/* Payment Method */}
                         <div className="space-y-1">
                           <label className="text-sm font-medium">Payment Method</label>
-                          <Select value={paymentMethod} onValueChange={(v)=>setPaymentMethod(v as any)}>
+                          <Select value={paymentMethod} onValueChange={(v: string)=>setPaymentMethod(v)} disabled={paymentMethods.length===0}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select method" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="cash">Cash</SelectItem>
-                              <SelectItem value="card">Card</SelectItem>
-                              <SelectItem value="mobile">Mobile</SelectItem>
+                              {paymentMethods.map(m=> (
+                                <SelectItem key={m} value={m}>{m.charAt(0).toUpperCase()+m.slice(1)}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -247,7 +249,7 @@ export const CompleteAppointmentDialog: React.FC<CompleteAppointmentDialogProps>
                         {/* Discount */}
                         <div className="space-y-1">
                           <label className="text-sm font-medium">Discount</label>
-                          <Select value={discountType} onValueChange={v=>{setDiscountType(v as any); if(v==='none'){setDiscountValue(0);}}}>
+                          <Select value={discountType} onValueChange={(v: 'none'|'percentage'|'fixed')=>{setDiscountType(v); if(v==='none'){setDiscountValue(0);}}}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">No Discount</SelectItem>
@@ -276,11 +278,11 @@ export const CompleteAppointmentDialog: React.FC<CompleteAppointmentDialogProps>
           </div>
           <div className="text-lg font-semibold whitespace-nowrap">{formatCurrency(totalWithTip())}</div>
           <div className="flex gap-2">
-            <Button variant="outline" disabled={step===0} onClick={() => setStep((step-1) as any)}>
+            <Button variant="outline" disabled={step===0} onClick={() => setStep((step-1) as 0|1|2)}>
               <ArrowLeft className="h-4 w-4 mr-2"/> Back
             </Button>
             {step < 2 ? (
-              <Button onClick={() => setStep((step+1) as any)}>
+              <Button onClick={() => setStep((step+1) as 0|1|2)}>
                 Next <ArrowRight className="h-4 w-4 ml-2"/>
               </Button>
             ) : (

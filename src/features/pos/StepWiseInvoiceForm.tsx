@@ -57,6 +57,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useApi } from '@/hooks/useApi';
 import { Customer, getCustomerByPhone } from '@/api/services/customerService';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 
 // Guest user handled directly in component, no need for a constant
 
@@ -71,7 +72,7 @@ const formSchema = z.object({
   discountType: z.enum(['none', 'percentage', 'fixed']).default('none'),
   discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
   tipAmount: z.number().min(0, 'Tip cannot be negative').default(0),
-  paymentMethod: z.enum(['cash', 'card', 'mobile']).default('cash'),
+  paymentMethod: z.string().min(1, 'Please select a payment method'),
   gstRates: z.array(z.string()).min(1, 'Please select at least one GST rate'),
   notes: z.string().optional(),
 });
@@ -89,7 +90,7 @@ export interface InvoiceFormData {
   discountType: 'none' | 'percentage' | 'fixed';
   discountValue: number;
   tipAmount: number;
-  paymentMethod: 'cash' | 'card' | 'mobile';
+  paymentMethod: string;
   gstRates: string[];
   notes?: string;
   services: Array<{ id: string; serviceId: string }>;
@@ -181,7 +182,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       discountType: 'none',
       discountValue: 0,
       tipAmount: 0,
-      paymentMethod: 'cash',
+      paymentMethod: '',
       gstRates: gstRatesData.length > 0 ? [gstRatesData[0].id] : [],
       notes: '',
     },
@@ -830,6 +831,8 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 
   // Render the payment step with enhanced UI for tips and discounts
   const renderPaymentStep = () => {
+    const pmOptions = paymentMethods;
+
     // Calculate subtotal including products
     const subtotalServices = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
@@ -871,16 +874,16 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Payment Method</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={pmLoading || pmOptions.length===0}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select payment method" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="mobile">Mobile Payment</SelectItem>
+                      {pmOptions.map(method => (
+                        <SelectItem key={method} value={method}>{method.charAt(0).toUpperCase()+method.slice(1)}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -1386,6 +1389,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         return false;
     }
   })();
+
+  // Fetch payment methods
+  const { paymentMethods, isLoading: pmLoading } = usePaymentMethods();
 
   return (
     <div className="flex flex-col h-full">
