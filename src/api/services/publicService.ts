@@ -13,6 +13,11 @@ export interface BusinessInfo {
   address: string;
   phone: string;
   email: string;
+  /** Optional social media URLs */
+  facebook_url?: string;
+  instagram_url?: string;
+  twitter_url?: string;
+  youtube_url?: string;
   logo?: string;
   // For compatibility we support both keys but strongly type 'hours'
   hours?: BusinessHour[];

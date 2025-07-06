@@ -10,6 +10,14 @@ export const PublicFooter: React.FC = () => {
   const phone = businessInfo?.phone || '(555) 123-4567';
   const email = businessInfo?.email || 'info@moderncuts.com';
 
+  // Social media links from business info (only include if present)
+  const socials = [
+    { Icon: Facebook, url: businessInfo?.facebook_url },
+    { Icon: Instagram, url: businessInfo?.instagram_url },
+    { Icon: Twitter, url: businessInfo?.twitter_url },
+    { Icon: Youtube, url: businessInfo?.youtube_url },
+  ];
+
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'About', href: '/about' },
@@ -43,13 +51,22 @@ export const PublicFooter: React.FC = () => {
         </div>
 
         {/* Socials */}
-        <div className="flex justify-center gap-6 pt-2">
-          {[Facebook,Instagram,Twitter,Youtube].map((Icon, idx) => (
-            <a key={idx} href="#" className="hover:text-white transition-colors" aria-label="social-link">
-              <Icon className="h-5 w-5" />
-            </a>
-          ))}
-        </div>
+        {socials.filter(s => s.url).length > 0 && (
+          <div className="flex justify-center gap-6 pt-2">
+            {socials.filter(s => s.url).map(({ Icon, url }, idx) => (
+              <a
+                key={idx}
+                href={url}
+                className="hover:text-white transition-colors"
+                aria-label="social-link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon className="h-5 w-5" />
+              </a>
+            ))}
+          </div>
+        )}
 
         <p className="pt-6 text-xs text-gray-500">© {new Date().getFullYear()} {shopName}. All rights reserved.</p>
       </div>
@@ -125,13 +142,22 @@ export const PublicFooter: React.FC = () => {
               <li className="text-sm text-gray-400">{email}</li>
             </ul>
             
-            <div className="flex space-x-4 mt-4">
-              {[Facebook,Instagram,Twitter,Youtube].map((Icon, idx) => (
-                <a key={idx} href="#" className="hover:text-white transition-colors" aria-label="social-link">
-                  <Icon className="h-5 w-5" />
-                </a>
-              ))}
-            </div>
+            {socials.filter(s => s.url).length > 0 && (
+              <div className="flex space-x-4 mt-4">
+                {socials.filter(s => s.url).map(({ Icon, url }, idx) => (
+                  <a
+                    key={idx}
+                    href={url}
+                    className="hover:text-white transition-colors"
+                    aria-label="social-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Icon className="h-5 w-5" />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
