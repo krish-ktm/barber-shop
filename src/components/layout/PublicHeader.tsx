@@ -11,6 +11,10 @@ import {
 } from '@/components/ui/sheet';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+};
+
 export const PublicHeader: React.FC = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -68,6 +72,7 @@ export const PublicHeader: React.FC = () => {
               >
                 <Link
                   to={item.href}
+                  onClick={scrollToTop}
                   className={`text-base font-medium transition-colors relative ${
                     location.pathname === item.href 
                       ? 'text-primary' 
@@ -117,13 +122,19 @@ export const PublicHeader: React.FC = () => {
                       className={`text-lg font-medium py-2 transition-colors hover:text-primary ${
                         location.pathname === item.href ? 'text-primary' : 'text-foreground'
                       }`}
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => {
+                        setIsOpen(false);
+                        scrollToTop();
+                      }}
                     >
                       {item.name}
                     </Link>
                   ))}
                   <div className="pt-4 border-t">
-                    <Link to="/booking" onClick={() => setIsOpen(false)}>
+                    <Link to="/booking" onClick={() => {
+                      setIsOpen(false);
+                      scrollToTop();
+                    }}>
                       <Button className="w-full bg-primary hover:bg-primary/90 text-white rounded-full">
                         Book Now
                       </Button>

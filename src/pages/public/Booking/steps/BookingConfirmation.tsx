@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Calendar, CheckCircle, Clock, Scissors, User, ArrowRight } from 'lucide-react';
@@ -34,6 +34,13 @@ export const BookingConfirmation: React.FC = () => {
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const navigate = useNavigate();
+
+  // Scroll to top when success screen becomes visible
+  useEffect(() => {
+    if (isSuccess) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [isSuccess]);
 
   const handleSubmitBooking = async () => {
     if (!selectedStaffId || !selectedServices.length || !selectedDate || !selectedTime || !customerDetails) {
