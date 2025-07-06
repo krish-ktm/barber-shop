@@ -1,18 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
-import { Calendar as CalendarIcon, Clock, Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -21,456 +18,606 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { ServicePicker } from './ServicePicker';
-import { Staff, Service, createAppointment, Appointment, getAvailableSlots } from '@/api/services/appointmentService';
-import { createCustomer, getAllCustomers } from '@/api/services/customerService';
 import { useApi } from '@/hooks/useApi';
+import { getCustomerByPhone, Customer } from '@/api/services/customerService';
+import {
+  createAppointment,
+  getAvailableSlots,
+  Staff,
+  Service as ApiAppointmentService,
+} from '@/api/services/appointmentService';
+import { getAllServices, Service as ApiService } from '@/api/services/serviceService';
+import { format, parse } from 'date-fns';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { createCustomer } from '@/api/services/customerService';
+import { get } from '@/api/apiClient';
 
+// ---------------- Schema ----------------
 const formSchema = z.object({
-  customerName: z.string().min(2, 'Name must be at least 2 characters'),
-  customerPhone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  customerEmail: z.string().email('Invalid email').optional().or(z.literal('')),
-  staffId: z.string().min(1, 'Please select a staff member'),
-  services: z.array(z.string()).min(1, 'Select at least one service'),
-  date: z.date({ required_error: 'Please select a date' }),
-  time: z.string().min(1, 'Please select a time'),
+  phone: z
+    .string()
+    .min(10, 'Phone number must be 10 digits')
+    .max(10, 'Phone number cannot exceed 10 digits'),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z
+    .string()
+    .optional()
+    .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+      message: 'Invalid email format',
+    }),
+  serviceIds: z.array(z.string()).min(1, 'Select at least one service'),
+  staffId: z.string().min(1, 'Select staff'),
+  slot: z.string().min(1, 'Select a time slot'),
   notes: z.string().optional(),
 });
 
+// ---------------- Props ----------------
 interface NewAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate?: Date;
   staffList: Staff[];
-  serviceList: Service[];
-  onAppointmentCreated?: (newAppointment?: Appointment) => void;
+  serviceList: ApiAppointmentService[];
+  onAppointmentCreated?: () => void;
 }
 
+// ---------------- Component ----------------
 export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   open,
   onOpenChange,
   selectedDate,
   staffList,
   serviceList,
-  onAppointmentCreated
+  onAppointmentCreated,
 }) => {
   const { toast } = useToast();
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
+  const [lookupStatus, setLookupStatus] = useState<
+    | { type: 'success' | 'error' | 'info'; message: string }
+    | null
+  >(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+  const lastLookupRef = useRef<string>('');
+
+  // Time slot state
+  interface Slot {
+    time: string;
+    available: boolean;
+    unavailableReason?: string;
+  }
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [isFetchingSlots, setIsFetchingSlots] = useState(false);
+  // Flag indicating that the requested preselected time is unavailable
+  const [requestedTimeUnavailable, setRequestedTimeUnavailable] = useState(false);
+
+  // Service categories expanded/collapsed state
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+
+  // Local service list (may be enriched via extra fetch to include categories)
+  const [allServices, setAllServices] = useState<Array<ApiService | ApiAppointmentService>>(serviceList);
 
   // API hooks
+  const { execute: fetchCustomer } = useApi(getCustomerByPhone);
+  const { execute: fetchSlots } = useApi(getAvailableSlots);
+  const { execute: fetchFullServices } = useApi(getAllServices);
   const {
-    execute: searchCustomers,
-  } = useApi(getAllCustomers);
-
-  const {
-    execute: createNewCustomer,
-  } = useApi(createCustomer);
-
-  const {
-    execute: createNewAppointment,
+    loading: isCreating,
+    execute: saveAppointment,
   } = useApi(createAppointment);
+  const { execute: createNewCustomer } = useApi(createCustomer);
 
+  // ---------------- React Hook Form ----------------
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customerName: '',
-      customerPhone: '',
-      customerEmail: '',
+      phone: '',
+      name: '',
+      email: '',
+      serviceIds: [],
       staffId: '',
-      services: [],
-      date: selectedDate || new Date(),
-      time: '',
+      slot: '',
       notes: '',
     },
   });
 
-  // When the form opens, reset it with the selected date
-  useEffect(() => {
-    if (open && selectedDate) {
-      form.setValue('date', selectedDate);
-      // If the selectedDate contains a specific hour (used when coming from Week/Day calendar cells)
-      const hrs = selectedDate.getHours();
-      const mins = selectedDate.getMinutes();
-      if (hrs !== 0 || mins !== 0) {
-        const timeStr = format(selectedDate, 'HH:mm');
-        form.setValue('time', timeStr);
+  // ---------------- Handlers ----------------
+  const handleCustomerLookup = async (digitsOnly: string) => {
+    try {
+      setIsSearchingCustomer(true);
+      setLookupStatus(null);
+      const res = await fetchCustomer(digitsOnly);
+      if (res.success && res.customer) {
+        const c: Customer = res.customer;
+        setCustomerId(c.id);
+        form.setValue('name', c.name || '', { shouldValidate: true });
+        form.setValue('email', c.email || '', { shouldValidate: true });
+        setLookupStatus({ type: 'success', message: 'Customer details auto-filled.' });
+      } else {
+        setCustomerId(null);
+        setLookupStatus({ type: 'info', message: 'Customer not found. Enter details below.' });
       }
+    } catch {
+      setLookupStatus({ type: 'error', message: 'Lookup failed. Try again.' });
+    } finally {
+      setIsSearchingCustomer(false);
     }
-  }, [open, selectedDate, form]);
-
-  // Get the formatted date for time slot creation
-  const selectedDateValue = form.watch('date');
-  const formattedDate = selectedDateValue 
-    ? format(selectedDateValue instanceof Date ? selectedDateValue : parseISO(selectedDateValue), 'yyyy-MM-dd')
-    : '';
-
-  // Watch for customer phone changes to check if customer exists
-  const customerPhone = form.watch('customerPhone');
-  
-  useEffect(() => {
-    const checkExistingCustomer = async () => {
-      if (customerPhone && customerPhone.length >= 10) {
-        setIsCheckingCustomer(true);
-        try {
-          const result = await searchCustomers(1, 10, 'name_asc', customerPhone);
-          if (result && result.customers && result.customers.length > 0) {
-            const existingCustomer = result.customers[0];
-            form.setValue('customerName', existingCustomer.name);
-            if (existingCustomer.email) {
-              form.setValue('customerEmail', existingCustomer.email);
-            }
-            toast({
-              title: 'Customer found',
-              description: `Found existing customer: ${existingCustomer.name}`,
-              variant: 'default',
-            });
-          }
-        } catch (error) {
-          console.error('Error checking customer:', error);
-        } finally {
-          setIsCheckingCustomer(false);
-        }
-      }
-    };
-
-    // Debounce the check to avoid too many API calls
-    const timeoutId = setTimeout(checkExistingCustomer, 500);
-    return () => clearTimeout(timeoutId);
-  }, [customerPhone, searchCustomers, form, toast]);
-
-  // -------------------- Time slot generation --------------------
-  const [timeSlots, setTimeSlots] = useState<string[]>([]);
-  const selectedStaffId = form.watch('staffId');
-  const watchedServices = form.watch('services');
-
-  useEffect(() => {
-    const fetchSlots = async () => {
-      if (!formattedDate || !selectedStaffId || watchedServices.length === 0) {
-        setTimeSlots([]);
-        return;
-      }
-
-      try {
-        // Use the first selected service to determine duration
-        const serviceId = watchedServices[0];
-        const resp = await getAvailableSlots(formattedDate, selectedStaffId, serviceId);
-        if (resp.success) {
-          const available = resp.slots.filter(s => s.available).map(s => s.time);
-          setTimeSlots(available);
-        } else {
-          setTimeSlots([]);
-        }
-      } catch (err) {
-        console.error('Error fetching slots', err);
-        setTimeSlots([]);
-      }
-    };
-
-    fetchSlots();
-  }, [formattedDate, selectedStaffId, JSON.stringify(watchedServices)]);
-
-  // Calculate total duration and price
-  const calculateTotals = () => {
-    return selectedServices.reduce(
-      (acc, serviceId) => {
-        const service = serviceList.find((s) => s.id === serviceId);
-        if (service) {
-          // Ensure duration is a number
-          const duration = typeof service.duration === 'number' ? service.duration : parseInt(String(service.duration), 10) || 0;
-          
-          // Ensure price is a number - Sequelize often returns decimal values as strings
-          const price = typeof service.price === 'number' ? service.price : parseFloat(String(service.price)) || 0;
-          
-          acc.duration += duration;
-          acc.price += price;
-        }
-        return acc;
-      },
-      { duration: 0, price: 0 }
-    );
   };
 
-  const { duration, price } = calculateTotals();
+  // Auto-lookup when phone enters 10 digits
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'phone') {
+        const digits = (value.phone || '').replace(/\D/g, '').slice(0, 10);
+        if (digits.length === 10 && digits !== lastLookupRef.current) {
+          lastLookupRef.current = digits;
+          void handleCustomerLookup(digits);
+        }
+        if (digits.length < 10) {
+          lastLookupRef.current = '';
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  // declare preselected time
+  const preselectedTimeStr = selectedDate ? format(selectedDate, 'HH:mm:ss') : undefined;
+
+  const handleFetchSlots = async (staffId: string, serviceId: string) => {
+    if (!selectedDate) return;
+    if (!staffId || !serviceId) return;
+    setIsFetchingSlots(true);
     try {
-      setIsSubmitting(true);
-      
-      // Format date to YYYY-MM-DD
-      const formattedDate = format(values.date, 'yyyy-MM-dd');
-      
-      // First check if we need to create a customer
-      let customerId = '';
-      
-      // Search for existing customer by phone
-      const customerResult = await searchCustomers(1, 10, 'name_asc', values.customerPhone);
-      
-      if (customerResult && customerResult.customers.length > 0) {
-        // Use existing customer
-        customerId = customerResult.customers[0].id;
-      } else {
-        // Create new customer
-        const newCustomerResult = await createNewCustomer({
-          name: values.customerName,
-          phone: values.customerPhone,
-          email: values.customerEmail || undefined,
-        });
-        
-        if (newCustomerResult && newCustomerResult.success) {
-          customerId = newCustomerResult.customer.id;
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const res = await fetchSlots(dateStr, staffId, serviceId);
+      if (res.success) {
+        setSlots(res.slots);
+        // Only auto-select if a preselected time string was provided and is available
+        let toSelect: string | undefined;
+        let wasRequestedBlocked = false;
+        if (preselectedTimeStr) {
+          const match = res.slots.find((s) => s.time.startsWith(preselectedTimeStr.substring(0, 5)) && s.available);
+          if (match) {
+            toSelect = match.time;
+          } else {
+            wasRequestedBlocked = true;
+          }
+        }
+        // Clear any previous selection if it's no longer available
+        if (toSelect) {
+          form.setValue('slot', toSelect, { shouldValidate: true });
         } else {
-          throw new Error('Failed to create customer');
+          form.setValue('slot', '', { shouldValidate: true });
         }
+
+        setRequestedTimeUnavailable(wasRequestedBlocked);
       }
-      
-      // Now create the appointment
-      const result = await createNewAppointment({
-        customer_id: customerId,
-        staff_id: values.staffId,
-        date: formattedDate,
-        time: values.time,
-        services: values.services,
-        notes: values.notes,
-      });
-      
-      if (result && result.success) {
-        toast({
-          title: 'Success',
-          description: 'Appointment created successfully',
-          variant: 'default',
-        });
-        
-        // Reset form and close dialog
-        form.reset();
-        setSelectedServices([]);
-        onOpenChange(false);
-        
-        // Callback to refresh appointments
-        if (onAppointmentCreated) {
-          onAppointmentCreated(result.appointment);
-        }
-      } else {
-        throw new Error('Failed to create appointment');
-      }
-    } catch (error) {
-      console.error('Error creating appointment:', error);
+    } catch {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create appointment',
+        description: 'Could not fetch time slots',
         variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false);
+      setIsFetchingSlots(false);
     }
+  };
+
+  // Trigger slot fetch when staff/service selection changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'staffId' || name === 'serviceIds') {
+        const staffId = value.staffId;
+        const firstServiceId = value.serviceIds?.[0];
+        if (staffId && firstServiceId) {
+          void handleFetchSlots(staffId, firstServiceId);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, selectedDate]);
+
+  // On open, enrich services if categories missing
+  useEffect(() => {
+    if (!open) return;
+    const hasValidCategory = serviceList.some((s) => (s as unknown as { category?: string }).category);
+    if (!hasValidCategory) {
+      void (async () => {
+        const res = await fetchFullServices(1, 100, 'name_asc');
+        if (res.success) {
+          setAllServices(res.services);
+        }
+      })();
+    } else {
+      setAllServices(serviceList);
+    }
+  }, [open, serviceList, fetchFullServices]);
+
+  // ---------------- Submit ----------------
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!selectedDate) {
+      toast({
+        title: 'Date not selected',
+        description: 'Please select a date from the calendar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Ensure we have a customer ID (existing or new)
+      let finalCustomerId = customerId;
+      if (!finalCustomerId) {
+        try {
+          const created = await createNewCustomer({
+            name: values.name,
+            email: values.email || undefined,
+            phone: values.phone,
+          });
+          finalCustomerId = created.customer.id;
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : '';
+          if (message.includes('already exists')) {
+            // Fetch the existing customer via secure lookup
+            const lookupRes = await get<{ success: boolean; customer: Customer }>(`/customers/lookup/${values.phone}`);
+            if (lookupRes.success && lookupRes.customer) {
+              finalCustomerId = lookupRes.customer.id;
+            } else {
+              throw new Error('Customer exists but lookup failed');
+            }
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      // Re-validate selected slot availability to avoid race conditions
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const slotCheck = await fetchSlots(dateStr, values.staffId, values.serviceIds[0]);
+      if (!slotCheck.success) {
+        throw new Error('Failed to validate slot availability');
+      }
+      const stillAvailable = slotCheck.slots.find(s => s.time === values.slot && s.available);
+      if (!stillAvailable) {
+        toast({
+          title: 'Time slot unavailable',
+          description: 'The selected time is no longer available. Please choose another slot.',
+          variant: 'destructive',
+        });
+        await handleFetchSlots(values.staffId, values.serviceIds[0]);
+        return;
+      }
+
+      const payload = {
+        customer_id: finalCustomerId,
+        staff_id: values.staffId,
+        date: dateStr,
+        time: values.slot,
+        services: values.serviceIds,
+        notes: values.notes,
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await saveAppointment(payload as any);
+      toast({ title: 'Appointment created' });
+      form.reset();
+      setSlots([]);
+      onOpenChange(false);
+      onAppointmentCreated?.();
+      setLookupStatus(null);
+      setCustomerId(null);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to create appointment',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Reset when dialog closes
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+      setSlots([]);
+      setLookupStatus(null);
+    }
+  }, [open, form]);
+
+  // Helper for lookup status color
+  const statusColor = lookupStatus?.type === 'success'
+    ? 'text-green-600'
+    : lookupStatus?.type === 'error'
+    ? 'text-destructive'
+    : 'text-muted-foreground';
+
+  // Helper to safely get category from service (API may not include it in type)
+  const getCategory = (svc: ApiService | ApiAppointmentService): string => {
+    return (svc as unknown as { category?: string }).category || 'Uncategorized';
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>New Appointment</DialogTitle>
-          <DialogDescription>
-            Schedule a new appointment by filling in the details below.
+      <DialogContent className="sm:max-w-[800px] w-auto max-w-[95vw] max-h-[90vh] p-4 sm:p-6">
+      <DialogHeader className="pb-2">
+          <DialogTitle className="text-base font-semibold text-center">Add New Appointment</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground text-center mt-1">
+            Fill in the details below to schedule an appointment.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1">
-          <div className="px-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+        <ScrollArea className="h-[65vh] pr-2">
+        <Form {...form}>
+          <form id="newAppointmentForm" onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 px-2">
+            {/* Scrollable content */}
+              <div className="space-y-6">
+                {/* Contact Details */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {/* Phone */}
                   <FormField
                     control={form.control}
-                    name="customerName"
+                    name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Customer Name</FormLabel>
+                        <FormLabel>Contact Number<span className="text-destructive"> *</span></FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter customer name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="customerPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Phone Number
-                          {isCheckingCustomer && (
-                            <Loader2 className="inline ml-2 h-3 w-3 animate-spin" />
-                          )}
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter phone number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="customerEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="Enter email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="staffId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Staff Member</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select staff member" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {staffList.map((staff) => (
-                            <SelectItem key={staff.id} value={staff.id}>
-                              {staff.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="services"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Services</FormLabel>
-                      <ServicePicker
-                        selectedServices={field.value}
-                        serviceList={serviceList}
-                        onServiceSelect={(serviceId) => {
-                          const currentServices = field.value;
-                          const isSelected = currentServices.includes(serviceId);
-                          
-                          const newServices = isSelected 
-                            ? currentServices.filter(id => id !== serviceId)
-                            : [...currentServices, serviceId];
-                          
-                          field.onChange(newServices);
-                          setSelectedServices(newServices);
-                        }}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? (
-                                  format(field.value, 'PPP')
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
+                          <div className="relative">
+                            <Input
+                              placeholder="Enter 10-digit phone number"
+                              maxLength={10}
+                              {...field}
+                              onChange={(e) => {
+                                const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                field.onChange(digits);
+                              }}
                             />
-                          </PopoverContent>
-                        </Popover>
+                            {isSearchingCustomer && (
+                              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              </span>
+                            )}
+                          </div>
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          We will auto-fill customer details if this number exists in records.
+                        </p>
+                        {lookupStatus && (
+                          <p className={`mt-1 flex items-center gap-1 text-xs ${statusColor}`}>
+                            {lookupStatus.type === 'success' && <CheckCircle2 className="h-3 w-3" />}\
+                            {lookupStatus.type === 'error' && <AlertCircle className="h-3 w-3" />}\
+                            {lookupStatus.message}
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
+                  {/* Name */}
                   <FormField
                     control={form.control}
-                    name="time"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Time</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select time">
-                                <div className="flex items-center">
-                                  <Clock className="mr-2 h-4 w-4" />
-                                  {field.value || 'Select time'}
-                                </div>
-                              </SelectValue>
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {timeSlots.map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Full Name<span className="text-destructive"> *</span></FormLabel>
+                        <FormControl>
+                          <Input placeholder="Customer's full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Email spans full width */}
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem className="sm:col-span-2">
+                        <FormLabel>Email (Optional)</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="Customer email" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
 
+                {/* Services (categorized) */}
+                <FormField
+                  control={form.control}
+                  name="serviceIds"
+                  render={({ field }) => {
+                    const categories = Array.from(new Set(allServices.map((s) => getCategory(s))));
+
+                    const toggleCategory = (cat: string) => {
+                      setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
+                    };
+
+                    const getSelectedCount = (cat: string) =>
+                      allServices.filter((s) => getCategory(s) === cat && field.value.includes(s.id)).length;
+
+                    return (
+                      <FormItem className="form-item-custom">
+                        <FormLabel>Select Services<span className="text-destructive"> *</span></FormLabel>
+                        <FormControl>
+                          <ScrollArea className="max-h-100">
+                            <div className="space-y-2">
+                              {categories.map((cat) => {
+                                const isOpen = openCategories[cat] ?? getSelectedCount(cat) > 0;
+                                return (
+                                  <div key={cat} className="border rounded-md">
+                                    <button
+                                      type="button"
+                                      className="w-full px-2 py-3 flex items-center justify-between text-sm font-medium"
+                                      onClick={() => toggleCategory(cat)}
+                                    >
+                                      <span>{cat}</span>
+                                      <span className="flex items-center gap-1 text-muted-foreground">
+                                        {getSelectedCount(cat) > 0 && (
+                                          <span className="text-xs">{getSelectedCount(cat)}</span>
+                                        )}
+                                        {isOpen ? (
+                                          <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronRight className="h-4 w-4" />
+                                        )}
+                                      </span>
+                                    </button>
+                                    {isOpen && (
+                                      <div className="px-3 py-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {allServices
+                                          .filter((s) => getCategory(s) === cat)
+                                          .map((svc) => {
+                                            const isSelected = field.value.includes(svc.id);
+                                            return (
+                                              <div
+                                                key={svc.id}
+                                                className={`border rounded-lg p-3 text-sm cursor-pointer transition-all ${
+                                                  isSelected
+                                                    ? 'border-primary bg-primary/5 shadow-sm'
+                                                    : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                                                }`}
+                                                onClick={() => {
+                                                  if (isSelected) {
+                                                    field.onChange(field.value.filter((id) => id !== svc.id));
+                                                  } else {
+                                                    field.onChange([...field.value, svc.id]);
+                                                  }
+                                                }}
+                                              >
+                                                <div className="flex justify-between items-center gap-2">
+                                                  <span className="font-medium break-words flex-1">
+                                                    {svc.name}
+                                                  </span>
+                                                  {isSelected && (
+                                                    <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                                                  )}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                  {svc.duration} min
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+
+                {/* Booking Details */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {/* Staff */}
+                  <FormField
+                    control={form.control}
+                    name="staffId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assign Staff<span className="text-destructive"> *</span></FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select staff" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {staffList.map((staff) => (
+                                <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Time Slots */}
+                  <FormField
+                    control={form.control}
+                    name="slot"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Time Slot<span className="text-destructive"> *</span></FormLabel>
+                        {isFetchingSlots ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Fetching available slots…
+                          </div>
+                        ) : slots.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Select staff and service to load slots.</p>
+                        ) : (
+                          <ScrollArea className="max-h-60 pr-1">
+                            <div className="grid grid-cols-3 gap-2">
+                              {slots.map((slot) => {
+                                const display = format(parse(slot.time, 'HH:mm:ss', new Date()), 'h:mm a');
+                                const isSelected = field.value === slot.time;
+                                return (
+                                  <TooltipProvider key={slot.time}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div>
+                                          <Button
+                                            type="button"
+                                            variant={isSelected ? 'default' : 'outline'}
+                                            size="sm"
+                                            className={`w-full text-xs px-0.5 ${!slot.available ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            onClick={() => slot.available && field.onChange(slot.time)}
+                                            disabled={!slot.available}
+                                          >
+                                            <Clock className="h-3 w-3 mr-1" /> {display}
+                                          </Button>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="text-xs">
+                                        <span>{slot.available ? 'Available' : slot.unavailableReason || 'Not available'}</span>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
+                        )}
+                        {/* No available slots message */}
+                        {slots.length > 0 && slots.every((s) => !s.available) && (
+                          <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" /> No available slots for the selected criteria.
+                          </p>
+                        )}
+                        {!field.value && slots.length > 0 && (
+                          <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" /> Select an available time slot.
+                          </p>
+                        )}
+                        {slots.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">Times are displayed in local business timezone.</p>
+                        )}
+                        {requestedTimeUnavailable && (
+                          <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" /> The requested time is no longer available. Please choose another slot.
+                          </p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Notes */}
                 <FormField
                   control={form.control}
                   name="notes"
@@ -478,46 +625,24 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                     <FormItem>
                       <FormLabel>Notes (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Add any notes about the appointment" {...field} />
+                        <Input placeholder="Additional notes" {...field} />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
-                {selectedServices.length > 0 && (
-                  <div className="rounded-lg border p-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Duration:</span>
-                      <span>{duration} minutes</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-medium">
-                      <span>Total Price:</span>
-                      <span>${(Math.round(price * 100) / 100).toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-              </form>
-            </Form>
-          </div>
+            {/* Sticky footer */}
+            
+          </form>
+        </Form>
         </ScrollArea>
-
-        <DialogFooter className="mt-4">
-          <Button 
-            onClick={form.handleSubmit(onSubmit)} 
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Appointment'
-            )}
-          </Button>
+        <DialogFooter className="mt-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
+        <Button form="newAppointmentForm" type="submit" disabled={isCreating}>
+                {isCreating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Add Appointment
+              </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
+}; 
