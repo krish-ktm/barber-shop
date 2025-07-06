@@ -1393,6 +1393,16 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   // Fetch payment methods
   const { paymentMethods, isLoading: pmLoading } = usePaymentMethods();
 
+  // Auto-select first payment method when list becomes available
+  React.useEffect(() => {
+    if (!pmLoading && paymentMethods.length > 0) {
+      const current = form.getValues('paymentMethod');
+      if (!current) {
+        form.setValue('paymentMethod', paymentMethods[0]);
+      }
+    }
+  }, [pmLoading, paymentMethods, form]);
+
   return (
     <div className="flex flex-col h-full">
       {renderStepIndicator()}

@@ -129,6 +129,13 @@ export const CompleteAppointmentDialog: React.FC<CompleteAppointmentDialogProps>
     }
   }, [open, appointment, fetchSvcs, fetchProds]);
 
+  // Auto-set when list ready
+  useEffect(() => {
+    if (paymentMethod === '' && paymentMethods.length > 0) {
+      setPaymentMethod(paymentMethods[0]);
+    }
+  }, [paymentMethods, paymentMethod]);
+
   const services: any[] = svcResp?.services ?? [];
   const products: Product[] = prodResp?.products ?? [];
 
