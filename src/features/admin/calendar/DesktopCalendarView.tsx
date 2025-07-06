@@ -165,6 +165,65 @@ export const DesktopCalendarView = ({
     });
   };
 
+  // Helper to parse a "HH:MM" time string into hour and minute numbers
+  const parseTimeString = (timeStr: string): { hour: number; minute: number } => {
+    const [h, m] = timeStr.split(':').map((t) => parseInt(t, 10));
+    return { hour: h, minute: m || 0 };
+  };
+
+  // Helper to calculate duration in minutes. Falls back to service durations if endTime not provided
+  const getAppointmentDuration = (appointment: Appointment): number => {
+    if (appointment.endTime) {
+      const { hour: sh, minute: sm } = parseTimeString(appointment.time);
+      const { hour: eh, minute: em } = parseTimeString(appointment.endTime);
+      return (eh * 60 + em) - (sh * 60 + sm);
+    }
+    // Fallback – sum of service durations or default 60 mins
+    const summed = appointment.services?.reduce((tot, svc) => tot + (svc.duration || 0), 0) || 0;
+    return summed > 0 ? summed : 60;
+  };
+
+  // Helper: format a HH:MM string to 12-hour format (e.g., 3:30 PM)
+  const formatTime12 = (timeStr: string) => {
+    const { hour, minute } = parseTimeString(timeStr);
+    const d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    return format(d, 'h:mm a');
+  };
+
+  // Helper: compute appointment end-time string in 12-hour format
+  const getAppointmentEndTime = (appointment: Appointment) => {
+    if (appointment.endTime) {
+      return formatTime12(appointment.endTime);
+    }
+    const { hour, minute } = parseTimeString(appointment.time);
+    const d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    d.setMinutes(d.getMinutes() + getAppointmentDuration(appointment));
+    return format(d, 'h:mm a');
+  };
+
+  // Helper: format hour label (integer) to 12-hour like "3 PM"
+  const formatHourLabel = (hour: number) => {
+    const d = new Date();
+    d.setHours(hour, 0, 0, 0);
+    return format(d, 'h a');
+  };
+
+  // Helper: for given date & hour, get appointments whose window intersects this hour block
+  const getAppointmentsOverlappingHour = (date: Date, hour: number) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const blockStart = hour * 60;
+    const blockEnd = (hour + 1) * 60; // exclusive
+    return appointments.filter(app => {
+      if (app.date !== dateStr) return false;
+      const { hour: sh, minute: sm } = parseTimeString(app.time);
+      const startMin = sh * 60 + sm;
+      const endMin = startMin + getAppointmentDuration(app);
+      return startMin < blockEnd && endMin > blockStart;
+    });
+  };
+
   // Header with navigation and view controls - Desktop optimized with all controls visible
   const renderHeader = () => {
     return (
@@ -304,7 +363,7 @@ export const DesktopCalendarView = ({
                         className="w-2 h-2 rounded-full mr-1 flex-shrink-0" 
                         style={{ backgroundColor: getStatusColor(appointment.status) }} 
                       />
-                      <span className="font-medium">{appointment.time}</span>
+                      <span className="font-medium">{formatTime12(appointment.time)}</span>
                     </div>
                     <div className="truncate">{appointment.customerName}</div>
                   </div>
@@ -392,12 +451,13 @@ export const DesktopCalendarView = ({
                 "p-2 border-r text-xs text-muted-foreground h-28 flex items-start justify-end bg-muted/10",
                 hourIndex === hours.length - 1 && "rounded-bl-lg"
               )}>
-                {hour}:00
+                {formatHourLabel(hour)}
               </div>
               
               {/* Day columns */}
               {weekDays.map((day, dayIndex) => {
                 const dayAppointments = getAppointmentsForTimeSlot(day, hour);
+                const overlappingAppointments = getAppointmentsOverlappingHour(day, hour);
                 const isLastHour = hourIndex === hours.length - 1;
                 const isLastDay = dayIndex === weekDays.length - 1;
                 
@@ -409,46 +469,44 @@ export const DesktopCalendarView = ({
                       isLastHour && isLastDay && "rounded-br-lg"
                     )}
                   >
-                    {dayAppointments.length === 0 ? (
-                      <div className="h-full w-full relative">
-                        {onAddAppointment && (
-                          <button
-                            className="absolute bottom-1 right-1 rounded-full p-1 text-primary bg-primary/10 hover:bg-primary/20"
+                    {/* Render any appointments; if none, leave cell blank (no add button) */}
+                    {dayAppointments.length > 0 && (
+                      dayAppointments.map((appointment, index) => {
+                        const { minute } = parseTimeString(appointment.time);
+                        const topPercent = (minute / 60) * 100;
+                        const width = Math.max(25, 100 / Math.max(overlappingAppointments.length, 1));
+                        const heightPercent = (getAppointmentDuration(appointment) / 60) * 100;
+                        const timeRange = `${formatTime12(appointment.time)} - ${getAppointmentEndTime(appointment)}`;
+                        const isCompact = heightPercent < 40;
+
+                        return (
+                          <div
+                            key={appointment.id}
+                            className={cn(
+                              `absolute p-1.5 rounded-md bg-primary/10 border border-primary/20 text-xs cursor-pointer 
+                                hover:bg-primary/20 transition-colors overflow-hidden hover:shadow-sm`,
+                              index > 1 && 'hidden md:block'
+                            )}
+                            style={{
+                              left: `${index * width}%`,
+                              width: `calc(${width}% - 4px)`,
+                              top: `${topPercent}%`,
+                              height: `calc(${heightPercent}% - 2px)`,
+                              zIndex: 5
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              const slotDate = new Date(day);
-                              slotDate.setHours(hour, 0, 0, 0);
-                              onAddAppointment(slotDate);
+                              onViewAppointment(appointment.id);
                             }}
                           >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      dayAppointments.map((appointment, index) => (
-                        <div
-                          key={appointment.id}
-                          className={`p-1.5 rounded-md bg-primary/10 border border-primary/20 
-                                   text-xs cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden hover:shadow-sm
-                                   ${index > 1 ? 'hidden md:block' : ''}`}
-                          style={{
-                            maxHeight: `${Math.floor(100 / Math.min(dayAppointments.length, 3))}%`
-                          }}
-                          onClick={() => onViewAppointment(appointment.id)}
-                        >
-                          <div className="flex items-center mb-0.5">
-                            <div className="w-2 h-2 rounded-full mr-1 flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
-                            <span className="font-medium truncate">{appointment.time}</span>
-                          </div>
-                          <div className="truncate">{appointment.customerName}</div>
-                          {index === 0 && dayAppointments.length > 3 && (
-                            <div className="text-[10px] text-center text-muted-foreground mt-0.5 bg-muted/20 rounded py-0.5">
-                              +{dayAppointments.length - 2} more
+                            <div className="flex items-center mb-0.5">
+                              <div className="w-2 h-2 rounded-full mr-1 flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
+                              <span className="font-medium truncate">{isCompact ? formatTime12(appointment.time) : timeRange}</span>
                             </div>
-                          )}
-                        </div>
-                      ))
+                            {!isCompact && <div className="truncate">{appointment.customerName}</div>}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 );
@@ -483,7 +541,7 @@ export const DesktopCalendarView = ({
                   index === 0 && "pt-1"
                 )}
               >
-                {hour}:00
+                {formatHourLabel(hour)}
               </div>
             ))}
           </div>
@@ -496,6 +554,8 @@ export const DesktopCalendarView = ({
                 return appointmentHour === hour;
               });
               
+              const overlappingAppointments = getAppointmentsOverlappingHour(currentDate, hour);
+
               return (
                 <div
                   key={hour}
@@ -504,7 +564,7 @@ export const DesktopCalendarView = ({
                     index === 0 ? "rounded-tr-lg" : "border-t",
                   )}
                   onClick={() => {
-                    if (hourAppointments.length === 0 && onAddAppointment) {
+                    if (onAddAppointment) {
                       const slotDate = new Date(currentDate);
                       slotDate.setHours(hour, 0, 0, 0);
                       onAddAppointment(slotDate);
@@ -513,24 +573,37 @@ export const DesktopCalendarView = ({
                 >
                   {hourAppointments.map((appointment, idx) => {
                     // Calculate width based on number of appointments in this hour
-                    const width = Math.min(100 / Math.max(hourAppointments.length, 2), 50);
-                    
+                    const width = Math.max(25, 100 / Math.max(overlappingAppointments.length, 1));
+
+                    // Calculate vertical positioning based on minutes and duration
+                    const { minute } = parseTimeString(appointment.time);
+                    const topPercent = (minute / 60) * 100;
+                    const heightPercent = (getAppointmentDuration(appointment) / 60) * 100;
+                    const timeRange = `${formatTime12(appointment.time)} - ${getAppointmentEndTime(appointment)}`;
+                    const isCompact = heightPercent < 40;
+
                     return (
                       <div
                         key={appointment.id}
-                        className="absolute inset-y-0 py-2 px-3 m-1 rounded-lg bg-primary/10 border border-primary/20 
+                        className="absolute py-2 px-3 m-1 rounded-lg bg-primary/10 border border-primary/20 
                                  cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden flex flex-col hover:shadow"
                         style={{
                           left: `${idx * width}%`,
                           width: `calc(${width}% - 8px)`,
+                          top: `${topPercent}%`,
+                          height: `calc(${heightPercent}% - 4px)`,
+                          zIndex: 5,
                           maxWidth: '350px'
                         }}
-                        onClick={() => onViewAppointment(appointment.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewAppointment(appointment.id);
+                        }}
                       >
                         {/* Header */}
                         <div className="flex items-center gap-1.5 mb-1">
                           <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: getStatusColor(appointment.status) }} />
-                          <span className="font-semibold text-sm">{appointment.time}</span>
+                          <span className="font-semibold text-sm truncate">{isCompact ? formatTime12(appointment.time) : timeRange}</span>
                           <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-5 whitespace-nowrap rounded-md">
                             {appointment.status}
                           </Badge>
@@ -538,7 +611,7 @@ export const DesktopCalendarView = ({
                         
                         {/* Content */}
                         <div className="overflow-hidden flex-1 min-h-0">
-                          <div className="font-medium text-sm mb-1 truncate">{appointment.customerName}</div>
+                          {!isCompact && <div className="font-medium text-sm mb-1 truncate">{appointment.customerName}</div>}
                           <div className="text-xs text-muted-foreground line-clamp-2">
                             {appointment.services.map(s => s.serviceName).join(', ')}
                           </div>
@@ -547,7 +620,7 @@ export const DesktopCalendarView = ({
                         {/* Footer */}
                         <div className="mt-1 pt-1 border-t border-primary/10 flex justify-between items-center flex-shrink-0">
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {appointment.services.reduce((total, svc) => total + svc.duration, 0)} min
+                            {getAppointmentDuration(appointment)} min
                           </span>
                           <Button variant="ghost" size="icon" className="h-6 w-6 -mr-1.5 -my-1 rounded-full" onClick={(e) => {
                             e.stopPropagation();
@@ -618,9 +691,9 @@ export const DesktopCalendarView = ({
                     onClick={() => onViewAppointment(appointment.id)}
                   >
                     <div className="flex-shrink-0 w-24">
-                      <div className="text-lg font-semibold">{appointment.time}</div>
+                      <div className="text-lg font-semibold">{formatTime12(appointment.time)}</div>
                       <div className="text-sm text-muted-foreground">
-                        {appointment.services.reduce((total, svc) => total + svc.duration, 0)} min
+                        {getAppointmentDuration(appointment)} min
                       </div>
                     </div>
                     
