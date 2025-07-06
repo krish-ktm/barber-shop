@@ -65,6 +65,10 @@ const AdminSettings: React.FC = () => {
         ...settings,
         currency: settings.currency || 'USD',
         timezone: settings.timezone || 'UTC',
+        facebook_url: settings.facebook_url || '',
+        instagram_url: settings.instagram_url || '',
+        twitter_url: settings.twitter_url || '',
+        youtube_url: settings.youtube_url || '',
         accept_cash: settings.accept_cash !== undefined ? settings.accept_cash : true,
         accept_card: settings.accept_card !== undefined ? settings.accept_card : true,
         accept_mobile: settings.accept_mobile !== undefined ? settings.accept_mobile : false,
@@ -322,6 +326,50 @@ const AdminSettings: React.FC = () => {
                         min="0"
                         max="100"
                         required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="facebook_url">Facebook URL</Label>
+                      <Input
+                        id="facebook_url"
+                        name="facebook_url"
+                        type="url"
+                        value={formData.facebook_url}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="instagram_url">Instagram URL</Label>
+                      <Input
+                        id="instagram_url"
+                        name="instagram_url"
+                        type="url"
+                        value={formData.instagram_url}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="twitter_url">Twitter URL</Label>
+                      <Input
+                        id="twitter_url"
+                        name="twitter_url"
+                        type="url"
+                        value={formData.twitter_url}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="youtube_url">YouTube URL</Label>
+                      <Input
+                        id="youtube_url"
+                        name="youtube_url"
+                        type="url"
+                        value={formData.youtube_url}
+                        onChange={handleInputChange}
                       />
                     </div>
                     

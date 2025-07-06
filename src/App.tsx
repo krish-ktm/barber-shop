@@ -135,6 +135,9 @@ function App() {
           <Route path="pos" element={<BillingPOS />} />
           <Route path="*" element={<Navigate to="/billing/dashboard" replace />} />
         </Route>
+
+        {/* Fallback Route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster />
     </BrowserRouter>

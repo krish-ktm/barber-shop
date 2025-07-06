@@ -18,6 +18,11 @@ export interface BusinessSettings {
   accept_cash: boolean;
   accept_card: boolean;
   accept_mobile: boolean;
+  // Optional social media URLs
+  facebook_url?: string;
+  instagram_url?: string;
+  twitter_url?: string;
+  youtube_url?: string;
   custom_payment_methods?: string[];
   updated_at?: string;
 }
