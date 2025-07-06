@@ -21,8 +21,7 @@ import {
   Clock, 
   CalendarDays, 
   LayoutGrid, 
-  LayoutList,
-  Plus,
+  LayoutList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -334,17 +333,6 @@ export const DesktopCalendarView = ({
                 >
                   {format(cloneDay, 'd')}
                 </span>
-                {onAddAppointment && (
-                  <button
-                    className="p-0.5 rounded-full text-primary hover:bg-primary/20"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddAppointment(cloneDay);
-                    }}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                )}
               </div>
               
               {/* Render appointments */}
