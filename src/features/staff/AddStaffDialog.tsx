@@ -74,8 +74,24 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
   
-  // Get unique categories from services
-  const categories = Array.from(new Set(services.map(service => service.category || 'Uncategorized')));
+  // Ensure every service has a valid category; fallback to "Uncategorized" if missing/empty.
+  const normalizedServices = React.useMemo(() =>
+    services.map((s) => ({
+      ...s,
+      // Prefer explicit category field; otherwise attempt nested serviceCategory.name; else fallback.
+      category:
+        (s.category && s.category.trim() !== '')
+          ? s.category
+          : ((s as unknown as { serviceCategory?: { name?: string } }).serviceCategory?.name || 'Uncategorized'),
+    })),
+    [services]
+  );
+  
+  // Get unique categories from normalized services
+  const categories = React.useMemo(
+    () => Array.from(new Set(normalizedServices.map((s) => s.category)) ),
+    [normalizedServices]
+  );
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -116,8 +132,8 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
   };
 
   const getSelectedServicesCount = (category: string) => {
-    return services
-      .filter(service => service.category === category && selectedServices.includes(service.id))
+    return normalizedServices
+      .filter((service) => service.category === category && selectedServices.includes(service.id))
       .length;
   };
 
@@ -343,7 +359,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
                           <div className="flex justify-center p-6">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                           </div>
-                        ) : services.length === 0 ? (
+                        ) : normalizedServices.length === 0 ? (
                           <div className="text-center p-4 border rounded-lg bg-muted/30">
                             <p>No services found. Please add services first.</p>
                           </div>
@@ -377,8 +393,8 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
                                   </CollapsibleTrigger>
                                   <CollapsibleContent className="p-2">
                                     <div className="grid gap-2">
-                                      {services
-                                        .filter(s => s.category === category)
+                                      {normalizedServices
+                                        .filter((s) => s.category === category)
                                         .map((s) => {
                                           const isSelected = selectedServices.includes(s.id);
                                           return (
@@ -408,7 +424,7 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
                               <div className="mt-4 space-y-2">
                                 <div className="text-sm font-medium">Selected Services</div>
                                 {selectedServices.map((serviceId) => {
-                                  const selectedService = services.find(s => s.id === serviceId);
+                                  const selectedService = normalizedServices.find((s) => s.id === serviceId);
                                   if (!selectedService) return null;
                                   
                                   return (

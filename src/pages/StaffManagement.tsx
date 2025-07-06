@@ -36,7 +36,7 @@ import {
   Staff as ApiStaff,
   CreateStaffRequest 
 } from '@/api/services/staffService';
-import { Service } from '@/api/services/serviceService';
+import { Service, getAllServices } from '@/api/services/serviceService';
 
 // Convert API staff to our internal Staff type
 const mapApiStaffToInternal = (apiStaff: ApiStaff): Staff => {
@@ -197,6 +197,27 @@ export const StaffManagement: React.FC = () => {
     execute: executeDeleteStaff
   } = useApi(deleteStaff);
   
+  // Fetch services separately to get full category information
+  const {
+    data: servicesData,
+    loading: isLoadingServiceList,
+    error: servicesError,
+    execute: fetchServices
+  } = useApi(getAllServices);
+  
+  // Initial fetch for services (run once)
+  useEffect(() => {
+    fetchServices(1, 100, 'name_asc');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  // Update services list when API responds
+  useEffect(() => {
+    if (servicesData?.services) {
+      setAllServices(servicesData.services);
+    }
+  }, [servicesData]);
+  
   // Generate the sort parameter for the API call
   const getSortParam = useCallback(() => {
     let sortField = '';
@@ -273,21 +294,17 @@ export const StaffManagement: React.FC = () => {
     fetchData();
   }, [fetchStaff, currentPage, itemsPerPage, getSortParam, appliedFilters]);
   
-  // Update services when staff data is loaded (services are included in the response)
+  // (Optional) fall back to any services attached to staff response if not already set
   useEffect(() => {
-    if (staffData?.services) {
+    if (staffData?.services && allServices.length === 0) {
       setAllServices(staffData.services);
     }
-    
+
     // Update pagination state if provided by the API
-    if (staffData?.currentPage) {
-      // If the API returns a different page than what we requested,
-      // update our state to match (this happens when requesting a page beyond what's available)
-      if (staffData.currentPage !== currentPage) {
-        setCurrentPage(staffData.currentPage);
-      }
+    if (staffData?.currentPage && staffData.currentPage !== currentPage) {
+      setCurrentPage(staffData.currentPage);
     }
-  }, [staffData, currentPage]);
+  }, [staffData, allServices, currentPage]);
   
   // Show error if services fail to load
   useEffect(() => {
@@ -322,7 +339,15 @@ export const StaffManagement: React.FC = () => {
         variant: 'destructive',
       });
     }
-  }, [staffError, createError, updateError, deleteError, toast]);
+    
+    if (servicesError) {
+      toast({
+        title: 'Error loading services',
+        description: servicesError.message,
+        variant: 'destructive',
+      });
+    }
+  }, [staffError, createError, updateError, deleteError, servicesError, toast]);
 
   // Convert API staff to internal format
   const allStaff: Staff[] = staffData?.staff 
@@ -661,7 +686,7 @@ export const StaffManagement: React.FC = () => {
                 onDeleteStaff={handleDeleteStaff}
                 deletingStaffId={deletingStaffId}
                 services={allServices}
-                isLoadingServices={isLoading && allServices.length === 0}
+                isLoadingServices={isLoadingServiceList && allServices.length === 0}
               />
               
               {/* Pagination controls */}
@@ -911,7 +936,7 @@ export const StaffManagement: React.FC = () => {
         onOpenChange={setShowAddDialog}
         onAddStaff={handleAddStaff as (newStaff: Staff & { password: string }) => void}
         services={allServices}
-        isLoadingServices={isLoading && allServices.length === 0}
+        isLoadingServices={isLoadingServiceList && allServices.length === 0}
       />
     </div>
   );

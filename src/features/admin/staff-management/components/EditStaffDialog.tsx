@@ -94,8 +94,27 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [imagePreview, setImagePreview] = useState<string | undefined>(staff?.image);
   
+  // Ensure every service has a valid category; fallback to "Uncategorized" if missing/empty
+  const normalizedServices = React.useMemo(
+    () =>
+      services.map((s) => ({
+        ...s,
+        category:
+          s.category && s.category.trim() !== ''
+            ? s.category
+            : (
+                (s as unknown as { serviceCategory?: { name?: string } }).serviceCategory?.name ||
+                'Uncategorized'
+              ),
+      })),
+    [services]
+  );
+  
   // Get unique categories from services
-  const categories = Array.from(new Set(services.map(service => service.category || 'Uncategorized')));
+  const categories = React.useMemo(
+    () => Array.from(new Set(normalizedServices.map((service) => service.category))),
+    [normalizedServices]
+  );
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -147,7 +166,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       );
 
       const validServiceIds = staffServiceIds.filter(id =>
-        services.some(service => service.id === id)
+        normalizedServices.some(service => service.id === id)
       );
       
       setSelectedServiceIds(validServiceIds);
@@ -156,7 +175,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
       // Open categories that have selected services
       const categoriesToOpen: Record<string, boolean> = {};
       validServiceIds.forEach(id => {
-        const service = services.find(s => s.id === id);
+        const service = normalizedServices.find((s) => s.id === id);
         if (service) {
           categoriesToOpen[service.category || 'Uncategorized'] = true;
         }
@@ -196,8 +215,8 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
   };
 
   const getSelectedServicesCount = (category: string) => {
-    return services
-      .filter(service => service.category === category && selectedServiceIds.includes(service.id))
+    return normalizedServices
+      .filter((service) => service.category === category && selectedServiceIds.includes(service.id))
       .length;
   };
 
@@ -491,8 +510,8 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                                   </CollapsibleTrigger>
                                   <CollapsibleContent className="p-2">
                                     <div className="grid gap-2">
-                                      {services
-                                        .filter(s => s.category === category)
+                                      {normalizedServices
+                                        .filter((s) => s.category === category)
                                         .map((s) => {
                                           const isSelected = selectedServiceIds.includes(s.id);
                                           return (
@@ -522,7 +541,7 @@ export const EditStaffDialog: React.FC<EditStaffDialogProps> = ({
                               <div className="mt-4 space-y-2">
                                 <div className="text-sm font-medium">Selected Services</div>
                                 {selectedServiceIds.map((serviceId) => {
-                                  const selectedService = services.find(s => s.id === serviceId);
+                                  const selectedService = normalizedServices.find((s) => s.id === serviceId);
                                   if (!selectedService) return null;
                                   
                                   return (
