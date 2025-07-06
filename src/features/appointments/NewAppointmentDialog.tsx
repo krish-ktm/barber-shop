@@ -37,6 +37,7 @@ import { format, parse } from 'date-fns';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { createCustomer } from '@/api/services/customerService';
 import { get } from '@/api/apiClient';
+import { getBookingStaff } from '@/api/services/bookingService';
 
 // ---------------- Schema ----------------
 const formSchema = z.object({
@@ -102,6 +103,9 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   // Local service list (may be enriched via extra fetch to include categories)
   const [allServices, setAllServices] = useState<Array<ApiService | ApiAppointmentService>>(serviceList);
 
+  // Dynamic staff list filtered by services
+  const [filteredStaff, setFilteredStaff] = useState<Staff[]>(staffList);
+
   // API hooks
   const { execute: fetchCustomer } = useApi(getCustomerByPhone);
   const { execute: fetchSlots } = useApi(getAvailableSlots);
@@ -111,6 +115,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
     execute: saveAppointment,
   } = useApi(createAppointment);
   const { execute: createNewCustomer } = useApi(createCustomer);
+  const { execute: fetchFilteredStaff } = useApi(getBookingStaff);
 
   // ---------------- React Hook Form ----------------
   const form = useForm<z.infer<typeof formSchema>>({
@@ -169,13 +174,13 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   // declare preselected time
   const preselectedTimeStr = selectedDate ? format(selectedDate, 'HH:mm:ss') : undefined;
 
-  const handleFetchSlots = async (staffId: string, serviceId: string) => {
+  const handleFetchSlots = async (staffId: string, serviceIdsParam: string) => {
     if (!selectedDate) return;
-    if (!staffId || !serviceId) return;
+    if (!staffId || !serviceIdsParam) return;
     setIsFetchingSlots(true);
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const res = await fetchSlots(dateStr, staffId, serviceId);
+      const res = await fetchSlots(dateStr, staffId, serviceIdsParam);
       if (res.success) {
         setSlots(res.slots);
         // Only auto-select if a preselected time string was provided and is available
@@ -212,11 +217,32 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   // Trigger slot fetch when staff/service selection changes
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
+      if (name === 'serviceIds') {
+        // When services change, refetch staff list accordingly
+        const joinedServiceIds = value.serviceIds?.length ? value.serviceIds.join(',') : undefined;
+        if (joinedServiceIds) {
+          void (async () => {
+            const res = await fetchFilteredStaff(joinedServiceIds);
+            if (res.success) {
+              setFilteredStaff(res.staff);
+              // If currently selected staff cannot perform services, clear selection
+              if (!res.staff.find((s) => s.id === form.getValues('staffId'))) {
+                form.setValue('staffId', '', { shouldValidate: true });
+                form.setValue('slot', '', { shouldValidate: true });
+                setSlots([]);
+              }
+            }
+          })();
+        } else {
+          setFilteredStaff(staffList);
+        }
+      }
+
       if (name === 'staffId' || name === 'serviceIds') {
         const staffId = value.staffId;
-        const firstServiceId = value.serviceIds?.[0];
-        if (staffId && firstServiceId) {
-          void handleFetchSlots(staffId, firstServiceId);
+        const joinedServiceIds = value.serviceIds?.length ? value.serviceIds.join(',') : undefined;
+        if (staffId && joinedServiceIds) {
+          void handleFetchSlots(staffId, joinedServiceIds);
         }
       }
     });
@@ -279,7 +305,8 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
 
       // Re-validate selected slot availability to avoid race conditions
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const slotCheck = await fetchSlots(dateStr, values.staffId, values.serviceIds[0]);
+      const slotServiceParam = values.serviceIds.join(',');
+      const slotCheck = await fetchSlots(dateStr, values.staffId, slotServiceParam);
       if (!slotCheck.success) {
         throw new Error('Failed to validate slot availability');
       }
@@ -290,7 +317,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
           description: 'The selected time is no longer available. Please choose another slot.',
           variant: 'destructive',
         });
-        await handleFetchSlots(values.staffId, values.serviceIds[0]);
+        await handleFetchSlots(values.staffId, slotServiceParam);
         return;
       }
 
@@ -300,6 +327,8 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
         date: dateStr,
         time: values.slot,
         services: values.serviceIds,
+        service_ids: values.serviceIds,
+        service_id: values.serviceIds.join(','),
         notes: values.notes,
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -535,7 +564,7 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                               <SelectValue placeholder="Select staff" />
                             </SelectTrigger>
                             <SelectContent>
-                              {staffList.map((staff) => (
+                              {filteredStaff.map((staff) => (
                                 <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
                               ))}
                             </SelectContent>
@@ -598,18 +627,17 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                             <AlertCircle className="h-3 w-3" /> No available slots for the selected criteria.
                           </p>
                         )}
-                        {!field.value && slots.length > 0 && (
-                          <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" /> Select an available time slot.
-                          </p>
-                        )}
-                        {slots.length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">Times are displayed in local business timezone.</p>
-                        )}
-                        {requestedTimeUnavailable && (
+                        {requestedTimeUnavailable ? (
                           <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                             <AlertCircle className="h-3 w-3" /> The requested time is no longer available. Please choose another slot.
                           </p>
+                        ) : (!field.value && slots.length > 0) ? (
+                          <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" /> Select an available time slot.
+                          </p>
+                        ) : null}
+                        {slots.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">Times are displayed in local business timezone.</p>
                         )}
                         <FormMessage />
                       </FormItem>
