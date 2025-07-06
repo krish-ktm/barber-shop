@@ -8,6 +8,8 @@ import { formatCurrency } from '@/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader } from '@/components/ui/loader';
+import { useNavigate } from 'react-router-dom';
+import { Service } from '@/types';
 
 const staggerContainer = {
   animate: {
@@ -82,6 +84,11 @@ const categoryImages = {
 
 export const Services: React.FC = () => {
   const { groupedServices, loading, error } = usePublicServices();
+  const navigate = useNavigate();
+
+  const handleServiceSelect = (service: Service) => {
+    navigate('/booking', { state: { services: [service] } });
+  };
 
   if (loading) {
     return (
@@ -233,6 +240,7 @@ export const Services: React.FC = () => {
                               animate="animate"
                               whileHover="hover"
                               className="px-8 py-5 flex items-center justify-between group cursor-pointer hover:bg-primary/5 transition-colors duration-200"
+                              onClick={() => handleServiceSelect(service)}
                             >
                               <div className="flex-1 min-w-0 mr-6">
                                 <div className="flex items-center gap-4">
@@ -266,15 +274,12 @@ export const Services: React.FC = () => {
                                 variant="ghost" 
                                 size="icon"
                                 className="opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:bg-primary/10"
-                                asChild
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleServiceSelect(service);
+                                }}
                               >
-                                <motion.a
-                                  href="/booking"
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                >
-                                  <ChevronRight className="h-5 w-5" />
-                                </motion.a>
+                                <ChevronRight className="h-5 w-5" />
                               </Button>
                             </motion.div>
                           ))}

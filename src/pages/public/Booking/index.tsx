@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Calendar, CheckCircle2, Info, Scissors, Users } from 'lucide-react';
 import { formatCurrency } from '@/utils';
 import { useLocation } from 'react-router-dom';
+import { Service } from '@/types';
 
 const BookingContent: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -25,6 +26,7 @@ const BookingContent: React.FC = () => {
     setSelectedStaffId,
     setSelectedStaffName,
     setSelectedStaffPosition,
+    setSelectedServices,
     setFirstSelection
   } = useBooking();
 
@@ -44,6 +46,19 @@ const BookingContent: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, selectedStaffId]);
+
+  // Preselect services if coming from Services page
+  useEffect(() => {
+    if (selectedServices.length === 0 && location.state && typeof location.state === 'object') {
+      const { services } = location.state as { services?: Service[] };
+      if (services && services.length > 0) {
+        setSelectedServices(services);
+        setFirstSelection('service');
+        setBookingFlow('service-first');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, selectedServices.length]);
 
   // Scroll to top when step changes (all viewports)
   useEffect(() => {
