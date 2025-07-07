@@ -15,6 +15,7 @@ import { formatCurrency } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useSettings } from '@/hooks/useSettings';
 
 interface InvoiceDialogProps {
   invoice: Invoice | null;
@@ -22,12 +23,32 @@ interface InvoiceDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Utility to load an image (from public folder) and convert to data URL for jsPDF
+const loadImageAsDataUrl = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Canvas context not available'));
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = (err) => reject(err);
+    img.src = url;
+  });
+};
+
 export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   invoice,
   open,
   onOpenChange,
 }) => {
   const { toast } = useToast();
+  const { settings } = useSettings();
   const [isPrinting, setIsPrinting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -69,19 +90,37 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
     try {
       const doc = new jsPDF('p', 'pt', 'a4');
+      const businessName = settings?.name || 'Barber Shop';
+      doc.setProperties({ title: `Invoice ${invoice.id}`, author: businessName });
       const pageWidth = doc.internal.pageSize.getWidth();
       const marginX = 40;
       let y = 40;
 
-      // Header Title
+      // Load and draw company logo then header texts
+      try {
+        const logoData = await loadImageAsDataUrl('/logo/logo-tran.png');
+        doc.addImage(logoData, 'PNG', marginX, y, 60, 60);
+      } catch {
+        // logo failed to load – continue without interruption
+      }
+
+      // Company name next to logo
       doc.setFontSize(18);
       doc.setFont('helvetica','bold');
-      doc.text('Invoice Details', marginX, y);
+      doc.setTextColor('#111827');
+      doc.text(businessName, marginX + 70, y + 25);
+
+      // Invoice Details subtitle
+      doc.setFontSize(12);
       doc.setFont('helvetica','normal');
+      doc.text('Invoice Details', marginX + 70, y + 45);
+
+      y += 70; // move below header block
+
+      // Invoice number below header
       doc.setFontSize(10);
-      y += 15;
       doc.text(`Invoice #: ${invoice.id}`, marginX, y);
-      y += 20;
+      y += 15;
 
       // Gray separator line
       doc.setDrawColor(210);
