@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { format } from 'date-fns';
-import { Copy, Download, Mail, Printer, Loader2, Percent, DollarSign } from 'lucide-react';
+import { Copy, Download, Printer, Loader2, Percent, DollarSign } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,31 +13,26 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Invoice, InvoiceProduct } from '@/api/services/invoiceService';
 import { formatCurrency } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
-import { sendInvoice } from '@/api/services/invoiceService';
-import { useApi } from '@/hooks/useApi';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface InvoiceDialogProps {
   invoice: Invoice | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvoiceUpdated?: () => void;
 }
 
 export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   invoice,
   open,
   onOpenChange,
-  onInvoiceUpdated,
 }) => {
   const { toast } = useToast();
   const [isPrinting, setIsPrinting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  
-  // API hook for sending invoice by email
-  const {
-    loading: isSendingEmail,
-    execute: executeSendInvoice
-  } = useApi(sendInvoice);
+
+  // Reference to the main invoice content for PDF/print capture
+  const invoiceContentRef = useRef<HTMLDivElement>(null);
 
   if (!invoice) return null;
 
@@ -67,56 +62,156 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
     });
   };
 
-  const handlePrint = () => {
-    setIsPrinting(true);
-    
-    // Simulate printing delay
-    setTimeout(() => {
-      window.print();
-      setIsPrinting(false);
-    toast({
-      title: 'Print requested',
-        description: 'Print dialog opened.',
-    });
-    }, 500);
-  };
+  // Helper to build PDF using jsPDF + autoTable
+  const generatePdf = async (autoPrint = false) => {
+    // Show loader state
+    if (autoPrint) setIsPrinting(true); else setIsDownloading(true);
 
-  const handleDownload = () => {
-    setIsDownloading(true);
-    
-    // Simulate download delay
-    setTimeout(() => {
-      setIsDownloading(false);
-    toast({
-      title: 'Download started',
-      description: 'Your invoice PDF will be downloaded shortly.',
-    });
-    }, 1000);
-  };
-
-  const handleSendEmail = async () => {
     try {
-      const response = await executeSendInvoice(invoice.id);
-      if (response.success) {
-    toast({
-      title: 'Email sent',
-          description: response.message || 'Invoice has been sent to the customer\'s email.',
-    });
-        
-        // Call the update callback if provided
-        if (onInvoiceUpdated) {
-          onInvoiceUpdated();
-        }
+      const doc = new jsPDF('p', 'pt', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const marginX = 40;
+      let y = 40;
+
+      // Header Title
+      doc.setFontSize(18);
+      doc.setFont('helvetica','bold');
+      doc.text('Invoice Details', marginX, y);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
+      y += 15;
+      doc.text(`Invoice #: ${invoice.id}`, marginX, y);
+      y += 20;
+
+      // Gray separator line
+      doc.setDrawColor(210);
+      doc.setLineWidth(0.5);
+      doc.line(marginX, y, pageWidth - marginX, y);
+      y += 10;
+
+      // Status display right side
+      doc.setFontSize(12);
+      doc.text(`Status: ${invoice.status.toUpperCase()}`, pageWidth - marginX - 80, y - 15);
+      
+      y += 15;
+
+      // Dates & Meta
+      doc.text(`Date: ${format(new Date(invoice.date), 'MMM d, yyyy')}`, marginX, y);
+      if (invoice.appointment_id) {
+        doc.text(`Appointment: #${invoice.appointment_id}`, marginX + 220, y);
       }
-    } catch (err) {
-      console.error('Error sending email:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to send email',
-        variant: 'destructive',
+      y += 14;
+      doc.text(`Payment: ${invoice.payment_method}`, marginX, y);
+      y += 15;
+
+      // Separator
+      doc.line(marginX, y, pageWidth - marginX, y);
+      y += 15;
+
+      // Customer & Staff
+      doc.setFontSize(11);
+      doc.text('Customer', marginX, y);    doc.text('Staff', pageWidth/2, y);
+      y += 12;
+      doc.setFontSize(10);
+      doc.text(invoice.customer_name, marginX, y);  doc.text(invoice.staff_name, pageWidth/2, y);
+      y += 10;
+
+      doc.line(marginX, y, pageWidth - marginX, y);
+      y += 15;
+
+      // Services table
+      const services = (invoice.invoiceServices || invoice.services || []).map((s)=>[
+        s.service_name + (s.quantity>1? ` x${s.quantity}`:''),
+        formatCurrency(s.total)
+      ]);
+      if(services.length){
+        autoTable(doc,{
+          startY:y,
+          head:[['Service','Amount']],
+          body:services,
+          styles:{ fontSize:10, cellPadding:3 },
+          headStyles:{ fillColor:[0,0,0], textColor:[255,255,255] },
+          theme:'grid',
+          margin:{ left:40, right:40 },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        y = (doc as any).lastAutoTable.finalY + 10;
+      }
+
+      // Products table
+      const products = (invoice.invoiceProducts || invoice.products || []).map((p)=>[
+        p.product_name + (p.quantity>1? ` x${p.quantity}`:''),
+        formatCurrency(p.total)
+      ]);
+      if(products.length){
+        autoTable(doc,{
+          startY:y,
+          head:[['Product','Amount']],
+          body:products,
+          styles:{ fontSize:10, cellPadding:3 },
+          headStyles:{ fillColor:[0,0,0], textColor:[255,255,255] },
+          theme:'grid',
+          margin:{ left:40, right:40 },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        y = (doc as any).lastAutoTable.finalY + 10;
+      }
+
+      // Totals
+      doc.setFontSize(12);
+      doc.text('Summary', 40, y+10);
+      y += 20;
+      doc.setFontSize(10);
+      const totals = [
+        ['Subtotal', formatCurrency(invoice.subtotal)],
+        ['Discount', formatCurrency(invoice.discount_amount ?? 0)],
+        ['Tax', formatCurrency(invoice.tax_amount)],
+        ['Tip', formatCurrency(invoice.tip_amount ?? 0)],
+        ['Total', formatCurrency(invoice.total)]
+      ];
+      autoTable(doc,{
+        startY:y,
+        body:totals,
+        theme:'plain',
+        styles:{ fontSize:10, cellPadding:2 },
+        columnStyles:{ 0:{cellWidth:100}, 1:{halign:'right'} },
+        margin:{ left:40, right:40 },
       });
+
+      // Notes
+      if(invoice.notes){
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        y = (doc as any).lastAutoTable.finalY + 10;
+        doc.text('Notes:', 40, y);
+        y += 14;
+        doc.text(doc.splitTextToSize(invoice.notes, pageWidth-80), 40, y);
+      }
+
+      if(autoPrint){
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const iframe = document.createElement('iframe');
+        iframe.style.position='fixed'; iframe.style.left='-9999px';
+        iframe.src=url; document.body.appendChild(iframe);
+        iframe.onload=()=>{
+          iframe.contentWindow?.focus(); iframe.contentWindow?.print();
+          setTimeout(()=>{ document.body.removeChild(iframe); URL.revokeObjectURL(url); },1000);
+        };
+      } else {
+        doc.save(`invoice_${invoice.id}.pdf`);
+      }
+    }catch(err){
+      console.error('PDF error',err);
+      toast({ title:'Error', description:'Failed to generate PDF', variant:'destructive' });
+    }finally{
+      setIsPrinting(false); setIsDownloading(false);
+      if(!autoPrint){ toast({title:'Download started', description:'Your invoice PDF is downloading.'}); }
+      else { toast({title:'Print dialog opened', description:'Generating printable view…'}); }
     }
   };
+
+  const handlePrint = () => generatePdf(true);
+  const handleDownload = () => generatePdf(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,7 +224,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
         </DialogHeader>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
-          <div className="space-y-6">
+          <div ref={invoiceContentRef} className="space-y-6">
             {/* Header Information */}
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
@@ -322,15 +417,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             ) : (
             <Download className="h-4 w-4 mr-2" />
             )}
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={handleSendEmail} disabled={isSendingEmail}>
-            {isSendingEmail ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-            <Mail className="h-4 w-4 mr-2" />
-            )}
-            Send Email
+            Download
           </Button>
         </div>
       </DialogContent>

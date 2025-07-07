@@ -143,6 +143,76 @@ export const POS: React.FC = () => {
 
   const invoices = invoicesResponse?.invoices ?? [];
 
+  // Export invoices to CSV
+  const handleExport = () => {
+    if (!invoices || invoices.length === 0) {
+      toast({
+        title: 'No data',
+        description: 'There are no invoices to export with the current filters.',
+      });
+      return;
+    }
+
+    const headers = [
+      'Invoice',
+      'Appointment',
+      'Customer',
+      'Staff',
+      'Date',
+      'Payment Method',
+      'Status',
+      'Subtotal',
+      'Tax',
+      'Discount',
+      'Tip',
+      'Total',
+    ];
+
+    const rows = invoices.map((inv) => [
+      inv.id,
+      inv.appointment_id || '',
+      inv.customer_name,
+      inv.staff_name,
+      format(new Date(inv.date), 'yyyy-MM-dd'),
+      inv.payment_method,
+      inv.status,
+      inv.subtotal,
+      inv.tax_amount,
+      inv.discount_amount ?? 0,
+      inv.tip_amount ?? 0,
+      inv.total,
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((cell) => {
+            // Escape quotes by duplicating them per CSV standard
+            const cellString = String(cell ?? '');
+            if (cellString.includes(',') || cellString.includes('"') || cellString.includes('\n')) {
+              return `"${cellString.replace(/"/g, '""')}"`;
+            }
+            return cellString;
+          })
+          .join(',')
+      )
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `invoices_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: 'Export started',
+      description: 'Your CSV file is being downloaded.',
+    });
+  };
+
   const clearFilters = () => {
     setSearchInput('');
     setSearchQuery('');
@@ -255,7 +325,7 @@ export const POS: React.FC = () => {
                 </SelectContent>
               </Select>
 
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
