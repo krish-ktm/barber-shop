@@ -26,6 +26,9 @@ export const Dashboard: React.FC = () => {
   // State for today's appointments
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [loadingTodayAppointments, setLoadingTodayAppointments] = useState(false);
+
+  // State for upcoming appointments (to allow local patching without refetch)
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   
   // State for reschedule dialog
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
@@ -142,9 +145,37 @@ export const Dashboard: React.FC = () => {
   };
 
   // Handle complete done
-  const handleCompleteDone = (_updated: ApiAppointment) => {
-    // Refresh data or patch state as needed; simplest: refetch dashboard
-    refetch();
+  const handleCompleteDone = (updatedAppt: ApiAppointment) => {
+    // Transform API appointment into UI format matching todayAppointments
+    const transformed: Appointment = {
+      id: updatedAppt.id,
+      customerId: updatedAppt.customer_id || updatedAppt.customer?.id || '',
+      customerName: updatedAppt.customer_name || updatedAppt.customer?.name || 'Unknown Customer',
+      customerPhone: updatedAppt.customer_phone || updatedAppt.customer?.phone || '',
+      customerEmail: updatedAppt.customer_email || updatedAppt.customer?.email || undefined,
+      staffId: updatedAppt.staff_id || updatedAppt.staff?.id || '',
+      staffName: updatedAppt.staff_name || updatedAppt.staff?.user?.name || 'Unknown Staff',
+      date: updatedAppt.date,
+      time: updatedAppt.time,
+      endTime: updatedAppt.end_time || '',
+      services: (updatedAppt.appointmentServices || []).map(s => ({
+        serviceId: s.service_id,
+        serviceName: s.service_name,
+        price: s.price,
+        duration: s.duration
+      })),
+      status: updatedAppt.status as Appointment['status'],
+      totalAmount: updatedAppt.total_amount || 0,
+      notes: updatedAppt.notes,
+      createdAt: updatedAppt.created_at || updatedAppt.createdAt || new Date().toISOString(),
+      updatedAt: updatedAppt.updated_at || updatedAppt.updatedAt || new Date().toISOString()
+    };
+
+    // Update todayAppointments state (and any other local lists in future)
+    setTodayAppointments(prev => prev.map(appt => appt.id === transformed.id ? transformed : appt));
+
+    // TODO: If the appointment belongs to upcoming list, we could patch cachedData too.
+
     setShowCompleteDialog(false);
     setAppointmentToComplete(null);
   };
@@ -216,6 +247,11 @@ export const Dashboard: React.FC = () => {
     updatedAt: apt.updatedAt || apt.createdAt || new Date().toISOString()
   })) || [];
 
+  // Keep upcomingAppointments in sync when server data changes
+  useEffect(() => {
+    setUpcomingAppointments(mappedAppointments);
+  }, [mappedAppointments]);
+
   if (isLoading && !dataToShow) {
     return (
       <div className="space-y-6">
@@ -286,11 +322,23 @@ export const Dashboard: React.FC = () => {
             <div>
               <AppointmentList 
                 title="Upcoming Appointments" 
-                appointments={mappedAppointments}
+                appointments={upcomingAppointments}
                 showActions={true}
                 allowCompletion={false}
                 onRefresh={refetch}
                 onReschedule={handleRescheduleAppointment}
+                onStatusPatched={(id, status) => {
+                  setUpcomingAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+
+                  // Also update cached dashboard data so later re-renders keep the new status
+                  setCachedData(prev => {
+                    if (!prev) return prev;
+                    const updatedUpcoming = prev.upcomingAppointments?.map(a =>
+                      a.id === id ? { ...a, status } : a
+                    ) || [];
+                    return { ...prev, upcomingAppointments: updatedUpcoming } as typeof prev;
+                  });
+                }}
                 onCompleteAppointment={(appt)=>{setAppointmentToComplete(appt as unknown as ApiAppointment); setShowCompleteDialog(true);}}
               />
             </div>

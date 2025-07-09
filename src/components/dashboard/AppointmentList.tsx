@@ -50,6 +50,7 @@ interface AppointmentListProps {
   onReschedule?: (appointment: SimpleAppointment) => void;
   allowCompletion?: boolean;
   onCompleteAppointment?: (appointment: SimpleAppointment) => void;
+  onStatusPatched?: (appointmentId: string, newStatus: SimpleAppointment['status']) => void;
 }
 
 export const AppointmentList: React.FC<AppointmentListProps> = ({
@@ -61,6 +62,7 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
   onReschedule,
   allowCompletion = true,
   onCompleteAppointment,
+  onStatusPatched,
 }) => {
   const { toast } = useToast();
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
@@ -108,16 +110,19 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({
       
       // Update local state
       setLocalAppointments(updatedAppointments);
+
+      // Notify parent of successful patch if callback provided
+      if (onStatusPatched) {
+        onStatusPatched(appointmentId, newStatus);
+      }
       
       toast({
         title: "Status Updated",
         description: `Appointment status changed to ${newStatus}`
       });
       
-      // Call the refresh callback if provided
-      if (onRefresh) {
-        onRefresh();
-      }
+      // SUCCESS: We already patched local state, so skip immediate refetch to avoid flicker
+      // If the parent still needs fresh aggregated stats, it can choose to refetch separately.
       
     } catch (error) {
       console.error('Error updating appointment status:', error);
