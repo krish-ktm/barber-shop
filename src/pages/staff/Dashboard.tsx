@@ -36,6 +36,10 @@ const StaffDashboardDesktop: React.FC = () => {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [appointmentToComplete, setAppointmentToComplete] = useState<ApiAppointment | null>(null);
 
+  // Local copies of simplified appointments for instant UI updates
+  const [todaySimpleAppts, setTodaySimpleAppts] = useState<SimpleAppointment[]>([]);
+  const [upcomingSimpleAppts, setUpcomingSimpleAppts] = useState<SimpleAppointment[]>([]);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -76,6 +80,21 @@ const StaffDashboardDesktop: React.FC = () => {
     }
   }, [loading, dashboardData]);
 
+  // Sync simplified appointment arrays whenever fresh dashboard data arrives
+  useEffect(() => {
+    if (!dashboardData) return;
+    const convert = convertToSimpleAppointment; // alias
+    const todaySimples = (dashboardData.todayAppointments || []).map(convert);
+
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const upcomingSimples = (dashboardData.upcomingAppointments || [])
+      .filter(a => a.date !== todayStr)
+      .map(convert);
+
+    setTodaySimpleAppts(todaySimples);
+    setUpcomingSimpleAppts(upcomingSimples);
+  }, [dashboardData]);
+
   // Handle reschedule appointment
   const handleRescheduleAppointment = (appointment: SimpleAppointment) => {
     // Convert SimpleAppointment to Appointment
@@ -114,9 +133,23 @@ const StaffDashboardDesktop: React.FC = () => {
   };
 
   // Handle complete done
-  const handleCompleteDone = (_updated: ApiAppointment) => {
-    void _updated; // mark as used
-    fetchDashboardData();
+  const handleCompleteDone = (updated: ApiAppointment) => {
+    // Patch local states to reflect completed status instantly
+    const patch = (arr: SimpleAppointment[]) => arr.map(a => a.id === updated.id ? { ...a, status: updated.status as SimpleAppointment['status'] } : a);
+    setTodaySimpleAppts(prev => patch(prev));
+    setUpcomingSimpleAppts(prev => patch(prev));
+
+    // Update cachedData so future renders preserve state
+    setCachedData(prev => {
+      if (!prev) return prev;
+      const patchApi = (list: UpcomingAppointment[]|undefined) => (list||[]).map(a => a.id === updated.id ? { ...a, status: updated.status } : a);
+      return {
+        ...prev,
+        todayAppointments: patchApi(prev.todayAppointments),
+        upcomingAppointments: patchApi(prev.upcomingAppointments)
+      } as StaffDashboardData;
+    });
+
     setShowCompleteDialog(false);
     setAppointmentToComplete(null);
   };
@@ -223,7 +256,7 @@ const StaffDashboardDesktop: React.FC = () => {
   const { staffInfo, performanceSummary } = dataToShow;
   
   // Get today's appointments count for stats card
-  const todayAppointmentsCount = dataToShow.todayAppointments ? dataToShow.todayAppointments.length : 0;
+  const todayAppointmentsCount = todaySimpleAppts.length;
 
   // Convert API appointments to the format expected by AppointmentList component
   const convertToSimpleAppointment = (appointment: UpcomingAppointment): SimpleAppointment => {
@@ -249,19 +282,6 @@ const StaffDashboardDesktop: React.FC = () => {
       notes: ''
     };
   };
-
-  // Convert todayAppointments for the AppointmentList
-  const todayAppointments = dataToShow.todayAppointments 
-    ? dataToShow.todayAppointments.map(convertToSimpleAppointment)
-    : [];
-    
-  // Filter upcoming appointments to exclude today's appointments
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const upcomingAppointments = dataToShow.upcomingAppointments
-    ? dataToShow.upcomingAppointments
-        .filter(appointment => appointment.date !== today)
-        .map(convertToSimpleAppointment)
-    : [];
 
   const handleViewAllAppointments = () => {
     navigate('/staff/appointments');
@@ -291,15 +311,17 @@ const StaffDashboardDesktop: React.FC = () => {
         <div>
           <AppointmentList 
             title="Today's Appointments"
-            appointments={todayAppointments}
+            appointments={todaySimpleAppts}
             className=""
             showActions={true}
             allowCompletion={true}
-            onRefresh={fetchDashboardData}
+            onStatusPatched={(id, status) => {
+              setTodaySimpleAppts(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+            }}
             onReschedule={handleRescheduleAppointment}
             onCompleteAppointment={handleCompleteAppointment}
           />
-          {todayAppointments.length > 0 && (
+          {todaySimpleAppts.length > 0 && (
             <div className="mt-4 flex justify-end">
               <Button variant="outline" size="sm" onClick={handleViewAllAppointments}>
                 View All Appointments
@@ -312,14 +334,16 @@ const StaffDashboardDesktop: React.FC = () => {
         <div>
           <AppointmentList 
             title="Upcoming Appointments"
-            appointments={upcomingAppointments}
+            appointments={upcomingSimpleAppts}
             className=""
             showActions={true}
             allowCompletion={false}
-            onRefresh={fetchDashboardData}
             onReschedule={handleRescheduleAppointment}
+            onStatusPatched={(id, status) => {
+              setUpcomingSimpleAppts(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+            }}
           />
-          {upcomingAppointments.length > 0 && (
+          {upcomingSimpleAppts.length > 0 && (
             <div className="mt-4 flex justify-end">
               <Button variant="outline" size="sm" onClick={handleViewAllAppointments}>
                 View All Appointments
