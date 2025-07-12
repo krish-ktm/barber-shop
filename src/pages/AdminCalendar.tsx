@@ -24,6 +24,7 @@ export const AdminCalendar: React.FC = () => {
   const [appointmentsCache, setAppointmentsCache] = useState<Record<string, Appointment[]>>({});
   const [staffList, setStaffList] = useState<ApiStaff[]>([]);
   const [serviceList, setServiceList] = useState<ApiService[]>([]);
+  const [selectedStaffName, setSelectedStaffName] = useState('All Staff');
   const [selectedStaffId, setSelectedStaffId] = useState<string>('all');
   const [showNewAppointmentDialog, setShowNewAppointmentDialog] = useState(false);
   const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
@@ -38,7 +39,7 @@ export const AdminCalendar: React.FC = () => {
       setAppointments(appointmentsCache[monthKey]);
       return; // optionally still fetch in background to refresh later
     }
-
+   
     setIsLoading(true);
     setError(null);
     
@@ -158,21 +159,34 @@ export const AdminCalendar: React.FC = () => {
         </div>
       ) : (
         <div className="mb-6 relative">
-          <div className="flex justify-end mb-4">
-            <Select value={selectedStaffId} onValueChange={(value) => setSelectedStaffId(value)}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Filter by Staff" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                {staffList.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="flex justify-between mb-4 flex-wrap">
+  {['all', ...staffList.map(s => s.id)].map((id) => {
+    const isActive = selectedStaffId === id;
+    const label = id === 'all' ? 'All Staff' : staffList.find(s => s.id === id)?.name || id;
+   
+    
+    return (
+      <span
+        key={id}
+        onClick={() => {
+        setSelectedStaffId(id);
+        setSelectedStaffName(label);
+      }}
+        className={`
+          cursor-pointer text-center flex-1 min-w-[80px] px-3 py-1 rounded m-1
+          ${isActive ? 'bg-black text-white' : 'bg-gray-200'}
+        `}
+      >
+        {label}
+        
+      </span>
+    );
+  })}
+</div>
+
           {/* Calendar */}
           <CalendarLayout 
+            name = {selectedStaffName}
             appointments={filteredAppointments}
             onSelectDate={handleSelectDate}
             onViewAppointment={handleViewAppointment}
@@ -200,6 +214,7 @@ export const AdminCalendar: React.FC = () => {
       )}
 
       <NewAppointmentDialog 
+        Sfname= {selectedStaffName}
         open={showNewAppointmentDialog}
         onOpenChange={setShowNewAppointmentDialog}
         selectedDate={newAppointmentDate}

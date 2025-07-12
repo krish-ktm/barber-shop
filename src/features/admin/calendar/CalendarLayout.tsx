@@ -5,6 +5,7 @@ import { MobileCalendarView } from './MobileCalendarView';
 import { Appointment } from '@/types';
 
 interface CalendarLayoutProps {
+  name: string;
   appointments: Appointment[];
   onSelectDate: (date: Date) => void;
   onViewAppointment: (appointmentId: string) => void;
@@ -12,6 +13,7 @@ interface CalendarLayoutProps {
 }
 
 export const CalendarLayout: React.FC<CalendarLayoutProps> = ({
+  name,
   appointments,
   onSelectDate,
   onViewAppointment,
@@ -54,11 +56,13 @@ export const CalendarLayout: React.FC<CalendarLayoutProps> = ({
     } else {
       return (
         <DesktopCalendarView
+          name = {name}
           appointments={appointments}
           onSelectDate={onSelectDate}
           onViewAppointment={onViewAppointment}
           onAddAppointment={onAddAppointment}
         />
+
       );
     }
   };

@@ -29,10 +29,15 @@ import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 import { theme } from '@/theme/theme';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
+import { Staff as ApiStaff, Service as ApiService } from '@/api/services/appointmentService';
+import {  endOfMonth } from 'date-fns';
+import { getCalendarAppointments } from '@/api/services/appointmentService';
+import { toast } from '@/hooks/use-toast';
 type CalendarView = 'month' | 'week' | 'day' | 'list';
 
 interface DesktopCalendarViewProps {
+  name:string;
   appointments: Appointment[];
   onSelectDate?: (date: Date) => void;
   onViewAppointment: (appointmentId: string) => void;
@@ -40,6 +45,7 @@ interface DesktopCalendarViewProps {
 }
 
 export const DesktopCalendarView = ({
+  name,
   appointments,
   onSelectDate,
   onViewAppointment,
@@ -47,6 +53,19 @@ export const DesktopCalendarView = ({
 }: DesktopCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('month');
+const [showNewAppointmentDialog, setShowNewAppointmentDialog] = useState(false);
+  const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
+ const [staffList, setStaffList] = useState<ApiStaff[]>([]);
+ const [serviceList, setServiceList] = useState<ApiService[]>([]);
+ const [appointmentsCache, setAppointmentsCache] = useState<Record<string, Appointment[]>>({});
+  const monthKey = format(currentDate, 'yyyy-MM');
+  const [appointment, setAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+   
+  //for appoitement
+  
   
   // Add CSS for custom scrollbar when component mounts
   useEffect(() => {
@@ -86,6 +105,73 @@ export const DesktopCalendarView = ({
     };
   }, []);
   
+   const fetchAppointments = async () => {
+      // if we already have data cached for this month, use it immediately
+      if (appointmentsCache[monthKey]) {
+        setAppointments(appointmentsCache[monthKey]);
+        return; // optionally still fetch in background to refresh later
+      }
+  
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Get date range for the current month
+        const startDate = format(startOfMonth(currentDate), 'yyyy-MM-dd');
+        const endDate = format(endOfMonth(currentDate), 'yyyy-MM-dd');
+        
+        // Fetch appointments with date range filter using the new endpoint
+        const response = await getCalendarAppointments(startDate, endDate);
+        
+        // Map the backend appointments to the frontend format
+        const formattedAppointments: Appointment[] = response.appointments.map(appointment => ({
+          id: appointment.id,
+          customerId: appointment.customer_id,
+          customerName: appointment.customer_name,
+          customerPhone: appointment.customer_phone,
+          customerEmail: appointment.customer_email,
+          staffId: appointment.staff_id,
+          staffName: appointment.staff_name,
+          date: appointment.date,
+          time: appointment.time,
+          endTime: appointment.end_time,
+          status: appointment.status,
+          totalAmount: appointment.total_amount,
+          notes: appointment.notes,
+          createdAt: appointment.created_at || appointment.createdAt || '',
+          updatedAt: appointment.updated_at || appointment.updatedAt || '',
+          services: appointment.appointmentServices?.map(service => ({
+            serviceId: service.service_id,
+            serviceName: service.service_name,
+            price: service.price,
+            duration: service.duration
+          })) || []
+        }));
+        
+        setAppointments(formattedAppointments);
+        setStaffList(response.staff || []);
+        setServiceList(response.services || []);
+        // store in cache
+        setAppointmentsCache(prev => ({ ...prev, [monthKey]: formattedAppointments }));
+        
+        toast({
+          title: "Appointments loaded",
+          description: `${formattedAppointments.length} appointments found for ${format(currentDate, 'MMMM yyyy')}`,
+          variant: "default",
+        });
+      } catch (err) {
+        console.error('Error fetching appointments:', err);
+        setError('Failed to load appointments. Please try again.');
+        toast({
+          title: "Error loading appointments",
+          description: "Could not fetch appointments from the server",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
   // Navigation functions
   const goToPrevious = () => {
     let newDate: Date;
@@ -513,10 +599,10 @@ export const DesktopCalendarView = ({
 
     return (
       <div className="flex flex-col">
-        <div className="text-center mb-4 bg-muted/10 py-3 rounded-lg shadow-sm">
+        {/* <div className="text-center mb-4 bg-muted/10 py-3 rounded-lg shadow-sm">
           <div className="font-medium text-muted-foreground">{format(currentDate, 'EEEE')}</div>
           <div className="text-2xl font-bold">{format(currentDate, 'MMMM d, yyyy')}</div>
-        </div>
+        </div> */}
         
         <div className="grid grid-cols-12 gap-4">
           {/* Time slots */}
@@ -552,10 +638,13 @@ export const DesktopCalendarView = ({
                     index === 0 ? "rounded-tr-lg" : "border-t",
                   )}
                   onClick={() => {
-                    if (onAddAppointment) {
+                    
+
+                   if (onAddAppointment) {
                       const slotDate = new Date(currentDate);
                       slotDate.setHours(hour, 0, 0, 0);
                       onAddAppointment(slotDate);
+                      
                     }
                   }}
                 >
