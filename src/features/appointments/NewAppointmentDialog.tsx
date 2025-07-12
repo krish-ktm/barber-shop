@@ -60,6 +60,7 @@ const formSchema = z.object({
 
 // ---------------- Props ----------------
 interface NewAppointmentDialogProps {
+  Sfname :string,
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate?: Date;
@@ -70,6 +71,7 @@ interface NewAppointmentDialogProps {
 
 // ---------------- Component ----------------
 export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
+  Sfname,
   open,
   onOpenChange,
   selectedDate,
@@ -105,7 +107,9 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
 
   // Dynamic staff list filtered by services
   const [filteredStaff, setFilteredStaff] = useState<Staff[]>(staffList);
-
+ const [selectedStaffName, setSelectedStaffName] = useState('All Staff');
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('all');
+  
   // API hooks
   const { execute: fetchCustomer } = useApi(getCustomerByPhone);
   const { execute: fetchSlots } = useApi(getAvailableSlots);
@@ -558,18 +562,31 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Assign Staff<span className="text-destructive"> *</span></FormLabel>
-                        <FormControl>
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select staff" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredStaff.map((staff) => (
-                                <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
+              
+            
+             {Sfname === "All Staff" ? (
+      
+              <Select value={selectedStaffId} onValueChange={(value) => setSelectedStaffId(value)}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Filter by Staff" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Staff</SelectItem>
+                {staffList.map((staff) => (
+                  <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+     
+      ) :
+      (
+        <Select disabled>
+          <SelectTrigger className="w-[220px]">
+            {Sfname}
+          </SelectTrigger>
+        </Select>
+      )}
+              
                         <FormMessage />
                       </FormItem>
                     )}
