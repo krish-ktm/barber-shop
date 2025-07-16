@@ -58,6 +58,13 @@ export const Contact: React.FC = () => {
   const phoneNumber = businessInfo?.phone || '(555) 123-4567';
   const email = businessInfo?.email || 'info@moderncuts.com';
 
+  // NEW: Build Google Maps "Get Directions" link dynamically based on the business address.
+  const googleMapsUrl = React.useMemo(() => {
+    const rawAddress = businessInfo?.address || '123 Main Street, New York, NY 10001';
+    const destination = encodeURIComponent(rawAddress.replace(/\n/g, ' '));
+    return `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destination}`;
+  }, [businessInfo?.address]);
+
   const hours = (businessInfo?.hours ?? (businessInfo as unknown as { business_hours?: BusinessHour[] })?.business_hours ?? []) as BusinessHour[];
 
   const formatTime = (time: string) => {
@@ -243,7 +250,7 @@ export const Contact: React.FC = () => {
                         </p>
                       </div>
                       <Button variant="default" className="w-full mt-auto" asChild>
-                        <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="hover:text-white text-white">
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white text-white">
                           Get Directions
                         </a>
                       </Button>

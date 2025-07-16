@@ -317,6 +317,7 @@ export const Services: React.FC = () => {
             <Button size="lg" asChild>
               <motion.a
                 href="/booking"
+                className="text-white hover:text-white"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
