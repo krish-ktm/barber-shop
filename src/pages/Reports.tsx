@@ -130,7 +130,8 @@ export const Reports: React.FC = () => {
 
   const {
     data: staffListData,
-    loading: staffListLoading,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    loading: _staffListLoading,
     error: staffListError,
     execute: fetchStaffList,
   } = useApi(getAllStaff);
@@ -670,21 +671,26 @@ const reportType = "daily";
               <TableHead>Staff Member</TableHead>
               <TableHead className="text-right">Appointments</TableHead>
               <TableHead className="text-right">Revenue</TableHead>
-              <TableHead className="text-right">Commission</TableHead>
+              <TableHead className="text-right">Srv Comm.</TableHead>
+              <TableHead className="text-right">Prod Comm.</TableHead>
+              <TableHead className="text-right">Total Comm.</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {advancedStaffData.data.map((staff) => {
               const revenue = parseFloat(String(staff.revenue)) || 0;
-              // Use commissionEarned from advanced metrics data
-              const commission = parseFloat(String(staff.commissionEarned)) || 0;
+              const commissionServices = parseFloat(String(staff.commissionFromServices ?? 0));
+              const commissionProducts = parseFloat(String(staff.commissionFromProducts ?? 0));
+              const commission = parseFloat(String(staff.commissionEarned)) || (commissionServices + commissionProducts);
               
               return (
                 <TableRow key={staff.staff_id} onClick={() => handleStaffRowClick(staff.staff_id)}>
                   <TableCell>{staff.name}</TableCell>
                   <TableCell className="text-right">{staff.appointments}</TableCell>
                   <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${commissionServices.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${commissionProducts.toFixed(2)}</TableCell>
                   <TableCell className="text-right">${commission.toFixed(2)}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={(e) => {
@@ -1989,12 +1995,12 @@ const reportType = "daily";
                                 <Card className="overflow-hidden">
                                   <CardHeader className="p-3">
                                     <CardTitle className="text-sm">
-                                      Commission
+                                      Srv Comm.
                                     </CardTitle>
                                   </CardHeader>
                                   <CardContent className="p-3 pt-0">
                                     <p className="text-2xl font-bold">
-                                      ${staff.commissionEarned.toLocaleString()}
+                                      ${staff.commissionFromServices.toLocaleString()}
                                     </p>
                                   </CardContent>
                                 </Card>
@@ -2002,12 +2008,25 @@ const reportType = "daily";
                                 <Card className="overflow-hidden">
                                   <CardHeader className="p-3">
                                     <CardTitle className="text-sm">
-                                      Utilization
+                                      Prod Comm.
                                     </CardTitle>
                                   </CardHeader>
                                   <CardContent className="p-3 pt-0">
                                     <p className="text-2xl font-bold">
-                                      {staff.utilization}%
+                                      ${staff.commissionFromProducts.toLocaleString()}
+                                    </p>
+                                  </CardContent>
+                                </Card>
+
+                                <Card className="overflow-hidden">
+                                  <CardHeader className="p-3">
+                                    <CardTitle className="text-sm">
+                                      Total Comm.
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="p-3 pt-0">
+                                    <p className="text-2xl font-bold">
+                                      ${staff.commissionEarned.toLocaleString()}
                                     </p>
                                   </CardContent>
                                 </Card>
@@ -2242,12 +2261,12 @@ const reportType = "daily";
                             <Card className="overflow-hidden">
                               <CardHeader className="p-3">
                                 <CardTitle className="text-sm">
-                                  Commission
+                                  Srv Comm.
                                 </CardTitle>
                               </CardHeader>
                               <CardContent className="p-3 pt-0">
                                 <p className="text-2xl font-bold">
-                                  ${selectedStaffDetails.commissionEarned.toLocaleString()}
+                                  ${selectedStaffDetails.commissionFromServices.toLocaleString()}
                                 </p>
                               </CardContent>
                             </Card>
@@ -2255,12 +2274,25 @@ const reportType = "daily";
                             <Card className="overflow-hidden">
                               <CardHeader className="p-3">
                                 <CardTitle className="text-sm">
-                                  Utilization
+                                  Prod Comm.
                                 </CardTitle>
                               </CardHeader>
                               <CardContent className="p-3 pt-0">
                                 <p className="text-2xl font-bold">
-                                  {selectedStaffDetails.utilization}%
+                                  ${selectedStaffDetails.commissionFromProducts.toLocaleString()}
+                                </p>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="overflow-hidden">
+                              <CardHeader className="p-3">
+                                <CardTitle className="text-sm">
+                                  Total Comm.
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="p-3 pt-0">
+                                <p className="text-2xl font-bold">
+                                  ${selectedStaffDetails.commissionEarned.toLocaleString()}
                                 </p>
                               </CardContent>
                             </Card>

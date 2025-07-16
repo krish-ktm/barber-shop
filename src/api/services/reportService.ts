@@ -152,6 +152,8 @@ export interface AdvancedStaffMetrics {
   revenue: number;
   commissionPercentage: number;
   commissionEarned: number;
+  commissionFromServices: number;
+  commissionFromProducts: number;
   utilization: number;
   topServices: Array<{
     service_id: string;
