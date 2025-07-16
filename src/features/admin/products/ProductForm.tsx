@@ -21,6 +21,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Image, Loader2 } from 'lucide-react';
+import { validateImageFile } from '@/utils/fileValidators';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Product } from '@/api/services/productService';
 import { useToast } from '@/hooks/use-toast';
@@ -72,18 +73,13 @@ export function ProductForm({ initialData, onSubmit, onCancel, isSubmitting = fa
     },
   });
 
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_SIZE_BYTES) {
-      toast({
-        title: 'Image too large',
-        description: 'Please select an image smaller than 5 MB.',
-        variant: 'destructive',
-      });
-      // Clear the input value so same file can be re-selected if needed
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      toast({ title: 'Invalid image', description: validation.message, variant: 'destructive' });
       e.currentTarget.value = '';
       return;
     }

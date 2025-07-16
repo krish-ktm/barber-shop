@@ -15,6 +15,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { GalleryImage } from '@/api/services/galleryImageService';
+import { validateImageFile } from '@/utils/fileValidators';
+import { useToast } from '@/hooks/use-toast';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Image as ImageIcon } from 'lucide-react';
 
@@ -45,6 +47,8 @@ export const GalleryImageDialog: React.FC<Props> = ({ open, initialData, onSubmi
   });
 
   const [imagePreview, setImagePreview] = React.useState<string | undefined>(initialData?.url);
+
+  const { toast } = useToast();
 
   const handleSubmit = (values: FormValues) => {
     onSubmit(values);
@@ -124,6 +128,14 @@ export const GalleryImageDialog: React.FC<Props> = ({ open, initialData, onSubmi
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (!file) return;
+
+                                  const validation = validateImageFile(file);
+                                  if (!validation.valid) {
+                                    toast({ title: 'Invalid image', description: validation.message, variant: 'destructive' });
+                                    e.currentTarget.value = '';
+                                    return;
+                                  }
+
                                   const reader = new FileReader();
                                   reader.onload = (ev) => {
                                     const base64 = ev.target?.result as string;

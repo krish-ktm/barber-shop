@@ -8,6 +8,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
+import { validateImageFile } from '@/utils/fileValidators';
+import { useToast } from '@/hooks/use-toast';
 import { ServiceCategory } from '@/api/services/categoryService';
 import { Image } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -64,15 +66,15 @@ export const CategoryDialog: React.FC<CategoryDialogProps> = ({ open, onOpenChan
   };
 
   const [imagePreview, setImagePreview] = useState<string | undefined>(initialData?.imageUrl);
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
+  const { toast } = useToast();
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_SIZE_BYTES) {
-      // We don't have toast in this file; optionally we could import useToast, but keep simple alert
-      alert('Please select an image smaller than 5 MB.');
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      toast({ title: 'Invalid image', description: validation.message, variant: 'destructive' });
       e.currentTarget.value = '';
       return;
     }

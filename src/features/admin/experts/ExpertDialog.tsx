@@ -17,6 +17,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Expert } from '@/api/services/expertService';
+import { validateImageFile } from '@/utils/fileValidators';
+import { useToast } from '@/hooks/use-toast';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -50,6 +52,9 @@ export const ExpertDialog: React.FC<Props> = ({ open, initialData, loading = fal
 
   // local preview state
   const [imagePreview, setImagePreview] = useState<string | undefined>(initialData?.image);
+
+  // Toast for error feedback
+  const { toast } = useToast();
 
   const handleSubmit = (values: FormValues) => {
     onSubmit(values);
@@ -143,9 +148,35 @@ export const ExpertDialog: React.FC<Props> = ({ open, initialData, loading = fal
                                 <p className="text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span></p>
                                 <p className="text-xs text-muted-foreground mt-1">PNG, JPG or GIF</p>
                               </div>
-                              <input id="expert-image-upload" type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { const base64 = ev.target?.result as string; setImagePreview(base64); field.onChange(base64); }; reader.readAsDataURL(file);
-                              }} />
+                              <input
+                                id="expert-image-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+
+                                  const validation = validateImageFile(file);
+                                  if (!validation.valid) {
+                                    toast({
+                                      title: 'Invalid image',
+                                      description: validation.message,
+                                      variant: 'destructive',
+                                    });
+                                    e.currentTarget.value = '';
+                                    return;
+                                  }
+
+                                  const reader = new FileReader();
+                                  reader.onload = (ev) => {
+                                    const base64 = ev.target?.result as string;
+                                    setImagePreview(base64);
+                                    field.onChange(base64);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }}
+                              />
                             </label>
                           </div>
                         )}

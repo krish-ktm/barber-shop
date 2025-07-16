@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Image } from 'lucide-react';
+import { validateImageFile } from '@/utils/fileValidators';
 import { Switch } from '@/components/ui/switch';
 import { Service } from '@/api/services/serviceService';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
@@ -74,18 +75,13 @@ export const EditServiceDialog: React.FC<EditServiceDialogProps> = ({
     },
   });
 
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024;
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_SIZE_BYTES) {
-      toast({
-        title: 'Image too large',
-        description: 'Please select an image smaller than 5 MB.',
-        variant: 'destructive',
-      });
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      toast({ title: 'Invalid image', description: validation.message, variant: 'destructive' });
       e.currentTarget.value = '';
       return;
     }

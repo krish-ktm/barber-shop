@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { validateImageFile } from '@/utils/fileValidators';
 import { Staff } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, ChevronDown, ChevronRight, Trash, Image } from 'lucide-react';
@@ -137,19 +138,13 @@ export const AddStaffDialog: React.FC<AddStaffDialogProps> = ({
       .length;
   };
 
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_SIZE_BYTES) {
-      toast({
-        title: 'Image too large',
-        description: 'Please select an image smaller than 5 MB.',
-        variant: 'destructive',
-      });
-      // Clear the input value so same file can be re-selected
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      toast({ title: 'Invalid image', description: validation.message, variant: 'destructive' });
       e.currentTarget.value = '';
       return;
     }
