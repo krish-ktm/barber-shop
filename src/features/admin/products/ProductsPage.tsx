@@ -57,6 +57,18 @@ export function ProductsPage() {
     error: productsError,
     execute: fetchProducts
   } = useApi(getAllProducts);
+
+  // --- NEW: keep a master list of all categories so the dropdown always shows every category ---
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+
+  // Build/merge category list whenever fresh products are loaded
+  useEffect(() => {
+    if (productsData?.products) {
+      const incomingCats = Array.from(new Set(productsData.products.map((p) => p.category))).filter(Boolean);
+      // Merge with the previous list while removing duplicates
+      setAllCategories((prev) => Array.from(new Set([...prev, ...incomingCats])));
+    }
+  }, [productsData]);
   
   const {
     loading: isCreating,
@@ -175,7 +187,8 @@ export function ProductsPage() {
   };
 
   // All unique categories from current products
-  const categories = Array.from(new Set((productsData?.products || []).map((p) => p.category))).filter(Boolean);
+  // NOTE: `allCategories` now contains every category we've encountered so far, ensuring
+  // the dropdown doesn’t shrink after a category filter is applied.
 
   // Search button click handler
   const handleSearchClick = () => {
@@ -274,7 +287,7 @@ export function ProductsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
-                {categories.map((c) => (
+                {allCategories.map((c) => (
                   <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>

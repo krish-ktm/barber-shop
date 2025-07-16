@@ -17,6 +17,9 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useSettings } from '@/hooks/useSettings';
 
+// Cache for the company logo so we don’t re-encode it to base64 on every print
+let cachedLogoDataUrl: string | null = null;
+
 interface InvoiceDialogProps {
   invoice: Invoice | null;
   open: boolean;
@@ -25,6 +28,11 @@ interface InvoiceDialogProps {
 
 // Utility to load an image (from public folder) and convert to data URL for jsPDF
 const loadImageAsDataUrl = (url: string): Promise<string> => {
+  // Return cached copy if we already converted once
+  if (cachedLogoDataUrl) {
+    return Promise.resolve(cachedLogoDataUrl);
+  }
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -35,9 +43,10 @@ const loadImageAsDataUrl = (url: string): Promise<string> => {
       const ctx = canvas.getContext('2d');
       if (!ctx) return reject(new Error('Canvas context not available'));
       ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+      cachedLogoDataUrl = canvas.toDataURL('image/png');
+      resolve(cachedLogoDataUrl);
     };
-    img.onerror = (err) => reject(err);
+    img.onerror = (err) => reject(err as Error);
     img.src = url;
   });
 };
