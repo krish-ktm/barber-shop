@@ -293,14 +293,24 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   };
 
   const handleServiceSelection = (serviceId: string) => {
-    // If service already selected, ignore click to enforce + / - controls for quantity changes
-    if (services.some(s => s.serviceId === serviceId)) return;
-    setServices([...services, { id: Date.now().toString(), serviceId, quantity: 1, staffIds: [''] }]);
+    setServices(prev => {
+      const exists = prev.find(s => s.serviceId === serviceId);
+      if (exists) {
+        // Deselect service when clicked again
+        return prev.filter(s => s.serviceId !== serviceId);
+      }
+      return [...prev, { id: Date.now().toString(), serviceId, quantity: 1, staffIds: [''] }];
+    });
   };
 
   const handleProductSelection = (productId: string) => {
-    if (products.some(p => p.productId === productId)) return;
-    setProducts([...products, { id: Date.now().toString(), productId, quantity: 1, staffIds: [''] }]);
+    setProducts(prev => {
+      const exists = prev.find(p => p.productId === productId);
+      if (exists) {
+        return prev.filter(p => p.productId !== productId);
+      }
+      return [...prev, { id: Date.now().toString(), productId, quantity: 1, staffIds: [''] }];
+    });
   };
 
   // Quantity update helpers
@@ -809,7 +819,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                         <button type="button" className="p-1 hover:bg-muted rounded" onClick={()=>updateProductQuantity(p.id,1)}>
                           <Plus className="h-4 w-4" />
                         </button>
-                        <span className="text-xs font-medium w-5 text-center">{products.find(pr=>pr.productId===p.id)?.quantity}</span>
+                        <span className="text-xs font-medium w-6 text-center text-primary-foreground bg-primary/20 rounded">
+                          {products.find(pr=>pr.productId===p.id)?.quantity}
+                        </span>
                         <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={products.find(pr=>pr.productId===p.id)?.quantity===1} onClick={()=>updateProductQuantity(p.id,-1)}>
                           <Minus className="h-4 w-4" />
                         </button>
@@ -1602,7 +1614,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                                           <button type="button" className="p-1 hover:bg-muted rounded" onClick={() => updateServiceQuantity(s.id, 1)}>
                                             <Plus className="h-4 w-4" />
                                           </button>
-                                          <span className="text-xs font-medium w-5 text-center">{services.find(s=>s.serviceId===s.id)?.quantity}</span>
+                                          <span className="text-xs font-medium w-6 text-center text-primary-foreground bg-primary/20 rounded">
+                                            {services.find(s=>s.serviceId===s.id)?.quantity}
+                                          </span>
                                           <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={services.find(s=>s.serviceId===s.id)?.quantity===1} onClick={() => updateServiceQuantity(s.id, -1)}>
                                             <Minus className="h-4 w-4" />
                                           </button>
