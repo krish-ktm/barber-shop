@@ -265,17 +265,17 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       }
       
       const servicesWithDetails = formData.services.map(service => {
-        // First, try to find the service in our loaded service items
         const serviceDetails = serviceItems.find(s => s.id === service.serviceId);
         
         if (serviceDetails) {
-          // If we have the service details, use them
           return {
             service_id: serviceDetails.id,
             service_name: serviceDetails.name,
             price: serviceDetails.price,
-            quantity: 1,
-            total: serviceDetails.price
+            quantity: service.quantity,
+            total: serviceDetails.price * service.quantity,
+            staff_id: service.staffId,
+            staff_name: staffMembers.find(s => s.id === service.staffId)?.name || 'Staff Member'
           };
         } else {
           // If we don't have the service details, use what we have in the form data
@@ -284,9 +284,11 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
           return {
             service_id: service.serviceId,
             service_name: service.id || 'Unknown Service',
-            price: 0, // We don't know the price, will need to be calculated on server
-            quantity: 1,
-            total: 0
+            price: 0, // unknown price
+            quantity: service.quantity,
+            total: 0,
+            staff_id: service.staffId,
+            staff_name: staffMembers.find(s => s.id === service.staffId)?.name || 'Staff Member'
           };
         }
       });
@@ -300,16 +302,20 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
             product_id: productDetails.id,
             product_name: productDetails.name,
             price: productDetails.price,
-            quantity: 1,
-            total: productDetails.price
+            quantity: product.quantity,
+            total: productDetails.price * product.quantity,
+            staff_id: product.staffId,
+            staff_name: staffMembers.find(s => s.id === product.staffId)?.name || 'Staff Member'
           };
         } else {
           return {
             product_id: product.productId,
             product_name: 'Unknown Product',
             price: 0,
-            quantity: 1,
-            total: 0
+            quantity: product.quantity,
+            total: 0,
+            staff_id: product.staffId,
+            staff_name: staffMembers.find(s => s.id === product.staffId)?.name || 'Staff Member'
           };
         }
       });
@@ -341,15 +347,26 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const tipAmount = Number(formData.tipAmount) || 0;
       const total = taxableAmount + taxAmount + tipAmount;
       
-      // Get staff details (if available)
-      const selectedStaff = staffMembers.find(staff => staff.id === formData.staffId);
-      const staffId = formData.staffId; // Use the ID from the form regardless
-      const staffName = selectedStaff?.name || 'Staff Member'; // Use name if available, otherwise generic name
+      // Collect unique staff IDs from services and products mapping
+      const staffIdsFromServices = servicesWithDetails.map(s => s.staff_id).filter(Boolean);
+      const staffIdsFromProducts = productsWithDetails.map(p => p.staff_id).filter(Boolean);
+      const uniqueStaffIds = Array.from(new Set([...staffIdsFromServices, ...staffIdsFromProducts]));
+
+      const staffSummary = uniqueStaffIds.map(id => {
+        const found = staffMembers.find(s => s.id === id);
+        return {
+          id,
+          name: found?.name || 'Staff Member'
+        };
+      });
       
-      // If we don't have staff details and this is not a mock ID starting with "staff-", show a warning
-      if (!selectedStaff && !formData.staffId.startsWith('staff-')) {
-        console.warn(`Staff member not found in local cache: ${formData.staffId}. Using original ID.`);
+      // If no staff mapped (edge case), warn and assign 'unassigned'
+      if (staffSummary.length === 0) {
+        console.warn('No staff mapped to items. Proceeding with empty staff list.');
       }
+      // (Optional) you can choose the first staff member for backward compatibility
+      const primaryStaffId = staffSummary[0]?.id || '';
+      const primaryStaffName = staffSummary[0]?.name || '';
       
       // Handle customer data based on form input
       let customerId;
@@ -398,8 +415,9 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const invoiceData = {
         customer_id: customerId,
         customer_name: customerName,
-        staff_id: staffId, // Use the ID from the form
-        staff_name: staffName, // Use the name we determined above
+        staff_id: primaryStaffId,
+        staff_name: primaryStaffName,
+        staff: staffSummary, // array of involved staff
         date: new Date().toISOString().split('T')[0],
         services: servicesWithDetails, // Keep for backward compatibility
         invoiceServices: servicesWithDetails, // Use the correct property name to match backend alias

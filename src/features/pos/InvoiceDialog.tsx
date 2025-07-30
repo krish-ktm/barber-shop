@@ -24,6 +24,7 @@ interface InvoiceDialogProps {
   invoice: Invoice | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onInvoiceUpdated?: () => void;
 }
 
 // Utility to load an image (from public folder) and convert to data URL for jsPDF
@@ -46,7 +47,7 @@ const loadImageAsDataUrl = (url: string): Promise<string> => {
       cachedLogoDataUrl = canvas.toDataURL('image/png');
       resolve(cachedLogoDataUrl);
     };
-    img.onerror = (err) => reject(err as Error);
+    img.onerror = (err) => reject(err as unknown as Error);
     img.src = url;
   });
 };
@@ -157,11 +158,12 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       y += 15;
 
       // Customer & Staff
+      // Customer label only (staff details are per-item)
       doc.setFontSize(11);
-      doc.text('Customer', marginX, y);    doc.text('Staff', pageWidth/2, y);
+      doc.text('Customer', marginX, y);
       y += 12;
       doc.setFontSize(10);
-      doc.text(invoice.customer_name, marginX, y);  doc.text(invoice.staff_name, pageWidth/2, y);
+      doc.text(invoice.customer_name, marginX, y);
       y += 10;
 
       doc.line(marginX, y, pageWidth - marginX, y);
@@ -169,7 +171,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
       // Services table
       const services = (invoice.invoiceServices || invoice.services || []).map((s)=>[
-        s.service_name + (s.quantity>1? ` x${s.quantity}`:''),
+        s.service_name + (s.quantity>1? ` x${s.quantity}`:'') + (s.staff_name? ` - ${s.staff_name}`:''),
         formatCurrency(s.total)
       ]);
       if(services.length){
@@ -188,7 +190,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
       // Products table
       const products = (invoice.invoiceProducts || invoice.products || []).map((p)=>[
-        p.product_name + (p.quantity>1? ` x${p.quantity}`:''),
+        p.product_name + (p.quantity>1? ` x${p.quantity}`:'') + (p.staff_name? ` - ${p.staff_name}`:''),
         formatCurrency(p.total)
       ]);
       if(products.length){
@@ -312,11 +314,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 <div className="text-sm">{invoice.customer_name}</div>
               </div>
 
-              {/* Staff Information */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">Staff</h4>
-                <div className="text-sm">{invoice.staff_name}</div>
-              </div>
+              {/* (Removed single staff list – staff now shown against each item) */}
             </div>
 
             <Separator />
@@ -335,6 +333,9 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                       <span>{service.service_name}</span>
                       {service.quantity > 1 && (
                         <span className="text-muted-foreground"> × {service.quantity}</span>
+                      )}
+                      {service.staff_name && (
+                        <span className="text-muted-foreground ml-1">- {service.staff_name}</span>
                       )}
                     </div>
                     <span>{formatCurrency(service.total)}</span>
@@ -357,6 +358,9 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                       <span>{product.product_name}</span>
                       {product.quantity > 1 && (
                         <span className="text-muted-foreground"> × {product.quantity}</span>
+                      )}
+                      {product.staff_name && (
+                        <span className="text-muted-foreground ml-1">- {product.staff_name}</span>
                       )}
                     </div>
                     <span>{formatCurrency(product.total)}</span>

@@ -14,7 +14,8 @@ import {
   Edit,
   Plus,
   Loader2,
-  X
+  X,
+  Minus
 } from 'lucide-react';
 import {
   Form,
@@ -68,7 +69,9 @@ const formSchema = z.object({
   customerPhone: z.string()
     .min(10, 'Phone number must be at least 10 digits')
     .max(10, 'Phone number cannot exceed 10 digits'),
-  staffId: z.string().min(1, 'Please select a staff member'),
+  // Staff will be selected in a dedicated step and can include multiple members.
+  // Keeping an optional placeholder field to satisfy existing form API but no validations here.
+  staffId: z.string().optional().default(''),
   discountType: z.enum(['none', 'percentage', 'fixed']).default('none'),
   discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
   tipAmount: z.number().min(0, 'Tip cannot be negative').default(0),
@@ -93,8 +96,8 @@ export interface InvoiceFormData {
   paymentMethod: string;
   gstRates: string[];
   notes?: string;
-  services: Array<{ id: string; serviceId: string }>;
-  products: Array<{ id: string; productId: string }>;
+  services: Array<{ id: string; serviceId: string; quantity: number; staffId: string }>;
+  products: Array<{ id: string; productId: string; quantity: number; staffId: string }>;
   customerName: string;
   isNewCustomer: boolean;
   isGuestUser: boolean;
@@ -158,9 +161,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 }) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('customer');
-  const [services, setServices] = useState<Array<{ id: string; serviceId: string }>>([]);
-  const [products, setProducts] = useState<Array<{ id: string; productId: string }>>([]);
+  const [services, setServices] = useState<Array<{ id: string; serviceId: string; quantity: number; staffId: string }>>([]);
+  const [products, setProducts] = useState<Array<{ id: string; productId: string; quantity: number; staffId: string }>>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
+  // Track multiple selected staff members
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   // We'll manage our own search state for UI, but use the API state for actual loading
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'new'>('search');
@@ -285,24 +290,31 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   };
 
   const handleServiceSelection = (serviceId: string) => {
-    const isSelected = services.some(s => s.serviceId === serviceId);
-    
-    if (isSelected) {
-      // Remove service if already selected
-      setServices(services.filter(s => s.serviceId !== serviceId));
-    } else {
-      // Add new service
-      setServices([...services, { id: Date.now().toString(), serviceId }]);
-    }
+    // If service already selected, ignore click to enforce + / - controls for quantity changes
+    if (services.some(s => s.serviceId === serviceId)) return;
+    setServices([...services, { id: Date.now().toString(), serviceId, quantity: 1, staffId: '' }]);
   };
 
   const handleProductSelection = (productId: string) => {
-    const isSelected = products.some(p => p.productId === productId);
-    if (isSelected) {
-      setProducts(products.filter(p => p.productId !== productId));
-    } else {
-      setProducts([...products, { id: Date.now().toString(), productId }]);
-    }
+    if (products.some(p => p.productId === productId)) return;
+    setProducts([...products, { id: Date.now().toString(), productId, quantity: 1, staffId: '' }]);
+  };
+
+  // Quantity update helpers
+  const updateServiceQuantity = (serviceId: string, delta: number) => {
+    setServices(prev => prev.map(s => s.serviceId === serviceId ? { ...s, quantity: Math.max(1, s.quantity + delta) } : s));
+  };
+
+  const updateProductQuantity = (productId: string, delta: number) => {
+    setProducts(prev => prev.map(p => p.productId === productId ? { ...p, quantity: Math.max(1, p.quantity + delta) } : p));
+  };
+
+  const updateServiceStaff = (serviceId: string, staffId: string) => {
+    setServices(prev => prev.map(s => s.serviceId === serviceId ? { ...s, staffId } : s));
+  };
+
+  const updateProductStaff = (productId: string, staffId: string) => {
+    setProducts(prev => prev.map(p => p.productId === productId ? { ...p, staffId } : p));
   };
 
   const getSelectedServicesCount = (category: string) => {
@@ -375,11 +387,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         setCurrentStep('staff');
         break;
       case 'staff':
-        // Validate staff selection before proceeding
-        if (!form.getValues('staffId')) {
+        // Validate at least one staff selected before proceeding
+        if (selectedStaffIds.length === 0) {
           toast({
             title: 'Staff required',
-            description: 'Please select a staff member.',
+            description: 'Please select at least one staff member.',
             variant: 'destructive',
           });
           return;
@@ -421,7 +433,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     if (isSubmitting) return;
     
     // Variables needed in switch cases
-    let customerResult, staffResult, formValues, newCustomerValues, customerDetails;
+    let customerResult, formValues, newCustomerValues, customerDetails;
     
     // Validate current step first
     switch(currentStep) {
@@ -453,8 +465,14 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         nextStep();
         break;
       case 'staff':
-        staffResult = form.trigger('staffId');
-        if (!staffResult) return;
+        if (selectedStaffIds.length === 0) {
+          toast({
+            title: 'Staff required',
+            description: 'Please select at least one staff member.',
+            variant: 'destructive',
+          });
+          return;
+        }
         nextStep();
         break;
       case 'payment':
@@ -717,7 +735,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 <div
                   key={p.id}
                   className={
-                    `border rounded-lg cursor-pointer overflow-hidden group transition-all ` +
+                    `border rounded-lg cursor-pointer overflow-hidden group relative transition-all ` +
                     (isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/50 hover:bg-muted/30')
                   }
                   onClick={() => handleProductSelection(p.id)}
@@ -733,13 +751,25 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                       No Image
                     </div>
                   )}
-                  <div className="p-3 space-y-1">
+                  <div className="p-3 space-y-1 relative">
                     <div className="text-sm font-medium leading-snug break-words">
                       {p.name}
                     </div>
                     <div className={isSelected ? 'font-semibold text-primary' : 'text-muted-foreground'}>
                       {formatCurrency(Number(p.price) || 0)}
                     </div>
+                    {isSelected && (
+                      <div className="absolute top-1 right-1 flex items-center gap-1 bg-background/80 rounded px-1 py-0.5" onClick={(e)=>e.stopPropagation()}>
+                        <button type="button" className="p-0.5 disabled:opacity-50" disabled={products.find(pr=>pr.productId===p.id)?.quantity===1} onClick={()=>updateProductQuantity(p.id,-1)}>
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="text-xs font-medium w-4 text-center">{products.find(pr=>pr.productId===p.id)?.quantity}</span>
+                        <button type="button" className="p-0.5" onClick={()=>updateProductQuantity(p.id,1)}>
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                    {/* Staff selection moved to dedicated mapping section */}
                   </div>
                 </div>
               );
@@ -752,9 +782,14 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 
   // Render the staff step
   const renderStaffStep = () => {
+    // Helper to toggle staff selection
+    const toggleStaff = (id: string) => {
+      setSelectedStaffIds(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+    };
+
     return (
       <div className="space-y-6">
-        <h3 className="text-lg font-medium">Select Staff Member</h3>
+        <h3 className="text-lg font-medium">Select Staff Members</h3>
         
         {isLoadingStaff ? (
           <div className="flex justify-center p-12">
@@ -771,12 +806,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 key={staff.id}
                 className={`
                   border rounded-lg p-4 cursor-pointer transition-all
-                  ${form.watch('staffId') === staff.id ? 
+                  ${selectedStaffIds.includes(staff.id) ? 
                     'border-primary bg-primary/5 shadow-sm' : 
                     'border-border hover:border-primary/50 hover:bg-muted/30'
                   }
                 `}
-                onClick={() => form.setValue('staffId', staff.id)}
+                onClick={() => toggleStaff(staff.id)}
               >
                 <div className="flex flex-col items-center text-center">
                   <Avatar className="h-16 w-16 mb-2">
@@ -790,7 +825,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   </Avatar>
                   <h4 className="text-base font-medium">{staff.name}</h4>
                   <p className="text-sm text-muted-foreground mb-1">{staff.position}</p>
-                  {form.watch('staffId') === staff.id && (
+                  {selectedStaffIds.includes(staff.id) && (
                     <Badge className="mt-2">
                       <Check className="h-3 w-3 mr-1" />
                       Selected
@@ -802,27 +837,72 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
           </div>
         )}
 
-        {form.formState.errors.staffId && (
-          <p className="text-destructive text-sm">{form.formState.errors.staffId.message}</p>
+        {selectedStaffIds.length === 0 && (
+          <p className="text-destructive text-sm">Please select at least one staff member.</p>
         )}
 
-        {/* Display selected services for reference */}
-        {services.length > 0 && (
-          <div className="mt-6 space-y-2">
-            <h4 className="text-sm font-medium">Selected Services</h4>
-            <div className="rounded-lg border p-4 space-y-2 bg-muted/30">
-              {services.map((service) => {
-                const selectedService = serviceData.find(s => s.id === service.serviceId);
-                if (!selectedService) return null;
-                
-                return (
-                  <div key={service.id} className="flex justify-between">
-                    <span>{selectedService.name}</span>
-                    <span className="font-medium">{formatCurrency(selectedService.price)}</span>
+        {/* Mapping UI */}
+        {(services.length > 0 || products.length > 0) && selectedStaffIds.length > 0 && (
+          <div className="space-y-4">
+            <Separator />
+            <h4 className="text-sm font-medium">Map Items to Staff</h4>
+
+            {/* Services Mapping */}
+            {services.length > 0 && (
+              <div className="space-y-2">
+                <h5 className="font-medium text-muted-foreground">Services</h5>
+                {services.flatMap(service => {
+                  const svcMeta = serviceData.find(s=>s.id===service.serviceId);
+                  if(!svcMeta) return [];
+                  // Repeat rows according to quantity
+                  return Array.from({length: service.quantity}).map((_,idx)=>({svc:service,meta:svcMeta,idx}));
+                }).map(({svc,meta,idx})=> (
+                  <div key={`${svc.id}-${idx}`} className="flex items-center gap-4">
+                    <span className="flex-1 text-sm truncate">{meta.name} #{idx+1}</span>
+                    <Select value={svc.staffId} onValueChange={(val)=>updateServiceStaff(svc.serviceId,val)}>
+                      <SelectTrigger className="h-8 pr-8 text-xs w-40">
+                        <SelectValue placeholder="Select Staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedStaffIds.map(id => {
+                          const st = staffData.find(s=>s.id===id);
+                          if(!st) return null;
+                          return <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {/* Products Mapping */}
+            {products.length > 0 && (
+              <div className="space-y-2">
+                <h5 className="font-medium text-muted-foreground">Products</h5>
+                {products.flatMap(product => {
+                  const prodMeta = productData.find(p=>p.id===product.productId);
+                  if(!prodMeta) return [];
+                  return Array.from({length: product.quantity}).map((_,idx)=>({prd:product,meta:prodMeta,idx}));
+                }).map(({prd,meta,idx})=> (
+                  <div key={`${prd.id}-${idx}`} className="flex items-center gap-4">
+                    <span className="flex-1 text-sm truncate">{meta.name} #{idx+1}</span>
+                    <Select value={prd.staffId} onValueChange={(val)=>updateProductStaff(prd.productId,val)}>
+                      <SelectTrigger className="h-8 pr-8 text-xs w-40">
+                        <SelectValue placeholder="Select Staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedStaffIds.map(id => {
+                          const st = staffData.find(s=>s.id===id);
+                          if(!st) return null;
+                          return <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1047,7 +1127,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
           </div>
           <div className="text-right text-sm">
             <p>{format(new Date(), 'dd MMM yyyy')}</p>
-            <p>{staffData?.find(s => s.id === form.getValues().staffId)?.name || '-'}</p>
+            <p>{selectedStaffIds.map(id => staffData.find(s=>s.id===id)?.name).filter(Boolean).join(', ') || '-'}</p>
           </div>
         </div>
         
@@ -1382,7 +1462,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       case 'services':
         return services.length === 0;
       case 'staff':
-        return !form.watch('staffId');
+        return selectedStaffIds.length === 0;
       case 'payment':
         return false; // Always allow proceed from payment to summary
       default:
@@ -1464,13 +1544,22 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                                       key={s.id}
                                       type="button"
                                       variant={isSelected ? "default" : "outline"}
-                                      className="w-full justify-between group"
+                                      className="w-full justify-between group relative"
                                       onClick={() => handleServiceSelection(s.id)}
                                     >
                                       <span>{s.name}</span>
-                                                                          <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
-                                      {formatCurrency(Number(s.price) || 0)}
-                                    </span>
+                                      {isSelected && (
+                                        <div className="absolute top-1 right-1 flex items-center gap-1 bg-background/80 rounded px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
+                                          <button type="button" className="p-0.5 disabled:opacity-50" disabled={services.find(s=>s.serviceId===s.id)?.quantity===1} onClick={() => updateServiceQuantity(s.id, -1)}>
+                                            <Minus className="h-3 w-3" />
+                                          </button>
+                                          <span className="text-xs font-medium w-4 text-center">{services.find(s=>s.serviceId===s.id)?.quantity}</span>
+                                          <button type="button" className="p-0.5" onClick={() => updateServiceQuantity(s.id, 1)}>
+                                            <Plus className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      )}
+                                      {/* Staff selection moved to dedicated mapping section */}
                                     </Button>
                                   );
                                 })}

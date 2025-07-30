@@ -7,6 +7,8 @@ export interface InvoiceService {
   price: number;
   quantity: number;
   total: number;
+  staff_id?: string;
+  staff_name?: string;
 }
 
 export interface InvoiceProduct {
@@ -15,6 +17,8 @@ export interface InvoiceProduct {
   price: number;
   quantity: number;
   total: number;
+  staff_id?: string;
+  staff_name?: string;
 }
 
 export interface TaxComponent {
@@ -27,10 +31,11 @@ export interface Invoice {
   id: string;
   appointment_id?: string;
   customer_id: string;
-  staff_id: string;
+  staff_id?: string;
   date: string;
   customer_name: string;
-  staff_name: string;
+  staff_name?: string;
+  staff?: Array<{ id: string; name: string }>;
   subtotal: number;
   discount_type?: 'percentage' | 'fixed';
   discount_value?: number;

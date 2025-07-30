@@ -505,7 +505,21 @@ export const POS: React.FC = () => {
                     )}
                   </TableCell>
                       <TableCell>{invoice.customer_name}</TableCell>
-                      <TableCell>{invoice.staff_name}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          if (invoice.staff && invoice.staff.length) {
+                            return invoice.staff.map(s => s.name).join(', ');
+                          }
+                          const fromItems = [
+                            ...(invoice.invoiceServices || invoice.services || []).map(i => i.staff_name).filter(Boolean),
+                            ...(invoice.invoiceProducts || invoice.products || []).map(p => p.staff_name).filter(Boolean),
+                          ] as string[];
+                          if (fromItems.length) {
+                            return Array.from(new Set(fromItems)).join(', ');
+                          }
+                          return invoice.staff_name || '-';
+                        })()}
+                      </TableCell>
                       <TableCell>{format(new Date(invoice.date), 'dd MMM yyyy')}</TableCell>
                       <TableCell>{getPaymentMethodBadge(invoice.payment_method)}</TableCell>
                       <TableCell>{getStatusBadge(invoice.status)}</TableCell>
