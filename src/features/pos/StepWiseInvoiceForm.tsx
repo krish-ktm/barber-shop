@@ -344,11 +344,15 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     }));
   };
 
+  // Calculate total quantity of selected services per category
   const getSelectedServicesCount = (category: string) => {
-    return services.filter(service => {
-      const selectedService = serviceData.find(s => s.id === service.serviceId);
-      return selectedService?.category === category;
-    }).length;
+    return services.reduce((acc, svc) => {
+      const selectedService = serviceData.find(s => s.id === svc.serviceId);
+      if (selectedService?.category === category) {
+        acc += svc.quantity;
+      }
+      return acc;
+    }, 0);
   };
 
   // Get unique categories from services
@@ -737,6 +741,20 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               />
             </div>
           </TabsContent>
+          {/* Quick Guest Checkout */}
+          <div className="mt-4 flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsGuestUser(true);
+                setIsNewCustomer(false);
+                setSelectedCustomer(undefined);
+                setCurrentStep('services');
+              }}
+            >
+              Continue as Guest
+            </Button>
+          </div>
         </Tabs>
       </Card>
     );
@@ -787,13 +805,13 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                       {formatCurrency(Number(p.price) || 0)}
                     </div>
                     {isSelected && (
-                      <div className="absolute top-1 right-1 flex items-center gap-1 bg-background/80 rounded px-1 py-0.5" onClick={(e)=>e.stopPropagation()}>
-                        <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={products.find(pr=>pr.productId===p.id)?.quantity===1} onClick={()=>updateProductQuantity(p.id,-1)}>
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="text-xs font-medium w-5 text-center">{products.find(pr=>pr.productId===p.id)?.quantity}</span>
+                      <div className="absolute top-1 right-1 flex items-center gap-1 bg-transparent rounded px-1 py-0.5" onClick={(e)=>e.stopPropagation()}>
                         <button type="button" className="p-1 hover:bg-muted rounded" onClick={()=>updateProductQuantity(p.id,1)}>
                           <Plus className="h-4 w-4" />
+                        </button>
+                        <span className="text-xs font-medium w-5 text-center">{products.find(pr=>pr.productId===p.id)?.quantity}</span>
+                        <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={products.find(pr=>pr.productId===p.id)?.quantity===1} onClick={()=>updateProductQuantity(p.id,-1)}>
+                          <Minus className="h-4 w-4" />
                         </button>
                       </div>
                     )}
@@ -1580,13 +1598,13 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                                     >
                                       <span>{s.name}</span>
                                       {isSelected && (
-                                        <div className="absolute top-1 right-1 flex items-center gap-1 bg-background/80 rounded px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
-                                          <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={services.find(s=>s.serviceId===s.id)?.quantity===1} onClick={() => updateServiceQuantity(s.id, -1)}>
-                                            <Minus className="h-4 w-4" />
-                                          </button>
-                                          <span className="text-xs font-medium w-5 text-center">{services.find(s=>s.serviceId===s.id)?.quantity}</span>
+                                        <div className="absolute top-1 right-1 flex items-center gap-1 bg-transparent rounded px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
                                           <button type="button" className="p-1 hover:bg-muted rounded" onClick={() => updateServiceQuantity(s.id, 1)}>
                                             <Plus className="h-4 w-4" />
+                                          </button>
+                                          <span className="text-xs font-medium w-5 text-center">{services.find(s=>s.serviceId===s.id)?.quantity}</span>
+                                          <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={services.find(s=>s.serviceId===s.id)?.quantity===1} onClick={() => updateServiceQuantity(s.id, -1)}>
+                                            <Minus className="h-4 w-4" />
                                           </button>
                                         </div>
                                       )}
