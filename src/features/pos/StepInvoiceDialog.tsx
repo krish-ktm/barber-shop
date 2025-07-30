@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { StepWiseInvoiceForm, InvoiceFormData } from './StepWiseInvoiceForm';
 import { useApi } from '@/hooks/useApi';
-import { createInvoice } from '@/api/services/invoiceService';
+import { createInvoice, InvoiceService, InvoiceProduct } from '@/api/services/invoiceService';
 import { getAllStaff } from '@/api/services/staffService';
 import { getAllServices } from '@/api/services/serviceService';
 import { getAllProducts } from '@/api/services/productService';
@@ -264,65 +264,87 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         return;
       }
       
-      const servicesWithDetails = formData.services.map(service => {
-        const serviceDetails = serviceItems.find(s => s.id === service.serviceId);
-        
-        if (serviceDetails) {
-          return {
-            service_id: serviceDetails.id,
-            service_name: serviceDetails.name,
-            price: serviceDetails.price,
-            quantity: service.quantity,
-            total: serviceDetails.price * service.quantity,
-            staff_id: service.staffId,
-            staff_name: staffMembers.find(s => s.id === service.staffId)?.name || 'Staff Member'
+      const servicesWithDetails: InvoiceService[] = [];
+      (formData.services as any[]).forEach((service) => {
+        const serviceDetails = serviceItems.find(s => s.id === (service as any).serviceId || (service as any).service_id);
+        const ids: string[] = service.staffIds ?? (service.staffId ? [service.staffId] : []);
+        if(ids.length===0){ ids.push(''); }
+        ids.forEach((sid)=>{
+          const detail = serviceDetails;
+          const base = {
+            service_id: detail?.id || (service as any).serviceId,
+            service_name: detail?.name || 'Unknown Service',
+            price: detail?.price || 0,
+            quantity: 1,
+            total: (detail?.price || 0),
+            staff_id: sid,
+            staff_name: staffMembers.find(s=>s.id===sid)?.name || 'Staff Member'
           };
-        } else {
-          // If we don't have the service details, use what we have in the form data
-          // This is a fallback to prevent errors when the service ID doesn't match the database
-          console.warn(`Service not found in local cache: ${service.serviceId}. Using fallback.`);
-          return {
-            service_id: service.serviceId,
-            service_name: service.id || 'Unknown Service',
-            price: 0, // unknown price
-            quantity: service.quantity,
-            total: 0,
-            staff_id: service.staffId,
-            staff_name: staffMembers.find(s => s.id === service.staffId)?.name || 'Staff Member'
-          };
-        }
+          servicesWithDetails.push(base);
+        });
       });
+
+      // Merge duplicates (same service & staff) for API expectations
+      const mergedServices: InvoiceService[] = Object.values(servicesWithDetails.reduce((acc: Record<string, InvoiceService>, svc: InvoiceService)=>{
+        const key = `${svc.service_id}_${svc.staff_id}`;
+        const existing = acc[key];
+        if(existing){
+          existing.quantity += 1;
+          existing.total += svc.total;
+        } else {
+          acc[key] = { ...svc };
+        }
+        return acc;
+      },{} as Record<string,InvoiceService>)) as InvoiceService[];
       
       // Prepare products data
-      const productsWithDetails = (formData.products || []).map(product => {
-        const productDetails = productItems.find(p => p.id === product.productId);
+      /*
+       * Map products and their assigned staff just like services.
+       * Each quantity of a product is stored as a separate record so that it can be
+       * associated to a specific staff member. This makes it easy to merge duplicates
+       * afterwards while maintaining a correct staff_id ➜ staff_name association.
+       */
+      const productsWithDetails: InvoiceProduct[] = [];
 
-        if (productDetails) {
-          return {
-            product_id: productDetails.id,
-            product_name: productDetails.name,
-            price: productDetails.price,
-            quantity: product.quantity,
-            total: productDetails.price * product.quantity,
-            staff_id: product.staffId,
-            staff_name: staffMembers.find(s => s.id === product.staffId)?.name || 'Staff Member'
-          };
-        } else {
-          return {
-            product_id: product.productId,
-            product_name: 'Unknown Product',
-            price: 0,
-            quantity: product.quantity,
-            total: 0,
-            staff_id: product.staffId,
-            staff_name: staffMembers.find(s => s.id === product.staffId)?.name || 'Staff Member'
-          };
-        }
+      (formData.products || []).forEach((product: any) => {
+        const productDetails = productItems.find(p => p.id === product.productId || p.id === product.product_id);
+
+        // Support both the new staffIds array and the legacy single staffId field
+        const ids: string[] = product.staffIds ?? (product.staffId ? [product.staffId] : []);
+
+        // Ensure at least one placeholder staff entry so that length === quantity
+        if (ids.length === 0) ids.push('');
+
+        ids.forEach((sid) => {
+          const priceVal = productDetails?.price ?? 0;
+          productsWithDetails.push({
+            product_id: productDetails?.id || product.productId,
+            product_name: productDetails?.name || 'Unknown Product',
+            price: priceVal,
+            quantity: 1,
+            total: priceVal,
+            staff_id: sid,
+            staff_name: staffMembers.find(s => s.id === sid)?.name || 'Staff Member'
+          });
+        });
       });
+
+      // Merge duplicates (same product & staff) for API expectations
+      const mergedProducts: InvoiceProduct[] = Object.values(productsWithDetails.reduce((acc: Record<string, InvoiceProduct>, prod: InvoiceProduct) => {
+        const key = `${prod.product_id}_${prod.staff_id}`;
+        const existing = acc[key];
+        if (existing) {
+          existing.quantity += 1;
+          existing.total += prod.total;
+        } else {
+          acc[key] = { ...prod };
+        }
+        return acc;
+      }, {} as Record<string, InvoiceProduct>)) as InvoiceProduct[];
       
       // Calculate subtotal - ensure values are numbers
-      const subtotalServices = servicesWithDetails.reduce((sum, service) => sum + (Number(service.total) || 0), 0);
-      const subtotalProducts = productsWithDetails.reduce((sum, product) => sum + (Number(product.total) || 0), 0);
+      const subtotalServices = mergedServices.reduce((sum: number, service: InvoiceService) => sum + (Number(service.total) || 0), 0);
+      const subtotalProducts = mergedProducts.reduce((sum: number, product: InvoiceProduct) => sum + (Number(product.total) || 0), 0);
       const subtotal = subtotalServices + subtotalProducts;
       
       // Get the GST rate data
@@ -348,8 +370,8 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const total = taxableAmount + taxAmount + tipAmount;
       
       // Collect unique staff IDs from services and products mapping
-      const staffIdsFromServices = servicesWithDetails.map(s => s.staff_id).filter(Boolean);
-      const staffIdsFromProducts = productsWithDetails.map(p => p.staff_id).filter(Boolean);
+      const staffIdsFromServices = mergedServices.map(s => s.staff_id).filter(Boolean);
+      const staffIdsFromProducts = mergedProducts.map(p => p.staff_id).filter(Boolean);
       const uniqueStaffIds = Array.from(new Set([...staffIdsFromServices, ...staffIdsFromProducts]));
 
       const staffSummary = uniqueStaffIds.map(id => {
@@ -419,10 +441,10 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         staff_name: primaryStaffName,
         staff: staffSummary, // array of involved staff
         date: new Date().toISOString().split('T')[0],
-        services: servicesWithDetails, // Keep for backward compatibility
-        invoiceServices: servicesWithDetails, // Use the correct property name to match backend alias
-        products: productsWithDetails,
-        invoiceProducts: productsWithDetails,
+        services: mergedServices, // Keep for backward compatibility
+        invoiceServices: mergedServices, // Use the correct property name to match backend alias
+        products: mergedProducts,
+        invoiceProducts: mergedProducts,
         subtotal: subtotal,
         tax: taxRate,
         tax_amount: taxAmount,
@@ -468,10 +490,10 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       }
       
       console.log('Sending invoice data:', JSON.stringify(invoiceData, null, 2));
-      console.log('Services being sent:', JSON.stringify(servicesWithDetails, null, 2));
-      console.log('Products being sent:', JSON.stringify(productsWithDetails, null, 2));
-      console.log('Services array length:', servicesWithDetails.length);
-      console.log('First service:', servicesWithDetails[0] ? JSON.stringify(servicesWithDetails[0], null, 2) : 'No services found');
+      console.log('Services being sent:', JSON.stringify(mergedServices, null, 2));
+      console.log('Products being sent:', JSON.stringify(mergedProducts, null, 2));
+      console.log('Services array length:', mergedServices.length);
+      console.log('First service:', mergedServices[0] ? JSON.stringify(mergedServices[0], null, 2) : 'No services found');
       
       // Log any services that don't match our local cache
       const mismatchedServices = formData.services.filter(service => 

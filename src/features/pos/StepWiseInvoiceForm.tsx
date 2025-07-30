@@ -96,8 +96,8 @@ export interface InvoiceFormData {
   paymentMethod: string;
   gstRates: string[];
   notes?: string;
-  services: Array<{ id: string; serviceId: string; quantity: number; staffId: string }>;
-  products: Array<{ id: string; productId: string; quantity: number; staffId: string }>;
+  services: Array<{ id: string; serviceId: string; quantity: number; staffIds: string[] }>;
+  products: Array<{ id: string; productId: string; quantity: number; staffIds: string[] }>;
   customerName: string;
   isNewCustomer: boolean;
   isGuestUser: boolean;
@@ -161,8 +161,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 }) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('customer');
-  const [services, setServices] = useState<Array<{ id: string; serviceId: string; quantity: number; staffId: string }>>([]);
-  const [products, setProducts] = useState<Array<{ id: string; productId: string; quantity: number; staffId: string }>>([]);
+  type ServiceItem = { id: string; serviceId: string; quantity: number; staffIds: string[] };
+  type ProductItem = { id: string; productId: string; quantity: number; staffIds: string[] };
+
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
   // Track multiple selected staff members
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
@@ -292,29 +295,53 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const handleServiceSelection = (serviceId: string) => {
     // If service already selected, ignore click to enforce + / - controls for quantity changes
     if (services.some(s => s.serviceId === serviceId)) return;
-    setServices([...services, { id: Date.now().toString(), serviceId, quantity: 1, staffId: '' }]);
+    setServices([...services, { id: Date.now().toString(), serviceId, quantity: 1, staffIds: [''] }]);
   };
 
   const handleProductSelection = (productId: string) => {
     if (products.some(p => p.productId === productId)) return;
-    setProducts([...products, { id: Date.now().toString(), productId, quantity: 1, staffId: '' }]);
+    setProducts([...products, { id: Date.now().toString(), productId, quantity: 1, staffIds: [''] }]);
   };
 
   // Quantity update helpers
   const updateServiceQuantity = (serviceId: string, delta: number) => {
-    setServices(prev => prev.map(s => s.serviceId === serviceId ? { ...s, quantity: Math.max(1, s.quantity + delta) } : s));
+    setServices(prev => prev.map(s => {
+      if (s.serviceId !== serviceId) return s;
+      const newQty = Math.max(1, s.quantity + delta);
+      if (newQty === s.quantity) return s;
+      const newStaffIds = [...s.staffIds];
+      if (delta > 0) newStaffIds.push(''); else newStaffIds.pop();
+      return { ...s, quantity: newQty, staffIds: newStaffIds };
+    }));
   };
 
   const updateProductQuantity = (productId: string, delta: number) => {
-    setProducts(prev => prev.map(p => p.productId === productId ? { ...p, quantity: Math.max(1, p.quantity + delta) } : p));
+    setProducts(prev => prev.map(p => {
+      if (p.productId !== productId) return p;
+      const newQty = Math.max(1, p.quantity + delta);
+      if (newQty === p.quantity) return p;
+      const newStaffIds = [...p.staffIds];
+      if (delta > 0) newStaffIds.push(''); else newStaffIds.pop();
+      return { ...p, quantity: newQty, staffIds: newStaffIds };
+    }));
   };
 
-  const updateServiceStaff = (serviceId: string, staffId: string) => {
-    setServices(prev => prev.map(s => s.serviceId === serviceId ? { ...s, staffId } : s));
+  const updateServiceStaff = (serviceId: string, index: number, staffId: string) => {
+    setServices(prev => prev.map(s => {
+      if (s.serviceId !== serviceId) return s;
+      const ids = [...s.staffIds];
+      ids[index] = staffId;
+      return { ...s, staffIds: ids };
+    }));
   };
 
-  const updateProductStaff = (productId: string, staffId: string) => {
-    setProducts(prev => prev.map(p => p.productId === productId ? { ...p, staffId } : p));
+  const updateProductStaff = (productId: string, index: number, staffId: string) => {
+    setProducts(prev => prev.map(p => {
+      if (p.productId !== productId) return p;
+      const ids = [...p.staffIds];
+      ids[index] = staffId;
+      return { ...p, staffIds: ids };
+    }));
   };
 
   const getSelectedServicesCount = (category: string) => {
@@ -465,10 +492,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         nextStep();
         break;
       case 'staff':
-        if (selectedStaffIds.length === 0) {
+        // Validate mapping completeness
+        if (selectedStaffIds.length === 0 || hasUnmappedItems()) {
           toast({
             title: 'Staff required',
-            description: 'Please select at least one staff member.',
+            description: 'Please assign staff for all items.',
             variant: 'destructive',
           });
           return;
@@ -760,12 +788,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                     </div>
                     {isSelected && (
                       <div className="absolute top-1 right-1 flex items-center gap-1 bg-background/80 rounded px-1 py-0.5" onClick={(e)=>e.stopPropagation()}>
-                        <button type="button" className="p-0.5 disabled:opacity-50" disabled={products.find(pr=>pr.productId===p.id)?.quantity===1} onClick={()=>updateProductQuantity(p.id,-1)}>
-                          <Minus className="h-3 w-3" />
+                        <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={products.find(pr=>pr.productId===p.id)?.quantity===1} onClick={()=>updateProductQuantity(p.id,-1)}>
+                          <Minus className="h-4 w-4" />
                         </button>
-                        <span className="text-xs font-medium w-4 text-center">{products.find(pr=>pr.productId===p.id)?.quantity}</span>
-                        <button type="button" className="p-0.5" onClick={()=>updateProductQuantity(p.id,1)}>
-                          <Plus className="h-3 w-3" />
+                        <span className="text-xs font-medium w-5 text-center">{products.find(pr=>pr.productId===p.id)?.quantity}</span>
+                        <button type="button" className="p-1 hover:bg-muted rounded" onClick={()=>updateProductQuantity(p.id,1)}>
+                          <Plus className="h-4 w-4" />
                         </button>
                       </div>
                     )}
@@ -854,12 +882,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 {services.flatMap(service => {
                   const svcMeta = serviceData.find(s=>s.id===service.serviceId);
                   if(!svcMeta) return [];
-                  // Repeat rows according to quantity
-                  return Array.from({length: service.quantity}).map((_,idx)=>({svc:service,meta:svcMeta,idx}));
-                }).map(({svc,meta,idx})=> (
+                  return service.staffIds.map((staffId,idx)=>({svc:service,meta:svcMeta,idx,staffId}));
+                }).map(({svc,meta,idx,staffId})=> (
                   <div key={`${svc.id}-${idx}`} className="flex items-center gap-4">
                     <span className="flex-1 text-sm truncate">{meta.name} #{idx+1}</span>
-                    <Select value={svc.staffId} onValueChange={(val)=>updateServiceStaff(svc.serviceId,val)}>
+                    <Select value={staffId} onValueChange={(val)=>updateServiceStaff(svc.serviceId,idx,val)}>
                       <SelectTrigger className="h-8 pr-8 text-xs w-40">
                         <SelectValue placeholder="Select Staff" />
                       </SelectTrigger>
@@ -883,11 +910,11 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 {products.flatMap(product => {
                   const prodMeta = productData.find(p=>p.id===product.productId);
                   if(!prodMeta) return [];
-                  return Array.from({length: product.quantity}).map((_,idx)=>({prd:product,meta:prodMeta,idx}));
-                }).map(({prd,meta,idx})=> (
+                  return product.staffIds.map((staffId,idx)=>({prd:product,meta:prodMeta,idx,staffId}));
+                }).map(({prd,meta,idx,staffId})=> (
                   <div key={`${prd.id}-${idx}`} className="flex items-center gap-4">
                     <span className="flex-1 text-sm truncate">{meta.name} #{idx+1}</span>
-                    <Select value={prd.staffId} onValueChange={(val)=>updateProductStaff(prd.productId,val)}>
+                    <Select value={staffId} onValueChange={(val)=>updateProductStaff(prd.productId,idx,val)}>
                       <SelectTrigger className="h-8 pr-8 text-xs w-40">
                         <SelectValue placeholder="Select Staff" />
                       </SelectTrigger>
@@ -899,7 +926,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                         })}
                       </SelectContent>
                     </Select>
-                  </div>
+            </div>
                 ))}
               </div>
             )}
@@ -1439,6 +1466,10 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   /* -------------------------------------------------------------
    * Determine if the "Continue" button should be disabled
    * -----------------------------------------------------------*/
+  const hasUnmappedItems = () => {
+      return services.some(s=>s.staffIds.some(id=>!id)) || products.some(p=>p.staffIds.some(id=>!id));
+   };
+
   const isContinueDisabled = (() => {
     switch (currentStep) {
       case 'customer': {
@@ -1462,7 +1493,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       case 'services':
         return services.length === 0;
       case 'staff':
-        return selectedStaffIds.length === 0;
+        return selectedStaffIds.length === 0 || hasUnmappedItems();
       case 'payment':
         return false; // Always allow proceed from payment to summary
       default:
@@ -1550,12 +1581,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                                       <span>{s.name}</span>
                                       {isSelected && (
                                         <div className="absolute top-1 right-1 flex items-center gap-1 bg-background/80 rounded px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
-                                          <button type="button" className="p-0.5 disabled:opacity-50" disabled={services.find(s=>s.serviceId===s.id)?.quantity===1} onClick={() => updateServiceQuantity(s.id, -1)}>
-                                            <Minus className="h-3 w-3" />
+                                          <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={services.find(s=>s.serviceId===s.id)?.quantity===1} onClick={() => updateServiceQuantity(s.id, -1)}>
+                                            <Minus className="h-4 w-4" />
                                           </button>
-                                          <span className="text-xs font-medium w-4 text-center">{services.find(s=>s.serviceId===s.id)?.quantity}</span>
-                                          <button type="button" className="p-0.5" onClick={() => updateServiceQuantity(s.id, 1)}>
-                                            <Plus className="h-3 w-3" />
+                                          <span className="text-xs font-medium w-5 text-center">{services.find(s=>s.serviceId===s.id)?.quantity}</span>
+                                          <button type="button" className="p-1 hover:bg-muted rounded" onClick={() => updateServiceQuantity(s.id, 1)}>
+                                            <Plus className="h-4 w-4" />
                                           </button>
                                         </div>
                                       )}
