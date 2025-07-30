@@ -14,7 +14,8 @@ import {
   Edit,
   Plus,
   Loader2,
-  X
+  X,
+  Minus
 } from 'lucide-react';
 import {
   Form,
@@ -63,6 +64,9 @@ import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 
 // Define steps for the invoice creation process
 type Step = 'customer' | 'services' | 'products' | 'staff' | 'payment' | 'summary';
+// Add new type definitions for selected line items with quantity + staff mapping
+type SelectedService = { id: string; serviceId: string; quantity: number; staffId?: string };
+type SelectedProduct = { id: string; productId: string; quantity: number; staffId?: string };
 
 const formSchema = z.object({
   customerPhone: z.string()
@@ -93,8 +97,8 @@ export interface InvoiceFormData {
   paymentMethod: string;
   gstRates: string[];
   notes?: string;
-  services: Array<{ id: string; serviceId: string }>;
-  products: Array<{ id: string; productId: string }>;
+  services: SelectedService[];
+  products: SelectedProduct[];
   customerName: string;
   isNewCustomer: boolean;
   isGuestUser: boolean;
@@ -158,8 +162,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 }) => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('customer');
-  const [services, setServices] = useState<Array<{ id: string; serviceId: string }>>([]);
-  const [products, setProducts] = useState<Array<{ id: string; productId: string }>>([]);
+  const [services, setServices] = useState<SelectedService[]>([]);
+  const [products, setProducts] = useState<SelectedProduct[]>([]);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
   // We'll manage our own search state for UI, but use the API state for actual loading
   const [isSearching, setIsSearching] = useState(false);
@@ -285,24 +290,41 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   };
 
   const handleServiceSelection = (serviceId: string) => {
-    const isSelected = services.some(s => s.serviceId === serviceId);
-    
-    if (isSelected) {
-      // Remove service if already selected
-      setServices(services.filter(s => s.serviceId !== serviceId));
-    } else {
-      // Add new service
-      setServices([...services, { id: Date.now().toString(), serviceId }]);
-    }
+    setServices(prev => {
+      const existing = prev.find(s => s.serviceId === serviceId);
+      if (existing) {
+        // remove if already selected (toggle behaviour)
+        return prev.filter(s => s.serviceId !== serviceId);
+      }
+      return [...prev, { id: Date.now().toString(), serviceId, quantity: 1 }];
+    });
   };
 
+  const changeServiceQuantity = (serviceId: string, delta: number) => {
+    setServices(prev => prev.map(s => s.serviceId === serviceId ? { ...s, quantity: Math.max(1, s.quantity + delta) } : s));
+  };
+
+  // TODO: implement quantity controls in product selection step similarly to services
   const handleProductSelection = (productId: string) => {
-    const isSelected = products.some(p => p.productId === productId);
-    if (isSelected) {
-      setProducts(products.filter(p => p.productId !== productId));
-    } else {
-      setProducts([...products, { id: Date.now().toString(), productId }]);
-    }
+    setProducts(prev => {
+      const existing = prev.find(p => p.productId === productId);
+      if (existing) {
+        return prev.filter(p => p.productId !== productId);
+      }
+      return [...prev, { id: Date.now().toString(), productId, quantity: 1 }];
+    });
+  };
+
+  const changeProductQuantity = (productId: string, delta: number) => {
+    setProducts(prev => prev.map(p => p.productId === productId ? { ...p, quantity: Math.max(1, p.quantity + delta) } : p));
+  };
+
+  const updateServiceStaff = (serviceId: string, staffId: string) => {
+    setServices(prev => prev.map(s => s.serviceId === serviceId ? { ...s, staffId } : s));
+  };
+
+  const updateProductStaff = (productId: string, staffId: string) => {
+    setProducts(prev => prev.map(p => p.productId === productId ? { ...p, staffId } : p));
   };
 
   const getSelectedServicesCount = (category: string) => {
@@ -737,8 +759,21 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                     <div className="text-sm font-medium leading-snug break-words">
                       {p.name}
                     </div>
-                    <div className={isSelected ? 'font-semibold text-primary' : 'text-muted-foreground'}>
-                      {formatCurrency(Number(p.price) || 0)}
+                    <div className="flex items-center justify-between">
+                      <span className={isSelected ? 'font-semibold text-primary' : 'text-muted-foreground'}>
+                        {formatCurrency(Number(p.price) || 0)}
+                      </span>
+                      {isSelected && (
+                        <div className="flex items-center gap-1">
+                          <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={(e)=>{e.stopPropagation(); changeProductQuantity(p.id,-1);}}>
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <span className="min-w-[20px] text-center text-sm">{products.find(pr=>pr.productId===p.id)?.quantity || 1}</span>
+                          <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={(e)=>{e.stopPropagation(); changeProductQuantity(p.id,1);}}>
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -766,17 +801,27 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
           </div>
         ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {staffData?.map((staff) => (
+          {staffData?.map((staff) => {
+            const isSelected = selectedStaffIds.includes(staff.id);
+            return (
               <div 
                 key={staff.id}
-                className={`
-                  border rounded-lg p-4 cursor-pointer transition-all
-                  ${form.watch('staffId') === staff.id ? 
-                    'border-primary bg-primary/5 shadow-sm' : 
-                    'border-border hover:border-primary/50 hover:bg-muted/30'
-                  }
-                `}
-                onClick={() => form.setValue('staffId', staff.id)}
+                className={
+                  `border rounded-lg p-4 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/50 hover:bg-muted/30'}`
+                }
+                onClick={() => {
+                  setSelectedStaffIds(prev => {
+                    const exists = prev.includes(staff.id);
+                    const updated = exists ? prev.filter(id=>id!==staff.id) : [...prev, staff.id];
+                    // set primary staffId in form as first selected
+                    if(updated.length>0){
+                      form.setValue('staffId', updated[0]);
+                    } else {
+                      form.setValue('staffId', '');
+                    }
+                    return updated;
+                  });
+                }}
               >
                 <div className="flex flex-col items-center text-center">
                   <Avatar className="h-16 w-16 mb-2">
@@ -790,7 +835,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   </Avatar>
                   <h4 className="text-base font-medium">{staff.name}</h4>
                   <p className="text-sm text-muted-foreground mb-1">{staff.position}</p>
-                  {form.watch('staffId') === staff.id && (
+                  {isSelected && (
                     <Badge className="mt-2">
                       <Check className="h-3 w-3 mr-1" />
                       Selected
@@ -798,7 +843,8 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   )}
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
 
@@ -836,12 +882,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Calculate subtotal including products
     const subtotalServices = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
-      return sum + (Number(selectedService?.price) || 0);
+      return sum + (Number(selectedService?.price) || 0) * service.quantity;
     }, 0);
 
     const subtotalProducts = products.reduce((sum, product) => {
       const selectedProduct = productData.find(p => p.id === product.productId);
-      return sum + (Number(selectedProduct?.price) || 0);
+      return sum + (Number(selectedProduct?.price) || 0) * product.quantity;
     }, 0);
 
     const subtotal = subtotalServices + subtotalProducts;
@@ -1001,12 +1047,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Calculate subtotal including products
     const subtotalServices = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
-      return sum + (Number(selectedService?.price) || 0);
+      return sum + (Number(selectedService?.price) || 0) * service.quantity;
     }, 0);
 
     const subtotalProducts = products.reduce((sum, product) => {
       const selectedProduct = productData.find(p => p.id === product.productId);
-      return sum + (Number(selectedProduct?.price) || 0);
+      return sum + (Number(selectedProduct?.price) || 0) * product.quantity;
     }, 0);
 
     const subtotal = subtotalServices + subtotalProducts;
@@ -1100,6 +1146,52 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
               </tbody>
             </table>
           </div>
+          {/* Staff Assignment */}
+          {selectedStaffIds.length > 1 && (
+            <div className="p-4 border-t space-y-2">
+              <h4 className="font-medium">Assign Staff to Items</h4>
+              {services.map(service => {
+                const svc = serviceData.find(s=>s.id===service.serviceId);
+                if(!svc) return null;
+                return (
+                  <div key={service.id} className="flex items-center justify-between gap-4">
+                    <span>{svc.name} x{service.quantity}</span>
+                    <Select value={service.staffId || selectedStaffIds[0]} onValueChange={(val)=>updateServiceStaff(service.serviceId,val)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedStaffIds.map(sid=>{
+                          const st = staffData.find(stf=>stf.id===sid);
+                          return st ? <SelectItem key={sid} value={sid}>{st.name}</SelectItem> : null;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+              {products.map(product => {
+                const pr = productData.find(p=>p.id===product.productId);
+                if(!pr) return null;
+                return (
+                  <div key={product.id} className="flex items-center justify-between gap-4">
+                    <span>{pr.name} x{product.quantity}</span>
+                    <Select value={product.staffId || selectedStaffIds[0]} onValueChange={(val)=>updateProductStaff(product.productId,val)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedStaffIds.map(sid=>{
+                          const st = staffData.find(stf=>stf.id===sid);
+                          return st ? <SelectItem key={sid} value={sid}>{st.name}</SelectItem> : null;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {/* Totals */}
           <div className="p-4 space-y-1 text-sm">
             <div className="flex justify-between">
@@ -1468,9 +1560,20 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                                       onClick={() => handleServiceSelection(s.id)}
                                     >
                                       <span>{s.name}</span>
-                                                                          <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
-                                      {formatCurrency(Number(s.price) || 0)}
-                                    </span>
+                                      <span className={isSelected ? "text-primary-foreground" : "text-muted-foreground"}>
+                                        {formatCurrency(Number(s.price) || 0)}
+                                      </span>
+                                      {isSelected && (
+                                        <div className="flex items-center gap-1 ml-2">
+                                          <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={(e)=>{e.stopPropagation(); changeServiceQuantity(s.id,-1);}}>
+                                            <Minus className="h-4 w-4" />
+                                          </Button>
+                                          <span className="min-w-[20px] text-center text-sm">{services.find(sr=>sr.serviceId===s.id)?.quantity || 1}</span>
+                                          <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={(e)=>{e.stopPropagation(); changeServiceQuantity(s.id,1);}}>
+                                            <Plus className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      )}
                                     </Button>
                                   );
                                 })}

@@ -265,28 +265,26 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       }
       
       const servicesWithDetails = formData.services.map(service => {
-        // First, try to find the service in our loaded service items
         const serviceDetails = serviceItems.find(s => s.id === service.serviceId);
-        
+        const qty = service.quantity || 1;
         if (serviceDetails) {
-          // If we have the service details, use them
           return {
             service_id: serviceDetails.id,
             service_name: serviceDetails.name,
             price: serviceDetails.price,
-            quantity: 1,
-            total: serviceDetails.price
+            quantity: qty,
+            total: serviceDetails.price * qty,
+            staff_id: service.staffId || formData.staffId
           };
         } else {
-          // If we don't have the service details, use what we have in the form data
-          // This is a fallback to prevent errors when the service ID doesn't match the database
           console.warn(`Service not found in local cache: ${service.serviceId}. Using fallback.`);
           return {
             service_id: service.serviceId,
             service_name: service.id || 'Unknown Service',
-            price: 0, // We don't know the price, will need to be calculated on server
-            quantity: 1,
-            total: 0
+            price: 0,
+            quantity: qty,
+            total: 0,
+            staff_id: service.staffId || formData.staffId
           };
         }
       });
@@ -294,22 +292,24 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       // Prepare products data
       const productsWithDetails = (formData.products || []).map(product => {
         const productDetails = productItems.find(p => p.id === product.productId);
-
+        const qty = product.quantity || 1;
         if (productDetails) {
           return {
             product_id: productDetails.id,
             product_name: productDetails.name,
             price: productDetails.price,
-            quantity: 1,
-            total: productDetails.price
+            quantity: qty,
+            total: productDetails.price * qty,
+            staff_id: product.staffId || formData.staffId
           };
         } else {
           return {
             product_id: product.productId,
             product_name: 'Unknown Product',
             price: 0,
-            quantity: 1,
-            total: 0
+            quantity: qty,
+            total: 0,
+            staff_id: product.staffId || formData.staffId
           };
         }
       });
