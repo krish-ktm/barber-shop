@@ -165,6 +165,14 @@ export const Reports: React.FC = () => {
     execute: fetchAdvancedService,
   } = useApi(getAdvancedServiceMetrics);
 
+  // Staff-specific Tips & Discounts API hook
+  const {
+    data: staffTipsDiscountsData,
+    loading: staffTipsDiscountsLoading,
+    error: staffTipsDiscountsError,
+    execute: fetchStaffTipsDiscounts,
+  } = useApi(getTipsDiscountsReport);
+
   // State management
   // Fixed report type since dropdown was removed
 const reportType = "daily";
@@ -237,7 +245,8 @@ const reportType = "daily";
       { error: dayOfWeekError, source: "day of week" },
       { error: advancedRevenueError, source: "advanced revenue" },
       { error: advancedStaffError, source: "advanced staff" },
-      { error: advancedServiceError, source: "advanced service" }
+      { error: advancedServiceError, source: "advanced service" },
+      { error: staffTipsDiscountsError, source: "staff tips & discounts" }
     ];
 
     errors.forEach(({ error, source }) => {
@@ -260,6 +269,7 @@ const reportType = "daily";
     advancedRevenueError,
     advancedStaffError,
     advancedServiceError,
+    staffTipsDiscountsError,
     toast,
   ]);
   
@@ -535,6 +545,9 @@ const reportType = "daily";
         variant: "destructive"
       });
     }
+
+    // Fetch tips & discounts specific to this staff member
+    fetchStaffTipsDiscounts(dateFrom, dateTo, 'day', staffId);
   };
 
   // Handle service selection
@@ -1611,12 +1624,18 @@ const reportType = "daily";
                             </div>
 
                             <Tabs defaultValue="metrics" className="w-full">
-                              <TabsList className="grid w-full grid-cols-2">
+                              <TabsList className="grid w-full grid-cols-4">
                                 <TabsTrigger value="metrics">
                                   Performance Metrics
                                 </TabsTrigger>
                                 <TabsTrigger value="services">
                                   Top Services
+                                </TabsTrigger>
+                                <TabsTrigger value="tips">
+                                  Tips
+                                </TabsTrigger>
+                                <TabsTrigger value="discounts">
+                                  Discounts
                                 </TabsTrigger>
                               </TabsList>
 
@@ -1775,6 +1794,104 @@ const reportType = "daily";
                                     )}
                                   </TableBody>
                                 </Table>
+                              </TabsContent>
+
+                              <TabsContent value="tips" className="space-y-4 pt-4">
+                                {staffTipsDiscountsLoading ? (
+                                  <div className="flex justify-center p-8">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                  </div>
+                                ) : staffTipsDiscountsError ? (
+                                  <div className="text-center p-8 text-destructive">
+                                    <p>Error loading tips data. Please try again.</p>
+                                  </div>
+                                ) : staffTipsDiscountsData?.data ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <Card>
+                                      <CardHeader className="p-3">
+                                        <CardTitle className="text-sm">Total Tips</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="p-3 pt-0">
+                                        <p className="text-2xl font-bold">
+                                          ${parseFloat(staffTipsDiscountsData.data.summary.totalTips as string || '0').toFixed(2)}
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                    <Card>
+                                      <CardHeader className="p-3">
+                                        <CardTitle className="text-sm">Avg Tip %</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="p-3 pt-0">
+                                        <p className="text-2xl font-bold">
+                                          {parseFloat(staffTipsDiscountsData.data.summary.avgTipPercentage as string || '0').toFixed(2)}%
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                    <Card>
+                                      <CardHeader className="p-3">
+                                        <CardTitle className="text-sm">Invoices w/ Tip</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="p-3 pt-0">
+                                        <p className="text-2xl font-bold">
+                                          {staffTipsDiscountsData.data.summary.invoicesWithTip}
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+                                ) : (
+                                  <div className="text-center p-8 text-muted-foreground">
+                                    No tips data available
+                                  </div>
+                                )}
+                              </TabsContent>
+
+                              <TabsContent value="discounts" className="space-y-4 pt-4">
+                                {staffTipsDiscountsLoading ? (
+                                  <div className="flex justify-center p-8">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                  </div>
+                                ) : staffTipsDiscountsError ? (
+                                  <div className="text-center p-8 text-destructive">
+                                    <p>Error loading discounts data. Please try again.</p>
+                                  </div>
+                                ) : staffTipsDiscountsData?.data ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <Card>
+                                      <CardHeader className="p-3">
+                                        <CardTitle className="text-sm">Total Discounts</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="p-3 pt-0">
+                                        <p className="text-2xl font-bold">
+                                          ${parseFloat(staffTipsDiscountsData.data.summary.totalDiscounts as string || '0').toFixed(2)}
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                    <Card>
+                                      <CardHeader className="p-3">
+                                        <CardTitle className="text-sm">Avg Discount %</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="p-3 pt-0">
+                                        <p className="text-2xl font-bold">
+                                          {parseFloat(staffTipsDiscountsData.data.summary.avgDiscountPercentage as string || '0').toFixed(2)}%
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                    <Card>
+                                      <CardHeader className="p-3">
+                                        <CardTitle className="text-sm">Invoices w/ Discount</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="p-3 pt-0">
+                                        <p className="text-2xl font-bold">
+                                          {staffTipsDiscountsData.data.summary.invoicesWithDiscount}
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+                                ) : (
+                                  <div className="text-center p-8 text-muted-foreground">
+                                    No discount data available
+                                  </div>
+                                )}
                               </TabsContent>
                             </Tabs>
                           </div>
@@ -2033,12 +2150,18 @@ const reportType = "daily";
                               </div>
 
                               <Tabs defaultValue="metrics" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2">
+                                <TabsList className="grid w-full grid-cols-4">
                                   <TabsTrigger value="metrics">
                                     Performance Metrics
                                   </TabsTrigger>
                                   <TabsTrigger value="services">
                                     Top Services
+                                  </TabsTrigger>
+                                  <TabsTrigger value="tips">
+                                    Tips
+                                  </TabsTrigger>
+                                  <TabsTrigger value="discounts">
+                                    Discounts
                                   </TabsTrigger>
                                 </TabsList>
 
@@ -2198,6 +2321,104 @@ const reportType = "daily";
                                     </TableBody>
                                   </Table>
                                 </TabsContent>
+
+                                <TabsContent value="tips" className="space-y-4 pt-4">
+                                  {staffTipsDiscountsLoading ? (
+                                    <div className="flex justify-center p-8">
+                                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                    </div>
+                                  ) : staffTipsDiscountsError ? (
+                                    <div className="text-center p-8 text-destructive">
+                                      <p>Error loading tips data. Please try again.</p>
+                                    </div>
+                                  ) : staffTipsDiscountsData?.data ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                      <Card>
+                                        <CardHeader className="p-3">
+                                          <CardTitle className="text-sm">Total Tips</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0">
+                                          <p className="text-2xl font-bold">
+                                            ${parseFloat(staffTipsDiscountsData.data.summary.totalTips as string || '0').toFixed(2)}
+                                          </p>
+                                        </CardContent>
+                                      </Card>
+                                      <Card>
+                                        <CardHeader className="p-3">
+                                          <CardTitle className="text-sm">Avg Tip %</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0">
+                                          <p className="text-2xl font-bold">
+                                            {parseFloat(staffTipsDiscountsData.data.summary.avgTipPercentage as string || '0').toFixed(2)}%
+                                          </p>
+                                        </CardContent>
+                                      </Card>
+                                      <Card>
+                                        <CardHeader className="p-3">
+                                          <CardTitle className="text-sm">Invoices w/ Tip</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0">
+                                          <p className="text-2xl font-bold">
+                                            {staffTipsDiscountsData.data.summary.invoicesWithTip}
+                                          </p>
+                                        </CardContent>
+                                      </Card>
+                                    </div>
+                                  ) : (
+                                    <div className="text-center p-8 text-muted-foreground">
+                                      No tips data available
+                                    </div>
+                                  )}
+                                </TabsContent>
+
+                                <TabsContent value="discounts" className="space-y-4 pt-4">
+                                  {staffTipsDiscountsLoading ? (
+                                    <div className="flex justify-center p-8">
+                                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                    </div>
+                                  ) : staffTipsDiscountsError ? (
+                                    <div className="text-center p-8 text-destructive">
+                                      <p>Error loading discounts data. Please try again.</p>
+                                    </div>
+                                  ) : staffTipsDiscountsData?.data ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                      <Card>
+                                        <CardHeader className="p-3">
+                                          <CardTitle className="text-sm">Total Discounts</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0">
+                                          <p className="text-2xl font-bold">
+                                            ${parseFloat(staffTipsDiscountsData.data.summary.totalDiscounts as string || '0').toFixed(2)}
+                                          </p>
+                                        </CardContent>
+                                      </Card>
+                                      <Card>
+                                        <CardHeader className="p-3">
+                                          <CardTitle className="text-sm">Avg Discount %</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0">
+                                          <p className="text-2xl font-bold">
+                                            {parseFloat(staffTipsDiscountsData.data.summary.avgDiscountPercentage as string || '0').toFixed(2)}%
+                                          </p>
+                                        </CardContent>
+                                      </Card>
+                                      <Card>
+                                        <CardHeader className="p-3">
+                                          <CardTitle className="text-sm">Invoices w/ Discount</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0">
+                                          <p className="text-2xl font-bold">
+                                            {staffTipsDiscountsData.data.summary.invoicesWithDiscount}
+                                          </p>
+                                        </CardContent>
+                                      </Card>
+                                    </div>
+                                  ) : (
+                                    <div className="text-center p-8 text-muted-foreground">
+                                      No discount data available
+                                    </div>
+                                  )}
+                                </TabsContent>
                               </Tabs>
                             </div>
                           );
@@ -2299,12 +2520,18 @@ const reportType = "daily";
                           </div>
 
                           <Tabs defaultValue="metrics" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2">
+                            <TabsList className="grid w-full grid-cols-4">
                               <TabsTrigger value="metrics">
                                 Performance Metrics
                               </TabsTrigger>
                               <TabsTrigger value="services">
                                 Top Services
+                              </TabsTrigger>
+                              <TabsTrigger value="tips">
+                                Tips
+                              </TabsTrigger>
+                              <TabsTrigger value="discounts">
+                                Discounts
                               </TabsTrigger>
                             </TabsList>
 
@@ -2463,6 +2690,104 @@ const reportType = "daily";
                                   )}
                                 </TableBody>
                               </Table>
+                            </TabsContent>
+
+                            <TabsContent value="tips" className="space-y-4 pt-4">
+                              {staffTipsDiscountsLoading ? (
+                                <div className="flex justify-center p-8">
+                                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                </div>
+                              ) : staffTipsDiscountsError ? (
+                                <div className="text-center p-8 text-destructive">
+                                  <p>Error loading tips data. Please try again.</p>
+                                </div>
+                              ) : staffTipsDiscountsData?.data ? (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <Card>
+                                    <CardHeader className="p-3">
+                                      <CardTitle className="text-sm">Total Tips</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3 pt-0">
+                                      <p className="text-2xl font-bold">
+                                        ${parseFloat(staffTipsDiscountsData.data.summary.totalTips as string || '0').toFixed(2)}
+                                      </p>
+                                    </CardContent>
+                                  </Card>
+                                  <Card>
+                                    <CardHeader className="p-3">
+                                      <CardTitle className="text-sm">Avg Tip %</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3 pt-0">
+                                      <p className="text-2xl font-bold">
+                                        {parseFloat(staffTipsDiscountsData.data.summary.avgTipPercentage as string || '0').toFixed(2)}%
+                                      </p>
+                                    </CardContent>
+                                  </Card>
+                                  <Card>
+                                    <CardHeader className="p-3">
+                                      <CardTitle className="text-sm">Invoices w/ Tip</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3 pt-0">
+                                      <p className="text-2xl font-bold">
+                                        {staffTipsDiscountsData.data.summary.invoicesWithTip}
+                                      </p>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              ) : (
+                                <div className="text-center p-8 text-muted-foreground">
+                                  No tips data available
+                                </div>
+                              )}
+                            </TabsContent>
+
+                            <TabsContent value="discounts" className="space-y-4 pt-4">
+                              {staffTipsDiscountsLoading ? (
+                                <div className="flex justify-center p-8">
+                                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                </div>
+                              ) : staffTipsDiscountsError ? (
+                                <div className="text-center p-8 text-destructive">
+                                  <p>Error loading discounts data. Please try again.</p>
+                                </div>
+                              ) : staffTipsDiscountsData?.data ? (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <Card>
+                                    <CardHeader className="p-3">
+                                      <CardTitle className="text-sm">Total Discounts</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3 pt-0">
+                                      <p className="text-2xl font-bold">
+                                        ${parseFloat(staffTipsDiscountsData.data.summary.totalDiscounts as string || '0').toFixed(2)}
+                                      </p>
+                                    </CardContent>
+                                  </Card>
+                                  <Card>
+                                    <CardHeader className="p-3">
+                                      <CardTitle className="text-sm">Avg Discount %</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3 pt-0">
+                                      <p className="text-2xl font-bold">
+                                        {parseFloat(staffTipsDiscountsData.data.summary.avgDiscountPercentage as string || '0').toFixed(2)}%
+                                      </p>
+                                    </CardContent>
+                                  </Card>
+                                  <Card>
+                                    <CardHeader className="p-3">
+                                      <CardTitle className="text-sm">Invoices w/ Discount</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3 pt-0">
+                                      <p className="text-2xl font-bold">
+                                        {staffTipsDiscountsData.data.summary.invoicesWithDiscount}
+                                      </p>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              ) : (
+                                <div className="text-center p-8 text-muted-foreground">
+                                  No discount data available
+                                </div>
+                              )}
                             </TabsContent>
                           </Tabs>
                         </div>
