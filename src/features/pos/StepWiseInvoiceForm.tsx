@@ -72,7 +72,7 @@ const formSchema = z.object({
   customerPhone: z.string()
     .min(10, 'Phone number must be at least 10 digits')
     .max(10, 'Phone number cannot exceed 10 digits'),
-  staffId: z.string().min(1, 'Please select a staff member'),
+  staffId: z.string().optional(),
   discountType: z.enum(['none', 'percentage', 'fixed']).default('none'),
   discountValue: z.number().min(0, 'Discount cannot be negative').default(0),
   tipAmount: z.number().min(0, 'Tip cannot be negative').default(0),
@@ -443,7 +443,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     if (isSubmitting) return;
     
     // Variables needed in switch cases
-    let customerResult, staffResult, formValues, newCustomerValues, customerDetails;
+    let customerResult, formValues, newCustomerValues, customerDetails;
     
     // Validate current step first
     switch(currentStep) {
@@ -475,8 +475,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         nextStep();
         break;
       case 'staff':
-        staffResult = form.trigger('staffId');
-        if (!staffResult) return;
+        // Skip mandatory staff validation; we only need at least one selected for each item which mapping step handles
         nextStep();
         break;
       case 'payment':

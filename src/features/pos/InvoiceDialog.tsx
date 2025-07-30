@@ -167,15 +167,16 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       doc.line(marginX, y, pageWidth - marginX, y);
       y += 15;
 
-      // Services table
+      // Services table with staff column
       const services = (invoice.invoiceServices || invoice.services || []).map((s)=>[
         s.service_name + (s.quantity>1? ` x${s.quantity}`:''),
+        (s.staff && s.staff.user ? s.staff.user.name : invoice.staff_name),
         formatCurrency(s.total)
       ]);
       if(services.length){
         autoTable(doc,{
           startY:y,
-          head:[['Service','Amount']],
+          head:[['Service','Staff','Amount']],
           body:services,
           styles:{ fontSize:10, cellPadding:3 },
           headStyles:{ fillColor:[0,0,0], textColor:[255,255,255] },
@@ -189,12 +190,13 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       // Products table
       const products = (invoice.invoiceProducts || invoice.products || []).map((p)=>[
         p.product_name + (p.quantity>1? ` x${p.quantity}`:''),
+        (p.staff && p.staff.user ? p.staff.user.name : invoice.staff_name),
         formatCurrency(p.total)
       ]);
       if(products.length){
         autoTable(doc,{
           startY:y,
-          head:[['Product','Amount']],
+          head:[['Product','Staff','Amount']],
           body:products,
           styles:{ fontSize:10, cellPadding:3 },
           headStyles:{ fillColor:[0,0,0], textColor:[255,255,255] },
@@ -329,7 +331,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 {(invoice.invoiceServices || invoice.services || []).map((service, index) => (
                   <div
                     key={`svc-${service.service_id}-${index}`}
-                    className="flex justify-between text-sm"
+                    className="grid grid-cols-3 gap-2 text-sm"
                   >
                     <div>
                       <span>{service.service_name}</span>
@@ -337,7 +339,10 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                         <span className="text-muted-foreground"> × {service.quantity}</span>
                       )}
                     </div>
-                    <span>{formatCurrency(service.total)}</span>
+                    <div className="text-muted-foreground truncate">
+                      {service.staff && service.staff.user ? service.staff.user.name : invoice.staff_name}
+                    </div>
+                    <span className="text-right">{formatCurrency(service.total)}</span>
                   </div>
                 ))}
               </div>
@@ -351,7 +356,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 {(invoice.invoiceProducts || invoice.products || []).map((product: InvoiceProduct, index: number) => (
                   <div
                     key={`prd-${product.product_id}-${index}`}
-                    className="flex justify-between text-sm"
+                    className="grid grid-cols-3 gap-2 text-sm"
                   >
                     <div>
                       <span>{product.product_name}</span>
@@ -359,7 +364,10 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                         <span className="text-muted-foreground"> × {product.quantity}</span>
                       )}
                     </div>
-                    <span>{formatCurrency(product.total)}</span>
+                    <div className="text-muted-foreground truncate">
+                      {product.staff && product.staff.user ? product.staff.user.name : invoice.staff_name}
+                    </div>
+                    <span className="text-right">{formatCurrency(product.total)}</span>
                   </div>
                 ))}
               </div>
