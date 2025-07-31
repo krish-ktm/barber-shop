@@ -166,11 +166,19 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   type ServiceItem = { id: string; serviceId: string; quantity: number; staffIds: string[] };
   type ProductItem = { id: string; productId: string; quantity: number; staffIds: string[] };
 
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>(() => (initialData.services && initialData.services.length ? (initialData.services as ServiceItem[]) : []));
+  const [products, setProducts] = useState<ProductItem[]>(() => (initialData.products && initialData.products.length ? (initialData.products as ProductItem[]) : []));
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
   // Track multiple selected staff members
-  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(() => {
+    const idsFromServices = (initialData.services || [])
+      .flatMap((s: any) => s.staffIds || [])
+      .filter((id: string) => id && id !== '');
+    const idsFromProducts = (initialData.products || [])
+      .flatMap((p: any) => p.staffIds || [])
+      .filter((id: string) => id && id !== '');
+    return Array.from(new Set([...idsFromServices, ...idsFromProducts]));
+  });
   // We'll manage our own search state for UI, but use the API state for actual loading
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'new'>('search');
