@@ -29,6 +29,8 @@ import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 import { theme } from '@/theme/theme';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 type CalendarView = 'month' | 'week' | 'day' | 'list';
 
@@ -46,7 +48,7 @@ export const DesktopCalendarView = ({
   onAddAppointment,
 }: DesktopCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [view, setView] = useState<CalendarView>('month');
+  const [view, setView] = useState<CalendarView>('day');
   
   // Add CSS for custom scrollbar when component mounts
   useEffect(() => {
@@ -236,11 +238,11 @@ export const DesktopCalendarView = ({
             <div className="flex items-center mr-4">
               <Tabs value={view} onValueChange={(value) => setView(value as CalendarView)} className="w-auto">
                 <TabsList className="shadow-sm">
-                  <TabsTrigger value="month" className="flex items-center gap-1">
+                  <TabsTrigger value="month" className="flex items-center gap-1 hidden">
                     <CalendarDays className="h-4 w-4" />
                     <span>Month</span>
                   </TabsTrigger>
-                  <TabsTrigger value="week" className="flex items-center gap-1">
+                  <TabsTrigger value="week" className="flex items-center gap-1 hidden">
                     <LayoutGrid className="h-4 w-4" />
                     <span>Week</span>
                   </TabsTrigger>
@@ -259,9 +261,26 @@ export const DesktopCalendarView = ({
             <Button variant="outline" size="icon" onClick={goToPrevious} className="rounded-full shadow-sm hover:shadow">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={goToToday} className="rounded-lg shadow-sm hover:shadow">
-              Today
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="px-3 py-2 text-sm">
+                  {format(currentDate, 'dd MMM yyyy')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={currentDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setCurrentDate(date);
+                      onSelectDate?.(date);
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             <Button variant="outline" size="icon" onClick={goToNext} className="rounded-full shadow-sm hover:shadow">
               <ChevronRight className="h-4 w-4" />
             </Button>

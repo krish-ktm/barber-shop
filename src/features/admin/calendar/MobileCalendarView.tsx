@@ -30,6 +30,8 @@ import { cn } from '@/lib/utils';
 import { Appointment } from '@/types';
 import { theme } from '@/theme/theme';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { AppointmentDetailsModalMobile } from '@/features/appointments/AppointmentDetailsModalMobile';
 
 type CalendarView = 'month' | 'week' | 'day' | 'list';
@@ -56,7 +58,7 @@ export const MobileCalendarView = ({
 }: MobileCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [view, setView] = useState<CalendarView>('month');
+  const [view, setView] = useState<CalendarView>('day');
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
 
@@ -208,9 +210,27 @@ export const MobileCalendarView = ({
             <Button variant="outline" size="icon" onClick={goToPrevious} className="h-7 w-7 rounded-full shadow-sm">
               <ChevronLeft className="h-3 w-3" />
             </Button>
-            <Button variant="outline" size="sm" onClick={goToToday} className="text-xs px-2 py-0 h-7 rounded-md shadow-sm">
-              Today
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="px-2 py-0 h-7 text-xs">
+                  {format(currentDate, 'dd MMM yyyy')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={currentDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setCurrentDate(date);
+                      setSelectedDate(date);
+                      onSelectDate?.(date);
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             <Button variant="outline" size="icon" onClick={goToNext} className="h-7 w-7 rounded-full shadow-sm">
               <ChevronRight className="h-3 w-3" />
             </Button>
@@ -224,11 +244,11 @@ export const MobileCalendarView = ({
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-4 shadow-sm h-12 rounded-md bg-muted/20">
-              <TabsTrigger value="month" className="flex flex-col items-center justify-center gap-0.5 h-full text-[11px]">
+              <TabsTrigger value="month" className="flex flex-col items-center justify-center gap-0.5 h-full text-[11px] hidden">
                 <CalendarDays className="h-4 w-4" />
                 <span>Month</span>
               </TabsTrigger>
-              <TabsTrigger value="week" className="flex flex-col items-center justify-center gap-0.5 h-full text-[11px]">
+              <TabsTrigger value="week" className="flex flex-col items-center justify-center gap-0.5 h-full text-[11px] hidden">
                 <LayoutGrid className="h-4 w-4" />
                 <span>Week</span>
               </TabsTrigger>

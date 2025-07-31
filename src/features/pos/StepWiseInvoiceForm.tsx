@@ -110,6 +110,7 @@ export interface InvoiceFormData {
 }
 
 interface StepWiseInvoiceFormProps {
+  initialData?: Partial<InvoiceFormData>;
   onSubmit: (data: InvoiceFormData) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
@@ -148,6 +149,7 @@ interface StepWiseInvoiceFormProps {
 }
 
 export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
+  initialData = {},
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -185,14 +187,14 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customerPhone: '',
-      staffId: '',
-      discountType: 'none',
-      discountValue: 0,
-      tipAmount: 0,
-      paymentMethod: '',
-      gstRates: gstRatesData.length > 0 ? [gstRatesData[0].id] : [],
-      notes: '',
+      customerPhone: initialData.customerPhone ?? '',
+      staffId: initialData.staffId ?? '',
+      discountType: initialData.discountType ?? 'none',
+      discountValue: initialData.discountValue ?? 0,
+      tipAmount: initialData.tipAmount ?? 0,
+      paymentMethod: initialData.paymentMethod ?? '',
+      gstRates: initialData.gstRates?.length ? initialData.gstRates : (gstRatesData.length > 0 ? [gstRatesData[0].id] : []),
+      notes: initialData.notes ?? '',
     },
   });
 
@@ -817,13 +819,13 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                     {isSelected && (
                       <div className="absolute top-1 right-1 flex items-center gap-1 bg-transparent rounded px-1 py-0.5" onClick={(e)=>e.stopPropagation()}>
                         <button type="button" className="p-1 hover:bg-muted rounded" onClick={()=>updateProductQuantity(p.id,1)}>
-                          <Plus className="h-4 w-4" />
+                          <Plus className="h-4 w-4 text-primary" />
                         </button>
                         <span className="text-xs font-medium w-6 text-center text-primary-foreground bg-primary/20 rounded">
                           {products.find(pr=>pr.productId===p.id)?.quantity}
                         </span>
                         <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={products.find(pr=>pr.productId===p.id)?.quantity===1} onClick={()=>updateProductQuantity(p.id,-1)}>
-                          <Minus className="h-4 w-4" />
+                          <Minus className="h-4 w-4 text-primary" />
                         </button>
                       </div>
                     )}
@@ -1124,8 +1126,8 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
         
         {/* Tip Section moved to summary page */}
 
-        {/* GST Rate Selection */}
-        {renderGSTRateSelection()}
+        {/* GST Rate Selection - hidden */}
+        {false && renderGSTRateSelection()}
       </div>
     );
   };
@@ -1612,13 +1614,13 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                                       {isSelected && (
                                         <div className="absolute top-1 right-1 flex items-center gap-1 bg-transparent rounded px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
                                           <button type="button" className="p-1 hover:bg-muted rounded" onClick={() => updateServiceQuantity(s.id, 1)}>
-                                            <Plus className="h-4 w-4" />
+                                            <Plus className="h-4 w-4 text-primary" />
                                           </button>
                                           <span className="text-xs font-medium w-6 text-center text-primary-foreground bg-primary/20 rounded">
                                             {services.find(s=>s.serviceId===s.id)?.quantity}
                                           </span>
                                           <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={services.find(s=>s.serviceId===s.id)?.quantity===1} onClick={() => updateServiceQuantity(s.id, -1)}>
-                                            <Minus className="h-4 w-4" />
+                                            <Minus className="h-4 w-4 text-primary" />
                                           </button>
                                         </div>
                                       )}

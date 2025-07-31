@@ -266,11 +266,11 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[90vh] flex flex-col w-[95vw] sm:w-auto sm:max-w-2xl rounded-lg">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="flex items-center gap-2 mr-8">
-            Invoice Details
+        <DialogHeader className="pb-2 flex justify-between items-start">
+          <div className="flex items-center gap-2 mr-8">
+            <DialogTitle className="flex items-center gap-2">Invoice Details</DialogTitle>
             {getStatusBadge(invoice.status)}
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1 -mx-6 px-6">

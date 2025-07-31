@@ -8,7 +8,8 @@ import {
   SortAsc,
   X,
   Loader2,
-  CalendarIcon
+  CalendarIcon,
+  Edit
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils';
 import { InvoiceDialog } from '@/features/pos/InvoiceDialog';
 import { StepInvoiceDialog } from '@/features/pos/StepInvoiceDialog';
+import { EditInvoiceDialog } from '@/features/pos/EditInvoiceDialog';
 import { useApi } from '@/hooks/useApi';
 import { getAllInvoices, Invoice } from '@/api/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
@@ -62,6 +64,8 @@ export const POS: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showNewInvoiceDialog, setShowNewInvoiceDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [page] = useState(1);
   const [limit] = useState(100);
   const { toast } = useToast();
@@ -266,6 +270,11 @@ export const POS: React.FC = () => {
     // Refresh the invoice list after creating a new invoice
     fetchInvoices(page, limit, sortMap[sortBy], undefined, undefined, undefined, undefined, undefined, searchQuery);
     setShowNewInvoiceDialog(false);
+  };
+
+  const handleInvoiceUpdated = () => {
+    fetchInvoices(page, limit, sortMap[sortBy], undefined, undefined, undefined, undefined, undefined, searchQuery);
+    setShowEditDialog(false);
   };
 
   // Utility count of active filters (excluding search)
@@ -486,6 +495,7 @@ export const POS: React.FC = () => {
                 <TableHead>Payment</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -526,6 +536,11 @@ export const POS: React.FC = () => {
                   <TableCell className="text-right">
                     {formatCurrency(invoice.total)}
                       </TableCell>
+                  <TableCell onClick={(e)=>e.stopPropagation()}>
+                    <Button size="icon" variant="ghost" onClick={()=>{ setEditInvoice(invoice); setShowEditDialog(true); }}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -555,6 +570,15 @@ export const POS: React.FC = () => {
         onOpenChange={setShowNewInvoiceDialog}
         onInvoiceCreated={handleInvoiceCreated}
       />
+
+      {editInvoice && (
+        <EditInvoiceDialog
+          invoice={editInvoice}
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          onInvoiceUpdated={handleInvoiceUpdated}
+        />
+      )}
 
       {/* Mobile card list */}
       <div className="sm:hidden py-2 space-y-3">
