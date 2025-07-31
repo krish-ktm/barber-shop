@@ -640,6 +640,8 @@ const reportType = "daily";
             <TableHead>Service</TableHead>
             <TableHead className="text-right">Bookings</TableHead>
             <TableHead className="text-right">Revenue</TableHead>
+            <TableHead className="text-right">Tips</TableHead>
+            <TableHead className="text-right">Discounts</TableHead>
             <TableHead className="text-right">Avg. Price</TableHead>
             <TableHead></TableHead>
           </TableRow>
@@ -649,6 +651,8 @@ const reportType = "daily";
             // Ensure numbers are properly parsed
             const revenue = parseFloat(String(service.revenue)) || 0;
             const bookings = parseInt(String(service.bookings)) || 0;
+            const tips = parseFloat(String(service.tips ?? 0)) || 0;
+            const discounts = parseFloat(String(service.discounts ?? 0)) || 0;
             const avgPrice = bookings > 0 ? revenue / bookings : 0;
             
             return (
@@ -656,6 +660,8 @@ const reportType = "daily";
                 <TableCell>{service.service_name}</TableCell>
                 <TableCell className="text-right">{bookings}</TableCell>
                 <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                <TableCell className="text-right">${tips.toFixed(2)}</TableCell>
+                <TableCell className="text-right">${discounts.toFixed(2)}</TableCell>
                 <TableCell className="text-right">${avgPrice.toFixed(2)}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={(e) => {
@@ -684,6 +690,8 @@ const reportType = "daily";
               <TableHead>Staff Member</TableHead>
               <TableHead className="text-right">Appointments</TableHead>
               <TableHead className="text-right">Revenue</TableHead>
+              <TableHead className="text-right">Tips</TableHead>
+              <TableHead className="text-right">Discounts</TableHead>
               <TableHead className="text-right">Srv Comm.</TableHead>
               <TableHead className="text-right">Prod Comm.</TableHead>
               <TableHead className="text-right">Total Comm.</TableHead>
@@ -693,6 +701,8 @@ const reportType = "daily";
           <TableBody>
             {advancedStaffData.data.map((staff) => {
               const revenue = parseFloat(String(staff.revenue)) || 0;
+              const tips = parseFloat(String(staff.tips ?? 0)) || 0;
+              const discounts = parseFloat(String(staff.discounts ?? 0)) || 0;
               const commissionServices = parseFloat(String(staff.commissionFromServices ?? 0));
               const commissionProducts = parseFloat(String(staff.commissionFromProducts ?? 0));
               const commission = parseFloat(String(staff.commissionEarned)) || (commissionServices + commissionProducts);
@@ -702,6 +712,8 @@ const reportType = "daily";
                   <TableCell>{staff.name}</TableCell>
                   <TableCell className="text-right">{staff.appointments}</TableCell>
                   <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${tips.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${discounts.toFixed(2)}</TableCell>
                   <TableCell className="text-right">${commissionServices.toFixed(2)}</TableCell>
                   <TableCell className="text-right">${commissionProducts.toFixed(2)}</TableCell>
                   <TableCell className="text-right">${commission.toFixed(2)}</TableCell>
@@ -751,6 +763,8 @@ const reportType = "daily";
             <TableHead>Staff Member</TableHead>
             <TableHead className="text-right">Appointments</TableHead>
             <TableHead className="text-right">Revenue</TableHead>
+            <TableHead className="text-right">Tips</TableHead>
+            <TableHead className="text-right">Discounts</TableHead>
             <TableHead className="text-right">Commission</TableHead>
             <TableHead></TableHead>
           </TableRow>
@@ -758,6 +772,8 @@ const reportType = "daily";
         <TableBody>
           {staffData.data.map((staff) => {
             const revenue = parseFloat(String(staff.revenue)) || 0;
+            const tips = parseFloat(String(staff.tips ?? 0)) || 0;
+            const discounts = parseFloat(String(staff.discounts ?? 0)) || 0;
             // Use commission from standard metrics as fallback
             const commission = parseFloat(String(staff.commission)) || 0;
             const appointments = parseInt(String(staff.appointments)) || 0;
@@ -767,6 +783,8 @@ const reportType = "daily";
                 <TableCell>{staff.staff_name || staff.name}</TableCell>
                 <TableCell className="text-right">{appointments}</TableCell>
                 <TableCell className="text-right">${revenue.toFixed(2)}</TableCell>
+                <TableCell className="text-right">${tips.toFixed(2)}</TableCell>
+                <TableCell className="text-right">${discounts.toFixed(2)}</TableCell>
                 <TableCell className="text-right">${commission.toFixed(2)}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={(e) => {

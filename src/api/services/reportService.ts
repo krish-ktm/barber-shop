@@ -56,6 +56,8 @@ export interface ServicePerformance {
   service_name: string;
   bookings: string | number;
   revenue: string | number;
+  tips?: string | number;
+  discounts?: string | number;
   avgPrice?: string | number;
 }
 
@@ -64,6 +66,8 @@ export interface StaffPerformance {
   staff_name: string;
   appointments: string | number;
   revenue: string | number;
+  tips?: string | number;
+  discounts?: string | number;
   commission: string | number;
   commissionPercentage?: string | number;
   commissionEarned?: string | number; // Add support for the advanced metrics field name
