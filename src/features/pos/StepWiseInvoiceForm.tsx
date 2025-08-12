@@ -1185,7 +1185,16 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Calculate tax
     const taxRate = Number(selectedGstRate?.totalRate) || 0;
     const taxableAmount = Math.max(0, round2(subtotal - discountAmount));
-    const taxAmount = round2((taxableAmount * taxRate) / 100);
+    // If the selected GST rate has components, compute per-component rounded amounts and sum
+    let taxAmount = 0;
+    if (selectedGstRate && Array.isArray(selectedGstRate.components) && selectedGstRate.components.length > 0) {
+      taxAmount = round2(selectedGstRate.components
+        .map((c) => round2((taxableAmount * Number(c.rate || 0)) / 100))
+        .reduce((s, a) => s + a, 0)
+      );
+    } else {
+      taxAmount = round2((taxableAmount * taxRate) / 100);
+    }
     
     // Ensure tax amount is a valid number
     const validTaxAmount = isNaN(taxAmount) ? 0 : taxAmount;
