@@ -244,6 +244,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   const handleSubmit = async (formData: InvoiceFormData) => {
     try {
       setIsSubmitting(true);
+      const round2 = (n: number) => Math.round((Number(n || 0) + Number.EPSILON) * 100) / 100;
       
       // If we received a selected customer in the form data, update our state
       if (formData.selectedCustomer) {
@@ -345,7 +346,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       // Calculate subtotal - ensure values are numbers
       const subtotalServices = mergedServices.reduce((sum: number, service: InvoiceService) => sum + (Number(service.total) || 0), 0);
       const subtotalProducts = mergedProducts.reduce((sum: number, product: InvoiceProduct) => sum + (Number(product.total) || 0), 0);
-      const subtotal = subtotalServices + subtotalProducts;
+      const subtotal = round2(subtotalServices + subtotalProducts);
       
       // Get the GST rate data
       const gstRateData = gstRates.find(rate => rate.id === formData.gstRates[0]);
@@ -356,18 +357,30 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       const discountValue = Number(formData.discountValue) || 0;
       
       if (formData.discountType === 'percentage' && discountValue > 0) {
-        discountAmount = (subtotal * discountValue) / 100;
+        discountAmount = round2((subtotal * discountValue) / 100);
       } else if (formData.discountType === 'fixed' && discountValue > 0) {
-        discountAmount = discountValue;
+        discountAmount = round2(discountValue);
       }
       
       // Calculate tax amount
-      const taxableAmount = subtotal - discountAmount;
-      const taxAmount = (taxableAmount * taxRate) / 100;
+      const taxableAmount = Math.max(0, round2(subtotal - discountAmount));
+      // If components exist, compute per-component rounded amounts and sum for total tax
+      let taxAmount = 0;
+      let taxComponentsForPayload: { name: string; rate: number; amount: number }[] | null = null;
+      if (gstRateData && gstRateData.components && gstRateData.components.length > 0) {
+        taxComponentsForPayload = gstRateData.components.map(comp => ({
+          name: comp.name,
+          rate: Number(comp.rate) || 0,
+          amount: round2((taxableAmount * (Number(comp.rate) || 0)) / 100),
+        }));
+        taxAmount = round2(taxComponentsForPayload.reduce((s, c) => s + c.amount, 0));
+      } else {
+        taxAmount = round2((taxableAmount * taxRate) / 100);
+      }
       
       // Calculate total
-      const tipAmount = Number(formData.tipAmount) || 0;
-      const total = taxableAmount + taxAmount + tipAmount;
+      const tipAmount = round2(Number(formData.tipAmount) || 0);
+      const total = round2(taxableAmount + taxAmount + tipAmount);
       
       // Collect unique staff IDs from services and products mapping
       const staffIdsFromServices = mergedServices.map(s => s.staff_id).filter(Boolean);
@@ -468,16 +481,8 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       // Tip amount is already included in the invoiceData object
       
       // Add tax components if we have GST rate details
-      if (gstRateData && gstRateData.components && gstRateData.components.length > 0) {
-        const taxComponents = gstRateData.components.map(comp => ({
-          name: comp.name,
-          rate: Number(comp.rate) || 0,
-          amount: (taxableAmount * Number(comp.rate) || 0) / 100
-        }));
-        
-        Object.assign(invoiceData, {
-          tax_components: taxComponents
-        });
+      if (taxComponentsForPayload) {
+        Object.assign(invoiceData, { tax_components: taxComponentsForPayload });
       } else {
         // Add default tax component if none exists
         Object.assign(invoiceData, {

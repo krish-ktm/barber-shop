@@ -1151,6 +1151,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
 
   // Render the summary step
   const renderSummaryStep = () => {
+    const round2 = (n: number) => Math.round((Number(n || 0) + Number.EPSILON) * 100) / 100;
     const selectedGstRateId = form.getValues().gstRates[0];
     const selectedGstRate = gstRatesData.find(rate => rate.id === selectedGstRateId);
     
@@ -1165,7 +1166,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
       return sum + ((Number(selectedProduct?.price) || 0) * product.quantity);
     }, 0);
 
-    const subtotal = subtotalServices + subtotalProducts;
+    const subtotal = round2(subtotalServices + subtotalProducts);
     
     // Calculate discount
     let discountAmount = 0;
@@ -1173,9 +1174,9 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     const discountValue = Number(form.getValues().discountValue) || 0;
     
     if (discountType === 'percentage' && !isNaN(discountValue) && subtotal > 0) {
-      discountAmount = (subtotal * discountValue) / 100;
+      discountAmount = round2((subtotal * discountValue) / 100);
     } else if (discountType === 'fixed' && !isNaN(discountValue)) {
-      discountAmount = discountValue;
+      discountAmount = round2(discountValue);
     }
     
     // Ensure discount amount is a valid number
@@ -1183,15 +1184,15 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     
     // Calculate tax
     const taxRate = Number(selectedGstRate?.totalRate) || 0;
-    const taxableAmount = subtotal - discountAmount;
-    const taxAmount = (taxableAmount * taxRate) / 100;
+    const taxableAmount = Math.max(0, round2(subtotal - discountAmount));
+    const taxAmount = round2((taxableAmount * taxRate) / 100);
     
     // Ensure tax amount is a valid number
     const validTaxAmount = isNaN(taxAmount) ? 0 : taxAmount;
     
     // Calculate total
-    const tipAmount = Number(form.getValues().tipAmount) || 0;
-    const total = taxableAmount + validTaxAmount + tipAmount;
+    const tipAmount = round2(Number(form.getValues().tipAmount) || 0);
+    const total = round2(taxableAmount + validTaxAmount + tipAmount);
     
     return (
       <div className="space-y-6">
