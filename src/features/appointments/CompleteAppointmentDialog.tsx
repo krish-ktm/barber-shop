@@ -190,11 +190,11 @@ export const CompleteAppointmentDialog: React.FC<CompleteAppointmentDialogProps>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl h-[90vh] grid grid-rows-[auto,1fr,auto]">
         <DialogHeader>
           <DialogTitle>Finalize Appointment</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 pr-4 -mr-4">
+        <ScrollArea className="min-h-0 pr-4 -mr-4 overflow-auto">
           {listLoading ? (
             <div className="h-full w-full flex items-center justify-center py-10">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -278,7 +278,7 @@ export const CompleteAppointmentDialog: React.FC<CompleteAppointmentDialogProps>
             </div>
           )}
         </ScrollArea>
-        <DialogFooter className="flex items-center justify-between gap-4 border-t pt-4 sticky bottom-0 bg-background">
+        <DialogFooter className="flex items-center justify-between gap-4 border-t pt-4 bg-background">
           <div className="flex-1 space-y-2">
             <Progress value={((step+1)/totalSteps)*100} />
             <div className="text-sm text-muted-foreground">Step {step+1} of {totalSteps}</div>
