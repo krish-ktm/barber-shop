@@ -33,9 +33,9 @@ export const StaffCalendar: React.FC = () => {
   const { user } = useAuth();
 
   // Fetch all appointments for the staff member
-  const fetchStaffAppointments = async () => {
-    // check cache first
-    if (appointmentsCache[monthKey]) {
+  const fetchStaffAppointments = async (forceRefresh = false) => {
+    // check cache first unless forced
+    if (!forceRefresh && appointmentsCache[monthKey]) {
       setStaffAppointments(appointmentsCache[monthKey]);
       return;
     }
@@ -55,16 +55,16 @@ export const StaffCalendar: React.FC = () => {
         // convert and cache
         const converted = response.appointments.map(convertApiToUIAppointment);
         setStaffAppointments(converted);
-        setAppointmentsCache(prev => ({ ...prev, [monthKey]: converted }));
+         setAppointmentsCache(prev => ({ ...prev, [monthKey]: converted }));
       } else {
         toast({
           title: 'Error',
-          description: 'Failed to load appointments',
+        description: 'Failed to load appointments',
           variant: 'destructive'
         });
       }
     } catch (error) {
-      console.error('Error fetching staff appointments:', error);
+       console.error('Error fetching staff appointments:', error);
       toast({
         title: 'Error',
         description: 'Failed to load appointments. Please try again.',
@@ -243,8 +243,13 @@ export const StaffCalendar: React.FC = () => {
         lockedStaffId={user?.staff?.id}
         onAppointmentCreated={() => {
           setShowNewAppointmentDialog(false);
-          // refresh data to reflect the newly created appointment
-          fetchStaffAppointments();
+          // Invalidate cache for current month and force refetch to reflect the new appointment
+          setAppointmentsCache(prev => {
+            const copy = { ...prev };
+            delete copy[monthKey];
+            return copy;
+          });
+          fetchStaffAppointments(true);
         }}
       />
     </div>
