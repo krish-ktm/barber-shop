@@ -19,13 +19,20 @@ interface RevenueChartProps {
   title: string;
   className?: string;
   loading?: boolean;
+  // Optional formatters so this chart can be reused for non-currency series (e.g., appointment counts)
+  yAxisFormatter?: (value: number) => string;
+  valueFormatter?: (value: number) => string;
+  tooltipName?: string;
 }
 
 export const RevenueChart: React.FC<RevenueChartProps> = ({ 
   data, 
   title,
   className,
-  loading = false
+  loading = false,
+  yAxisFormatter = (value) => `$${value}`,
+  valueFormatter = (value) => formatCurrency(Number(value)),
+  tooltipName = 'Revenue'
 }) => {
   return (
     <Card className={cn('relative', className)}>
@@ -50,12 +57,12 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
               tick={{ fontSize: 12 }}
             />
             <YAxis 
-              tickFormatter={(value) => `$${value}`} 
+              tickFormatter={(value) => yAxisFormatter(Number(value))} 
               tick={{ fontSize: 12 }}
             />
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <Tooltip 
-              formatter={(value) => [formatCurrency(Number(value)), 'Revenue']}
+              formatter={(value) => [valueFormatter(Number(value)), tooltipName]}
               labelFormatter={(date) => {
                 const d = new Date(date);
                 return d.toLocaleDateString('en-US', { 

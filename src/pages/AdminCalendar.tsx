@@ -32,9 +32,9 @@ export const AdminCalendar: React.FC = () => {
   const monthKey = format(currentDate, 'yyyy-MM');
 
   // Fetch appointments for the current month
-  const fetchAppointments = async () => {
-    // if we already have data cached for this month, use it immediately
-    if (appointmentsCache[monthKey]) {
+  const fetchAppointments = async (force: boolean = false) => {
+    // if we already have data cached for this month, use it immediately unless forced
+    if (appointmentsCache[monthKey] && !force) {
       setAppointments(appointmentsCache[monthKey]);
       return; // optionally still fetch in background to refresh later
     }
@@ -150,7 +150,7 @@ export const AdminCalendar: React.FC = () => {
           <p className="text-destructive font-medium mb-3">{error}</p>
           <Button 
             variant="outline" 
-            onClick={fetchAppointments}
+          onClick={() => fetchAppointments(true)}
             className="rounded-md shadow-sm hover:shadow"
           >
             Retry
@@ -179,11 +179,14 @@ export const AdminCalendar: React.FC = () => {
             onAddAppointment={handleAddAppointment}
           />
 
-          {/* Loading overlay */}
+          {/* Loading overlay - ensure it overlays calendar content correctly */}
           {isLoading && (
-            <div className="absolute inset-0 bg-background/60 flex flex-col items-center justify-center z-10 rounded-xl">
-              <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
-              <span className="text-xs text-muted-foreground">Loading…</span>
+            <div className="absolute inset-0 flex items-center justify-center z-50">
+              <div className="absolute inset-0 bg-background/60 rounded-xl" />
+              <div className="relative z-50 flex flex-col items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+                <span className="text-xs text-muted-foreground">Loading…</span>
+              </div>
             </div>
           )}
         </div>
@@ -193,9 +196,19 @@ export const AdminCalendar: React.FC = () => {
         <AppointmentDetailsDialog 
           appointment={selectedAppointment}
           open={showAppointmentDetails}
-          onOpenChange={setShowAppointmentDetails}
-          onStatusChange={handleAppointmentStatusChange}
-          onAppointmentUpdated={fetchAppointments}
+          onOpenChange={(open) => {
+            setShowAppointmentDetails(open);
+            if (!open) {
+              // After dialog actions, refresh to reflect changes in calendar cards
+              fetchAppointments(true);
+            }
+          }}
+          onStatusChange={(id, status) => {
+            handleAppointmentStatusChange(id, status);
+            // also refresh to ensure all derived views are in sync
+            fetchAppointments(true);
+          }}
+          onAppointmentUpdated={() => fetchAppointments(true)}
         />
       )}
 
@@ -207,7 +220,7 @@ export const AdminCalendar: React.FC = () => {
         serviceList={serviceList}
         onAppointmentCreated={() => {
           setShowNewAppointmentDialog(false);
-          fetchAppointments();
+          fetchAppointments(true);
         }}
       />
     </div>

@@ -11,7 +11,7 @@ import { formatCurrency } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ServicePerformance, StaffPerformance, RevenueData, Appointment } from '@/types';
 import { useDashboard, DashboardPeriod } from '@/hooks/useDashboard';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { RescheduleAppointmentDialog } from '@/features/appointments/RescheduleAppointmentDialog';
 import { getAdminAppointments, Appointment as ApiAppointment } from '@/api/services/appointmentService';
@@ -388,7 +388,7 @@ export const Dashboard: React.FC = () => {
             );
           })()}
           
-          {/* Period Tabs - Only for charts and performance tables */}
+          {/* Period selection */}
           <Tabs defaultValue={period} onValueChange={(value) => handlePeriodChange(value as DashboardPeriod)} className="mt-6">
             <TabsList className="grid grid-cols-4 w-full max-w-md">
               <TabsTrigger value="daily">Daily</TabsTrigger>
@@ -396,163 +396,44 @@ export const Dashboard: React.FC = () => {
               <TabsTrigger value="monthly">Monthly</TabsTrigger>
               <TabsTrigger value="yearly">Yearly</TabsTrigger>
             </TabsList>
-            
-            {/* Daily Tab Content */}
-            <TabsContent value="daily" className="mt-4" forceMount>
-              <>
-                {/* Charts Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <RevenueChart 
-                    title="Appointments Over Time" 
-                    data={appointmentChartData} 
-                    className="col-span-1"
-                    loading={isLoading && !!cachedData}
-                  />
-                  <RevenueChart 
-                    title="Revenue Over Time" 
-                    data={revenueChartData} 
-                    className="col-span-1"
-                    loading={isLoading && !!cachedData}
-                  />
-                </div>
-                
-                {/* Performance Tables Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                  <PerformanceTable
-                    title="Top Services"
-                    data={servicePerformanceData.slice(0, 5)}
-                    type="service"
-                    className="lg:col-span-6"
-                    loading={isLoading && !!cachedData}
-                  />
-                  <PerformanceTable
-                    title="Top Staff"
-                    data={staffPerformanceData.slice(0, 5)}
-                    type="staff"
-                    className="lg:col-span-6"
-                    loading={isLoading && !!cachedData}
-                  />
-                </div>
-              </>
-            </TabsContent>
-            
-            {/* Weekly Tab Content */}
-            <TabsContent value="weekly" className="mt-4" forceMount>
-              <>
-                {/* Charts Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <RevenueChart 
-                    title="Appointments Over Time" 
-                    data={appointmentChartData} 
-                    className="col-span-1"
-                    loading={isLoading && !!cachedData}
-                  />
-                  <RevenueChart 
-                    title="Revenue Over Time" 
-                    data={revenueChartData} 
-                    className="col-span-1"
-                    loading={isLoading && !!cachedData}
-                  />
-                </div>
-                
-                {/* Performance Tables Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                  <PerformanceTable
-                    title="Top Services"
-                    data={servicePerformanceData.slice(0, 5)}
-                    type="service"
-                    className="lg:col-span-6"
-                    loading={isLoading && !!cachedData}
-                  />
-                  <PerformanceTable
-                    title="Top Staff"
-                    data={staffPerformanceData.slice(0, 5)}
-                    type="staff"
-                    className="lg:col-span-6"
-                    loading={isLoading && !!cachedData}
-                  />
-                </div>
-              </>
-            </TabsContent>
-            
-            {/* Monthly Tab Content */}
-            <TabsContent value="monthly" className="mt-4" forceMount>
-              <>
-                {/* Charts Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <RevenueChart 
-                    title="Appointments Over Time" 
-                    data={appointmentChartData} 
-                    className="col-span-1"
-                    loading={isLoading && !!cachedData}
-                  />
-                  <RevenueChart 
-                    title="Revenue Over Time" 
-                    data={revenueChartData} 
-                    className="col-span-1"
-                    loading={isLoading && !!cachedData}
-                  />
-                </div>
-                
-                {/* Performance Tables Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                  <PerformanceTable
-                    title="Top Services"
-                    data={servicePerformanceData.slice(0, 5)}
-                    type="service"
-                    className="lg:col-span-6"
-                    loading={isLoading && !!cachedData}
-                  />
-                  <PerformanceTable
-                    title="Top Staff"
-                    data={staffPerformanceData.slice(0, 5)}
-                    type="staff"
-                    className="lg:col-span-6"
-                    loading={isLoading && !!cachedData}
-                  />
-                </div>
-              </>
-            </TabsContent>
-            
-            {/* Yearly Tab Content */}
-            <TabsContent value="yearly" className="mt-4" forceMount>
-              <>
-                {/* Charts Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <RevenueChart 
-                    title="Appointments Over Time" 
-                    data={appointmentChartData} 
-                    className="col-span-1"
-                    loading={isLoading && !!cachedData}
-                  />
-                  <RevenueChart 
-                    title="Revenue Over Time" 
-                    data={revenueChartData} 
-                    className="col-span-1"
-                    loading={isLoading && !!cachedData}
-                  />
-                </div>
-                
-                {/* Performance Tables Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                  <PerformanceTable
-                    title="Top Services"
-                    data={servicePerformanceData.slice(0, 5)}
-                    type="service"
-                    className="lg:col-span-6"
-                    loading={isLoading && !!cachedData}
-                  />
-                  <PerformanceTable
-                    title="Top Staff"
-                    data={staffPerformanceData.slice(0, 5)}
-                    type="staff"
-                    className="lg:col-span-6"
-                    loading={isLoading && !!cachedData}
-                  />
-                </div>
-              </>
-            </TabsContent>
           </Tabs>
+
+          {/* Charts Row (rendered once, driven by selected period) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <RevenueChart 
+              title="Appointments Over Time" 
+              data={appointmentChartData} 
+              className="col-span-1"
+              loading={isLoading && !!cachedData}
+              yAxisFormatter={(v) => `${v}`}
+              valueFormatter={(v) => `${v}`}
+              tooltipName="Appointments"
+            />
+            <RevenueChart 
+              title="Revenue Over Time" 
+              data={revenueChartData} 
+              className="col-span-1"
+              loading={isLoading && !!cachedData}
+            />
+          </div>
+
+          {/* Performance Tables Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+            <PerformanceTable
+              title="Top Services"
+              data={servicePerformanceData.slice(0, 5)}
+              type="service"
+              className="lg:col-span-6"
+              loading={isLoading && !!cachedData}
+            />
+            <PerformanceTable
+              title="Top Staff"
+              data={staffPerformanceData.slice(0, 5)}
+              type="staff"
+              className="lg:col-span-6"
+              loading={isLoading && !!cachedData}
+            />
+          </div>
           
           {/* Status Distribution */}
           <div className="mt-6">
