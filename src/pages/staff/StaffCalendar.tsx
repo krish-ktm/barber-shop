@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout';
 import { CalendarLayout } from '@/features/admin/calendar/CalendarLayout';
 import { AppointmentDetailsDialog } from '@/features/appointments/AppointmentDetailsDialog';
+import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { getStaffAppointments, updateAppointmentStatus } from '@/api/services/appointmentService';
-import { Appointment as ApiAppointment, Service } from '@/api/services/appointmentService';
+import { Appointment as ApiAppointment, Service, Staff as ApiStaff } from '@/api/services/appointmentService';
+import { getBookingStaff } from '@/api/services/bookingService';
+import { useAuth } from '@/lib/auth';
 import { Appointment as UIAppointment } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -15,6 +18,8 @@ export const StaffCalendar: React.FC = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showNewAppointmentDialog, setShowNewAppointmentDialog] = useState(false);
+  const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
   const monthKey = format(currentDate, 'yyyy-MM');
   const [appointmentsCache, setAppointmentsCache] = useState<Record<string, UIAppointment[]>>({});
   const [staffAppointments, setStaffAppointments] = useState<UIAppointment[]>([]);
@@ -23,7 +28,9 @@ export const StaffCalendar: React.FC = () => {
     services: Service[];
     totalCount: number;
   } | null>(null);
+  const [staffList, setStaffList] = useState<ApiStaff[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Fetch all appointments for the staff member
   const fetchStaffAppointments = async () => {
@@ -73,6 +80,28 @@ export const StaffCalendar: React.FC = () => {
     fetchStaffAppointments();
   }, [monthKey]);
 
+  // Fetch staff list for NewAppointment dialog
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getBookingStaff();
+        if (res.success) {
+          const mapped: ApiStaff[] = res.staff.map((s) => ({
+            id: s.id,
+            name: s.name,
+            email: '',
+            phone: '',
+            position: s.position || '',
+            avatar: null,
+          }));
+          setStaffList(mapped);
+        }
+      } catch (e) {
+        // ignore silently; dialog can still fetch filtered staff on service change
+      }
+    })();
+  }, []);
+
   const handleViewAppointment = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
     setIsDetailsOpen(true);
@@ -80,6 +109,11 @@ export const StaffCalendar: React.FC = () => {
 
   const handleSelectDate = (date: Date) => {
     setCurrentDate(date);
+  };
+
+  const handleAddAppointment = (date: Date) => {
+    setNewAppointmentDate(date);
+    setShowNewAppointmentDialog(true);
   };
 
   // Handle appointment status change
@@ -177,6 +211,7 @@ export const StaffCalendar: React.FC = () => {
             appointments={staffAppointments}
             onSelectDate={handleSelectDate}
             onViewAppointment={handleViewAppointment}
+            onAddAppointment={handleAddAppointment}
           />
 
           {isLoading && (
@@ -197,6 +232,21 @@ export const StaffCalendar: React.FC = () => {
           onStatusChange={handleStatusChange}
         />
       )}
+
+      <NewAppointmentDialog
+        open={showNewAppointmentDialog}
+        onOpenChange={setShowNewAppointmentDialog}
+        selectedDate={newAppointmentDate}
+        staffList={staffList}
+        serviceList={staffData?.services ?? []}
+        disableStaffSelection={true}
+        lockedStaffId={user?.staff?.id}
+        onAppointmentCreated={() => {
+          setShowNewAppointmentDialog(false);
+          // refresh data to reflect the newly created appointment
+          fetchStaffAppointments();
+        }}
+      />
     </div>
   );
 }; 

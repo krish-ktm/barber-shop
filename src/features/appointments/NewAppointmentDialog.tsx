@@ -66,6 +66,8 @@ interface NewAppointmentDialogProps {
   staffList: Staff[];
   serviceList: ApiAppointmentService[];
   onAppointmentCreated?: () => void;
+  disableStaffSelection?: boolean;
+  lockedStaffId?: string;
 }
 
 // ---------------- Component ----------------
@@ -76,6 +78,8 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   staffList,
   serviceList,
   onAppointmentCreated,
+  disableStaffSelection = false,
+  lockedStaffId,
 }) => {
   const { toast } = useToast();
   const [lookupStatus, setLookupStatus] = useState<
@@ -218,27 +222,34 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'serviceIds') {
-        // When services change, refetch staff list accordingly
         const joinedServiceIds = value.serviceIds?.length ? value.serviceIds.join(',') : undefined;
-        if (joinedServiceIds) {
-          void (async () => {
-            const res = await fetchFilteredStaff(joinedServiceIds);
-            if (res.success) {
-              setFilteredStaff(res.staff);
-              // If currently selected staff cannot perform services, clear selection
-              if (!res.staff.find((s) => s.id === form.getValues('staffId'))) {
-                form.setValue('staffId', '', { shouldValidate: true });
-                form.setValue('slot', '', { shouldValidate: true });
-                setSlots([]);
-              }
-            }
-          })();
-        } else {
+        if (disableStaffSelection) {
           setFilteredStaff(staffList);
+          if (lockedStaffId && joinedServiceIds) {
+            void handleFetchSlots(lockedStaffId, joinedServiceIds);
+          }
+        } else {
+          // When services change, refetch staff list accordingly
+          if (joinedServiceIds) {
+            void (async () => {
+              const res = await fetchFilteredStaff(joinedServiceIds);
+              if (res.success) {
+                setFilteredStaff(res.staff);
+                // If currently selected staff cannot perform services, clear selection
+                if (!res.staff.find((s) => s.id === form.getValues('staffId'))) {
+                  form.setValue('staffId', '', { shouldValidate: true });
+                  form.setValue('slot', '', { shouldValidate: true });
+                  setSlots([]);
+                }
+              }
+            })();
+          } else {
+            setFilteredStaff(staffList);
+          }
         }
       }
 
-      if (name === 'staffId' || name === 'serviceIds') {
+      if (!disableStaffSelection && (name === 'staffId' || name === 'serviceIds')) {
         const staffId = value.staffId;
         const joinedServiceIds = value.serviceIds?.length ? value.serviceIds.join(',') : undefined;
         if (staffId && joinedServiceIds) {
@@ -247,7 +258,14 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, selectedDate]);
+  }, [form, selectedDate, disableStaffSelection, lockedStaffId, staffList, fetchFilteredStaff]);
+
+  // When locked staff is provided, preselect it on open
+  useEffect(() => {
+    if (open && disableStaffSelection && lockedStaffId) {
+      form.setValue('staffId', lockedStaffId, { shouldValidate: true });
+    }
+  }, [open, disableStaffSelection, lockedStaffId, form]);
 
   // On open, enrich services if categories missing
   useEffect(() => {
@@ -557,9 +575,12 @@ export const NewAppointmentDialog: React.FC<NewAppointmentDialogProps> = ({
                     name="staffId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Assign Staff<span className="text-destructive"> *</span></FormLabel>
+                        <FormLabel>
+                          {disableStaffSelection ? 'Staff' : 'Assign Staff'}
+                          {!disableStaffSelection && <span className="text-destructive"> *</span>}
+                        </FormLabel>
                         <FormControl>
-                          <Select value={field.value} onValueChange={field.onChange}>
+                          <Select value={field.value} onValueChange={field.onChange} disabled={disableStaffSelection}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select staff" />
                             </SelectTrigger>
