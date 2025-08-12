@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Copy, Download, Printer, Loader2, Percent, DollarSign } from 'lucide-react';
 import {
@@ -10,7 +10,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Invoice, InvoiceProduct } from '@/api/services/invoiceService';
+import { Invoice, InvoiceProduct, getInvoiceById } from '@/api/services/invoiceService';
+import { useApi } from '@/hooks/useApi';
+// Helper to expand line items based on quantity so UI can show "#1", "#2", ...
+interface ExpandedLine<T extends { quantity?: number }> extends T { _index: number; }
+
+const expandByQuantity = <T extends { quantity?: number }>(items: T[]): ExpandedLine<T>[] => {
+  return items.flatMap((item) => {
+    const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
+    return Array.from({ length: qty }, (_, i) => ({ ...item, _index: i + 1 }));
+  });
+};
 import { formatCurrency } from '@/utils';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
@@ -58,14 +68,30 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   onOpenChange,
 }) => {
   const { toast } = useToast();
+  const { execute: fetchInvoice } = useApi(getInvoiceById);
   const { settings } = useSettings();
   const [isPrinting, setIsPrinting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [fullInvoice, setFullInvoice] = useState<Invoice | null>(null);
 
   // Reference to the main invoice content for PDF/print capture
   const invoiceContentRef = useRef<HTMLDivElement>(null);
 
-  if (!invoice) return null;
+  // Load detailed invoice when dialog opens
+  useEffect(() => {
+    if (open && invoice) {
+      fetchInvoice(invoice.id)
+        .then((resp)=>{
+          if(resp.success) setFullInvoice(resp.invoice);
+        })
+        .catch(()=>{/* ignore */});
+    } else {
+      setFullInvoice(null);
+    }
+  }, [open, invoice]);
+
+  const inv = fullInvoice || invoice;
+  if (!inv) return null;
 
   const getStatusBadge = (status: Invoice['status']) => {
     const base = 'rounded-full px-2 py-0.5 text-[11px] font-semibold border';
@@ -82,14 +108,14 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   };
 
   // Safe numeric values
-  const discountAmount = invoice.discount_amount ?? 0;
-  const tipAmount = invoice.tip_amount ?? 0;
+  const discountAmount = inv.discount_amount ?? 0;
+  const tipAmount = inv.tip_amount ?? 0;
 
   const handleCopyInvoiceNumber = () => {
-    navigator.clipboard.writeText(invoice.id);
+    navigator.clipboard.writeText(inv.id);
     toast({
       title: 'Copied to clipboard',
-      description: `Invoice number ${invoice.id} has been copied.`,
+      description: `Invoice number ${inv.id} has been copied.`,
     });
   };
 
@@ -101,7 +127,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
     try {
       const doc = new jsPDF('p', 'pt', 'a4');
       const businessName = settings?.name || 'Barber Shop';
-      doc.setProperties({ title: `Invoice ${invoice.id}`, author: businessName });
+      doc.setProperties({ title: `Invoice ${inv.id}`, author: businessName });
       const pageWidth = doc.internal.pageSize.getWidth();
       const marginX = 40;
       let y = 40;
@@ -129,7 +155,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
       // Invoice number below header
       doc.setFontSize(10);
-      doc.text(`Invoice #: ${invoice.id}`, marginX, y);
+      doc.text(`Invoice #: ${inv.id}`, marginX, y);
       y += 15;
 
       // Gray separator line
@@ -140,17 +166,17 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
       // Status display right side
       doc.setFontSize(12);
-      doc.text(`Status: ${invoice.status.toUpperCase()}`, pageWidth - marginX - 80, y - 15);
+      doc.text(`Status: ${inv.status.toUpperCase()}`, pageWidth - marginX - 80, y - 15);
       
       y += 15;
 
       // Dates & Meta
-      doc.text(`Date: ${format(new Date(invoice.date), 'MMM d, yyyy')}`, marginX, y);
-      if (invoice.appointment_id) {
-        doc.text(`Appointment: #${invoice.appointment_id}`, marginX + 220, y);
+      doc.text(`Date: ${format(new Date(inv.date), 'MMM d, yyyy')}`, marginX, y);
+      if (inv.appointment_id) {
+        doc.text(`Appointment: #${inv.appointment_id}`, marginX + 220, y);
       }
       y += 14;
-      doc.text(`Payment: ${invoice.payment_method}`, marginX, y);
+      doc.text(`Payment: ${inv.payment_method}`, marginX, y);
       y += 15;
 
       // Separator
@@ -163,16 +189,16 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       doc.text('Customer', marginX, y);
       y += 12;
       doc.setFontSize(10);
-      doc.text(invoice.customer_name, marginX, y);
+      doc.text(inv.customer_name, marginX, y);
       y += 10;
 
       doc.line(marginX, y, pageWidth - marginX, y);
       y += 15;
 
-      // Services table
-      const services = (invoice.invoiceServices || invoice.services || []).map((s)=>[
-        s.service_name + (s.quantity>1? ` x${s.quantity}`:'') + (s.staff_name? ` - ${s.staff_name}`:''),
-        formatCurrency(s.total)
+      // Services table (expanded)
+      const services = expandByQuantity(inv.invoiceServices || inv.services || []).map((s)=>[
+        `${s.service_name} #${s._index}${s.staff_name? ` - ${s.staff_name}`:''}`,
+        formatCurrency(s.price)
       ]);
       if(services.length){
         autoTable(doc,{
@@ -189,9 +215,9 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       }
 
       // Products table
-      const products = (invoice.invoiceProducts || invoice.products || []).map((p)=>[
-        p.product_name + (p.quantity>1? ` x${p.quantity}`:'') + (p.staff_name? ` - ${p.staff_name}`:''),
-        formatCurrency(p.total)
+      const products = expandByQuantity(inv.invoiceProducts || inv.products || []).map((p)=>[
+        `${p.product_name} #${p._index}${p.staff_name? ` - ${p.staff_name}`:''}`,
+        formatCurrency(p.price)
       ]);
       if(products.length){
         autoTable(doc,{
@@ -213,11 +239,11 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       y += 20;
       doc.setFontSize(10);
       const totals = [
-        ['Subtotal', formatCurrency(invoice.subtotal)],
-        ['Discount', formatCurrency(invoice.discount_amount ?? 0)],
-        ['Tax', formatCurrency(invoice.tax_amount)],
-        ['Tip', formatCurrency(invoice.tip_amount ?? 0)],
-        ['Total', formatCurrency(invoice.total)]
+        ['Subtotal', formatCurrency(inv.subtotal)],
+        ['Discount', formatCurrency(inv.discount_amount ?? 0)],
+        ['Tax', formatCurrency(inv.tax_amount)],
+        ['Tip', formatCurrency(inv.tip_amount ?? 0)],
+        ['Total', formatCurrency(inv.total)]
       ];
       autoTable(doc,{
         startY:y,
@@ -229,12 +255,12 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       });
 
       // Notes
-      if(invoice.notes){
+      if(inv.notes){
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         y = (doc as any).lastAutoTable.finalY + 10;
         doc.text('Notes:', 40, y);
         y += 14;
-        doc.text(doc.splitTextToSize(invoice.notes, pageWidth-80), 40, y);
+        doc.text(doc.splitTextToSize(inv.notes, pageWidth-80), 40, y);
       }
 
       if(autoPrint){
@@ -248,7 +274,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
           setTimeout(()=>{ document.body.removeChild(iframe); URL.revokeObjectURL(url); },1000);
         };
       } else {
-        doc.save(`invoice_${invoice.id}.pdf`);
+        doc.save(`invoice_${inv.id}.pdf`);
       }
     }catch(err){
       console.error('PDF error',err);
@@ -269,7 +295,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
         <DialogHeader className="pb-2 flex justify-between items-start">
           <div className="flex items-center gap-2 mr-8">
             <DialogTitle className="flex items-center gap-2">Invoice Details</DialogTitle>
-            {getStatusBadge(invoice.status)}
+            {getStatusBadge(inv.status)}
           </div>
         </DialogHeader>
 
@@ -279,7 +305,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Invoice Number:</span>
-                <span className="font-medium">{invoice.id}</span>
+                <span className="font-medium">{inv.id}</span>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -290,19 +316,19 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 </Button>
               </div>
               <div className="text-sm text-muted-foreground">
-                Date: {format(new Date(invoice.date), 'MMMM d, yyyy')}
+                Date: {format(new Date(inv.date), 'MMMM d, yyyy')}
               </div>
-              {invoice.appointment_id && (
+              {inv.appointment_id && (
                 <div className="text-sm text-muted-foreground">
-                  Appointment: #{invoice.appointment_id}
+                  Appointment: #{inv.appointment_id}
                 </div>
               )}
               <div className="text-sm text-muted-foreground">
-                Payment Method: {invoice.payment_method.charAt(0).toUpperCase() + invoice.payment_method.slice(1)}
+                Payment Method: {inv.payment_method.charAt(0).toUpperCase() + inv.payment_method.slice(1)}
               </div>
-              {invoice.created_at && (
+              {inv.created_at && (
                 <div className="text-sm text-muted-foreground">
-                  Created: {format(new Date(invoice.created_at), 'MMMM d, yyyy, h:mm a')}
+                  Created: {format(new Date(inv.created_at), 'MMMM d, yyyy, h:mm a')}
                 </div>
               )}
             </div>
@@ -311,7 +337,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
               {/* Customer Information */}
               <div className="space-y-1">
                 <h4 className="text-sm font-medium">Customer</h4>
-                <div className="text-sm">{invoice.customer_name}</div>
+                <div className="text-sm">{inv.customer_name}</div>
               </div>
 
               {/* (Removed single staff list – staff now shown against each item) */}
@@ -320,50 +346,44 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             <Separator />
 
             {/* Services */}
-            { (invoice.invoiceServices || invoice.services || []).length > 0 && (
+            { (inv.invoiceServices || inv.services || []).length > 0 && (
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Services</h4>
               <div className="space-y-2">
-                {(invoice.invoiceServices || invoice.services || []).map((service, index) => (
+                {expandByQuantity(inv.invoiceServices || inv.services || []).map((service, idx) => (
                   <div
-                    key={`svc-${service.service_id}-${index}`}
+                    key={`svc-${service.service_id}-${idx}`}
                     className="flex justify-between text-sm"
                   >
                     <div>
-                      <span>{service.service_name}</span>
-                      {service.quantity > 1 && (
-                        <span className="text-muted-foreground"> × {service.quantity}</span>
-                      )}
+                      <span>{service.service_name} #{service._index}</span>
                       {service.staff_name && (
                         <span className="text-muted-foreground ml-1">- {service.staff_name}</span>
                       )}
                     </div>
-                    <span>{formatCurrency(service.total)}</span>
+                    <span>{formatCurrency(service.price)}</span>
                   </div>
                 ))}
               </div>
             </div>) }
 
             {/* Products */}
-            { (invoice.invoiceProducts || invoice.products || []).length > 0 && (
+            { (inv.invoiceProducts || inv.products || []).length > 0 && (
             <div className="space-y-3">
               <h4 className="text-sm font-medium">Products</h4>
               <div className="space-y-2">
-                {(invoice.invoiceProducts || invoice.products || []).map((product: InvoiceProduct, index: number) => (
+                {expandByQuantity(inv.invoiceProducts || inv.products || []).map((product: any, idx: number) => (
                   <div
-                    key={`prd-${product.product_id}-${index}`}
+                    key={`prd-${product.product_id}-${idx}`}
                     className="flex justify-between text-sm"
                   >
                     <div>
-                      <span>{product.product_name}</span>
-                      {product.quantity > 1 && (
-                        <span className="text-muted-foreground"> × {product.quantity}</span>
-                      )}
+                      <span>{product.product_name} #{product._index}</span>
                       {product.staff_name && (
                         <span className="text-muted-foreground ml-1">- {product.staff_name}</span>
                       )}
                     </div>
-                    <span>{formatCurrency(product.total)}</span>
+                    <span>{formatCurrency(product.price)}</span>
                   </div>
                 ))}
               </div>
@@ -375,7 +395,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>{formatCurrency(invoice.subtotal)}</span>
+                <span>{formatCurrency(inv.subtotal)}</span>
               </div>
 
               <div className="flex justify-between items-center">
@@ -383,8 +403,8 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                   <Percent className={`h-4 w-4 mr-1 ${discountAmount > 0 ? 'text-blue-600' : 'text-muted-foreground'}`} />
                   <span className={`text-sm ${discountAmount > 0 ? 'font-medium' : 'text-muted-foreground'}`}>
                     Discount
-                    {invoice.discount_type === 'percentage' && invoice.discount_value
-                      ? ` (${invoice.discount_value}%)`
+                    {inv.discount_type === 'percentage' && inv.discount_value
+                      ? ` (${inv.discount_value}%)`
                       : ''}
                   </span>
                 </div>
@@ -394,8 +414,8 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
               </div>
 
               {/* Display individual tax components if available */}
-              {invoice.tax_components && invoice.tax_components.length > 0 ? (
-                invoice.tax_components.map((component, index) => (
+              {inv.tax_components && inv.tax_components.length > 0 ? (
+                inv.tax_components.map((component, index) => (
                   <div key={index} className="flex justify-between text-sm text-muted-foreground">
                     <span>{component.name} ({component.rate}%)</span>
                     <span>{formatCurrency(component.amount)}</span>
@@ -403,8 +423,8 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 ))
               ) : (
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Tax ({invoice.tax}%)</span>
-                  <span>{formatCurrency(invoice.tax_amount)}</span>
+                  <span>Tax ({inv.tax}%)</span>
+                  <span>{formatCurrency(inv.tax_amount)}</span>
                 </div>
               )}
 
@@ -424,30 +444,30 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
               <div className="flex justify-between font-medium">
                 <span>Total</span>
-                <span>{formatCurrency(invoice.total)}</span>
+                <span>{formatCurrency(inv.total)}</span>
               </div>
               
               {/* Percentage indicators for tip and discount */}
               {(tipAmount > 0 || discountAmount > 0) && (
                 <div className="text-xs text-muted-foreground space-y-1 mt-1">
-                  {discountAmount > 0 && invoice.subtotal > 0 && (
+                  {discountAmount > 0 && inv.subtotal > 0 && (
                     <div className="flex justify-end">
-                      Discount: {((discountAmount / invoice.subtotal) * 100).toFixed(1)}% of subtotal
+                      Discount: {((discountAmount / inv.subtotal) * 100).toFixed(1)}% of subtotal
                     </div>
                   )}
-                  {tipAmount > 0 && invoice.total > 0 && (
+                  {tipAmount > 0 && inv.total > 0 && (
                     <div className="flex justify-end">
-                      Tip: {((tipAmount / invoice.total) * 100).toFixed(1)}% of total
+                      Tip: {((tipAmount / inv.total) * 100).toFixed(1)}% of total
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {invoice.notes && (
+            {inv.notes && (
               <div className="text-sm text-muted-foreground">
                 <span className="font-medium">Notes: </span>
-                {invoice.notes}
+                {inv.notes}
               </div>
             )}
           </div>

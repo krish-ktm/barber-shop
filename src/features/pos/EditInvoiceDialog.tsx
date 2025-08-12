@@ -26,19 +26,28 @@ interface EditInvoiceDialogProps {
 // Helper to transform existing invoice data into InvoiceFormData structure expected by StepWiseInvoiceForm
 const mapInvoiceToFormData = (inv: Invoice): Partial<InvoiceFormData> => {
   // Flatten services and products into simplified arrays for the form.
-  const services = (inv.invoiceServices || inv.services || []).map((s, idx) => ({
-    id: `svc-${idx}`,
-    serviceId: s.service_id,
-    quantity: s.quantity,
-    staffIds: s.staff_id ? [s.staff_id] : [''],
-  }));
+  // Ensure staffIds array length matches quantity so mapping UI can display one row per unit (#1, #2, ...)
+  const services = (inv.invoiceServices || inv.services || []).map((s, idx) => {
+    const qty = s.quantity || 1;
+    const staffIdBaseline = s.staff_id || '';
+    return {
+      id: `svc-${idx}`,
+      serviceId: s.service_id,
+      quantity: qty,
+      staffIds: Array(qty).fill(staffIdBaseline),
+    };
+  });
 
-  const products = (inv.invoiceProducts || inv.products || []).map((p, idx) => ({
-    id: `prd-${idx}`,
-    productId: p.product_id,
-    quantity: p.quantity,
-    staffIds: p.staff_id ? [p.staff_id] : [''],
-  }));
+  const products = (inv.invoiceProducts || inv.products || []).map((p, idx) => {
+    const qty = p.quantity || 1;
+    const staffIdBaseline = p.staff_id || '';
+    return {
+      id: `prd-${idx}`,
+      productId: p.product_id,
+      quantity: qty,
+      staffIds: Array(qty).fill(staffIdBaseline),
+    };
+  });
 
   return {
     id: inv.id,
@@ -174,12 +183,16 @@ export const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
       const sourceServices = invoice.invoiceServices || invoice.services || [];
       const sourceProducts = invoice.invoiceProducts || invoice.products || [];
 
-      // Helper to get service details
+      // Helper to get service / product meta data
+      // 1. Try existing entries on the invoice (sourceServices/sourceProducts)
+      // 2. Fallback to the full catalog fetched for the form (serviceItems/productItems)
       const getServiceDetails = (serviceId: string) =>
-        sourceServices.find((s) => s.service_id === serviceId);
+        sourceServices.find((s) => s.service_id === serviceId) ||
+        serviceItems.find((s) => s.id === serviceId) || null;
 
       const getProductDetails = (productId: string) =>
-        sourceProducts.find((p) => p.product_id === productId);
+        sourceProducts.find((p) => p.product_id === productId) ||
+        productItems.find((p) => p.id === productId) || null;
 
       type Svc = {
         service_id: string;
@@ -204,7 +217,7 @@ export const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
       const tempServices: Svc[] = [];
       (formData.services || []).forEach((svc) => {
         const det = getServiceDetails(svc.serviceId);
-        const priceVal = det?.price || 0;
+        const priceVal = det ? (det as any).price || 0 : 0;
         if (svc.quantity < 1) return;
         const ids = svc.staffIds && svc.staffIds.length ? svc.staffIds : Array(svc.quantity).fill('');
         ids.forEach((sid, idx) => {
@@ -212,7 +225,7 @@ export const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
           if (idx >= svc.quantity) return;
           tempServices.push({
             service_id: svc.serviceId,
-            service_name: det?.service_name || det?.service_name || 'Service',
+            service_name: (det as any)?.service_name || (det as any)?.name || 'Service',
             price: priceVal,
             quantity: 1,
             total: priceVal,
@@ -240,14 +253,14 @@ export const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
       const tempProducts: Prod[] = [];
       (formData.products || []).forEach((prd) => {
         const det = getProductDetails(prd.productId);
-        const priceVal = det?.price || 0;
+        const priceVal = det ? (det as any).price || 0 : 0;
         if (prd.quantity < 1) return;
         const ids = prd.staffIds && prd.staffIds.length ? prd.staffIds : Array(prd.quantity).fill('');
         ids.forEach((sid, idx) => {
           if (idx >= prd.quantity) return;
           tempProducts.push({
             product_id: prd.productId,
-            product_name: det?.product_name || det?.product_name || 'Product',
+            product_name: (det as any)?.product_name || (det as any)?.name || 'Product',
             price: priceVal,
             quantity: 1,
             total: priceVal,
