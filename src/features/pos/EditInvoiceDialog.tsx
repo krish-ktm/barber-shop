@@ -25,29 +25,38 @@ interface EditInvoiceDialogProps {
 
 // Helper to transform existing invoice data into InvoiceFormData structure expected by StepWiseInvoiceForm
 const mapInvoiceToFormData = (inv: Invoice): Partial<InvoiceFormData> => {
-  // Flatten services and products into simplified arrays for the form.
-  // Ensure staffIds array length matches quantity so mapping UI can display one row per unit (#1, #2, ...)
-  const services = (inv.invoiceServices || inv.services || []).map((s, idx) => {
-    const qty = s.quantity || 1;
-    const staffIdBaseline = s.staff_id || '';
-    return {
-      id: `svc-${idx}`,
-      serviceId: s.service_id,
-      quantity: qty,
-      staffIds: Array(qty).fill(staffIdBaseline),
-    };
-  });
+  // Aggregate duplicate service/product lines (same service/product id) into a single entry
+  // and expand per-unit staff assignments into the staffIds array so each unit can be mapped independently.
 
-  const products = (inv.invoiceProducts || inv.products || []).map((p, idx) => {
-    const qty = p.quantity || 1;
-    const staffIdBaseline = p.staff_id || '';
-    return {
-      id: `prd-${idx}`,
-      productId: p.product_id,
-      quantity: qty,
-      staffIds: Array(qty).fill(staffIdBaseline),
-    };
+  const svcMap = new Map<string, { id: string; serviceId: string; quantity: number; staffIds: string[] }>();
+  (inv.invoiceServices || inv.services || []).forEach((s) => {
+    const qty = s.quantity || 1;
+    const key = s.service_id;
+    if (!svcMap.has(key)) {
+      svcMap.set(key, { id: `svc-${key}`, serviceId: key, quantity: 0, staffIds: [] });
+    }
+    const entry = svcMap.get(key)!;
+    for (let i = 0; i < qty; i += 1) {
+      entry.staffIds.push(s.staff_id || '');
+      entry.quantity += 1;
+    }
   });
+  const services = Array.from(svcMap.values());
+
+  const prdMap = new Map<string, { id: string; productId: string; quantity: number; staffIds: string[] }>();
+  (inv.invoiceProducts || inv.products || []).forEach((p) => {
+    const qty = p.quantity || 1;
+    const key = p.product_id;
+    if (!prdMap.has(key)) {
+      prdMap.set(key, { id: `prd-${key}`, productId: key, quantity: 0, staffIds: [] });
+    }
+    const entry = prdMap.get(key)!;
+    for (let i = 0; i < qty; i += 1) {
+      entry.staffIds.push(p.staff_id || '');
+      entry.quantity += 1;
+    }
+  });
+  const products = Array.from(prdMap.values());
 
   return {
     id: inv.id,
@@ -214,6 +223,9 @@ export const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
         staff_name?: string | null;
       };
 
+      const staffNameById = new Map<string, string>();
+      staffMembers.forEach((m) => staffNameById.set(m.id, m.name));
+
       const tempServices: Svc[] = [];
       (formData.services || []).forEach((svc) => {
         const det = getServiceDetails(svc.serviceId);
@@ -230,7 +242,7 @@ export const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
             quantity: 1,
             total: priceVal,
             staff_id: sid || null,
-            staff_name: det?.staff_name || null,
+            staff_name: sid ? (staffNameById.get(sid) || null) : null,
           });
         });
       });
@@ -265,7 +277,7 @@ export const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
             quantity: 1,
             total: priceVal,
             staff_id: sid || null,
-            staff_name: det?.staff_name || null,
+            staff_name: sid ? (staffNameById.get(sid) || null) : null,
           });
         });
       });

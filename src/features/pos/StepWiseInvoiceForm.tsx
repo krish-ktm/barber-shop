@@ -346,18 +346,18 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     }));
   };
 
-  const updateServiceStaff = (serviceId: string, index: number, staffId: string) => {
+  const updateServiceStaff = (itemId: string, index: number, staffId: string) => {
     setServices(prev => prev.map(s => {
-      if (s.serviceId !== serviceId) return s;
+      if (s.id !== itemId) return s;
       const ids = [...s.staffIds];
       ids[index] = staffId;
       return { ...s, staffIds: ids };
     }));
   };
 
-  const updateProductStaff = (productId: string, index: number, staffId: string) => {
+  const updateProductStaff = (itemId: string, index: number, staffId: string) => {
     setProducts(prev => prev.map(p => {
-      if (p.productId !== productId) return p;
+      if (p.id !== itemId) return p;
       const ids = [...p.staffIds];
       ids[index] = staffId;
       return { ...p, staffIds: ids };
@@ -935,7 +935,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 }).map(({svc,meta,idx,staffId})=> (
                   <div key={`${svc.id}-${idx}`} className="flex items-center gap-4">
                     <span className="flex-1 text-sm truncate">{meta.name} #{idx+1}</span>
-                    <Select value={staffId} onValueChange={(val)=>updateServiceStaff(svc.serviceId,idx,val)}>
+                    <Select value={staffId} onValueChange={(val)=>updateServiceStaff(svc.id,idx,val)}>
                       <SelectTrigger className="h-8 pr-8 text-xs w-40">
                         <SelectValue placeholder="Select Staff" />
                       </SelectTrigger>
@@ -963,7 +963,7 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                 }).map(({prd,meta,idx,staffId})=> (
                   <div key={`${prd.id}-${idx}`} className="flex items-center gap-4">
                     <span className="flex-1 text-sm truncate">{meta.name} #{idx+1}</span>
-                    <Select value={staffId} onValueChange={(val)=>updateProductStaff(prd.productId,idx,val)}>
+                    <Select value={staffId} onValueChange={(val)=>updateProductStaff(prd.id,idx,val)}>
                       <SelectTrigger className="h-8 pr-8 text-xs w-40">
                         <SelectValue placeholder="Select Staff" />
                       </SelectTrigger>
