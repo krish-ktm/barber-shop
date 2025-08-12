@@ -825,15 +825,24 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                       {formatCurrency(Number(p.price) || 0)}
                     </div>
                     {isSelected && (
-                      <div className="absolute top-1 right-1 flex items-center gap-1 bg-transparent rounded px-1 py-0.5" onClick={(e)=>e.stopPropagation()}>
-                        <button type="button" className="p-1 hover:bg-muted rounded" onClick={()=>updateProductQuantity(p.id,1)}>
-                          <Plus className="h-4 w-4 text-primary" />
+                      <div className="mt-2 flex items-center justify-center gap-2" onClick={(e)=>e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="h-6 w-6 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                          onClick={() => updateProductQuantity(p.id, -1)}
+                          disabled={products.find(pr => pr.productId === p.id)?.quantity === 1}
+                        >
+                          <Minus className="h-3 w-3" />
                         </button>
-                        <span className="text-xs font-medium w-6 text-center text-primary-foreground bg-primary/20 rounded">
-                          {products.find(pr=>pr.productId===p.id)?.quantity}
+                        <span className="text-sm font-semibold w-6 text-center">
+                          {products.find(pr => pr.productId === p.id)?.quantity}
                         </span>
-                        <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={products.find(pr=>pr.productId===p.id)?.quantity===1} onClick={()=>updateProductQuantity(p.id,-1)}>
-                          <Minus className="h-4 w-4 text-primary" />
+                        <button
+                          type="button"
+                          className="h-6 w-6 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                          onClick={() => updateProductQuantity(p.id, 1)}
+                        >
+                          <Plus className="h-3 w-3" />
                         </button>
                       </div>
                     )}
@@ -983,12 +992,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Calculate subtotal including products
     const subtotalServices = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
-      return sum + (Number(selectedService?.price) || 0);
+      return sum + ((Number(selectedService?.price) || 0) * service.quantity);
     }, 0);
 
     const subtotalProducts = products.reduce((sum, product) => {
       const selectedProduct = productData.find(p => p.id === product.productId);
-      return sum + (Number(selectedProduct?.price) || 0);
+      return sum + ((Number(selectedProduct?.price) || 0) * product.quantity);
     }, 0);
 
     const subtotal = subtotalServices + subtotalProducts;
@@ -1148,12 +1157,12 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
     // Calculate subtotal including products
     const subtotalServices = services.reduce((sum, service) => {
       const selectedService = serviceData.find(s => s.id === service.serviceId);
-      return sum + (Number(selectedService?.price) || 0);
+      return sum + ((Number(selectedService?.price) || 0) * service.quantity);
     }, 0);
 
     const subtotalProducts = products.reduce((sum, product) => {
       const selectedProduct = productData.find(p => p.id === product.productId);
-      return sum + (Number(selectedProduct?.price) || 0);
+      return sum + ((Number(selectedProduct?.price) || 0) * product.quantity);
     }, 0);
 
     const subtotal = subtotalServices + subtotalProducts;
@@ -1229,8 +1238,8 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   if (!selectedService) return null;
                   return (
                     <tr key={service.id}>
-                      <td className="py-2">{selectedService.name}</td>
-                      <td className="py-2 text-right">{formatCurrency(Number(selectedService.price) || 0)}</td>
+                      <td className="py-2">{`${selectedService.name} x${service.quantity}`}</td>
+                      <td className="py-2 text-right">{formatCurrency((Number(selectedService.price) || 0) * service.quantity)}</td>
                     </tr>
                   );
                 })}
@@ -1239,8 +1248,8 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                   if (!selectedProduct) return null;
                   return (
                     <tr key={product.id}>
-                      <td className="py-2">{selectedProduct.name}</td>
-                      <td className="py-2 text-right">{formatCurrency(Number(selectedProduct.price) || 0)}</td>
+                      <td className="py-2">{`${selectedProduct.name} x${product.quantity}`}</td>
+                      <td className="py-2 text-right">{formatCurrency((Number(selectedProduct.price) || 0) * product.quantity)}</td>
                     </tr>
                   );
                 })}
@@ -1618,17 +1627,29 @@ export const StepWiseInvoiceForm: React.FC<StepWiseInvoiceFormProps> = ({
                                       className="w-full justify-between group relative"
                                       onClick={() => handleServiceSelection(s.id)}
                                     >
-                                      <span>{s.name}</span>
+                                      <span className={isSelected ? "text-primary-foreground" : undefined}>{s.name}</span>
                                       {isSelected && (
-                                        <div className="absolute top-1 right-1 flex items-center gap-1 bg-transparent rounded px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
-                                          <button type="button" className="p-1 hover:bg-muted rounded" onClick={() => updateServiceQuantity(s.id, 1)}>
-                                            <Plus className="h-4 w-4 text-primary" />
+                                        <div
+                                          className="absolute bottom-1 right-1 flex items-center gap-1 bg-white/80 backdrop-blur px-1.5 py-0.5 rounded-full shadow"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <button
+                                            type="button"
+                                            className="h-6 w-6 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                                            onClick={() => updateServiceQuantity(s.id, -1)}
+                                            disabled={services.find(svc => svc.serviceId === s.id)?.quantity === 1}
+                                          >
+                                            <Minus className="h-3 w-3" />
                                           </button>
-                                          <span className="text-xs font-medium w-6 text-center text-primary-foreground bg-primary/20 rounded">
-                                            {services.find(s=>s.serviceId===s.id)?.quantity}
+                                          <span className="text-xs font-semibold w-5 text-center">
+                                            {services.find(svc => svc.serviceId === s.id)?.quantity}
                                           </span>
-                                          <button type="button" className="p-1 disabled:opacity-50 hover:bg-muted rounded" disabled={services.find(s=>s.serviceId===s.id)?.quantity===1} onClick={() => updateServiceQuantity(s.id, -1)}>
-                                            <Minus className="h-4 w-4 text-primary" />
+                                          <button
+                                            type="button"
+                                            className="h-6 w-6 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                                            onClick={() => updateServiceQuantity(s.id, 1)}
+                                          >
+                                            <Plus className="h-3 w-3" />
                                           </button>
                                         </div>
                                       )}
