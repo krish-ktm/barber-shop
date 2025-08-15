@@ -214,6 +214,15 @@ const reportType = "daily";
   // Add new state for selected staff details
   const [selectedStaffDetails, setSelectedStaffDetails] = useState<any | null>(null);
 
+  // Fetch staff-specific tips & discounts when dialog opens or date changes
+  useEffect(() => {
+    if (showStaffDialog && selectedStaffMember) {
+      const dateFromStr = format(fromDate, 'yyyy-MM-dd');
+      const dateToStr = format(toDate, 'yyyy-MM-dd');
+      fetchStaffTipsDiscounts(dateFromStr, dateToStr, selectedStaffMember);
+    }
+  }, [showStaffDialog, selectedStaffMember, fromDate, toDate, fetchStaffTipsDiscounts]);
+
   // Load data on component mount
   useEffect(() => {
     // Fetch initial data
