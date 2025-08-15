@@ -352,7 +352,17 @@ export function ProductsPage() {
                       <TableCell>{product.category}</TableCell>
                       <TableCell>{product.price !== undefined ? `$${parseFloat(product.price.toString()).toFixed(2)}` : '-'}</TableCell>
                       <TableCell>{product.commission !== undefined ? `${parseFloat(product.commission.toString())}%` : '-'}</TableCell>
-                      <TableCell>{product.stock !== undefined ? product.stock : '-'}</TableCell>
+                      <TableCell>
+                        {product.stock !== undefined ? (
+                          product.stock === 0 ? (
+                            <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">Out of stock</span>
+                          ) : product.stock <= 5 ? (
+                            <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">Low ({product.stock})</span>
+                          ) : (
+                            product.stock
+                          )
+                        ) : '-'}
+                      </TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
@@ -411,6 +421,13 @@ export function ProductsPage() {
                       <div>
                         <p className="font-medium leading-none">{product.name}</p>
                         <p className="text-xs text-muted-foreground">{product.category}</p>
+                        {product.stock !== undefined && (
+                          product.stock === 0 ? (
+                            <span className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800">Out of stock</span>
+                          ) : product.stock <= 5 ? (
+                            <span className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-100 text-yellow-800">Low: {product.stock}</span>
+                          ) : null
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">
