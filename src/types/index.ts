@@ -205,6 +205,10 @@ export interface StaffPerformance {
   appointments: number;
   revenue: number;
   commissionEarned: number;
+  /** Optional total tips earned in the selected period */
+  tips?: number;
+  /** Optional discounts attributed to this staff */
+  discounts?: number;
 }
 
 export interface GSTComponent {
