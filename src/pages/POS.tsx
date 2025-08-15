@@ -183,7 +183,7 @@ export const POS: React.FC = () => {
       inv.subtotal,
       inv.tax_amount,
       inv.discount_amount ?? 0,
-      inv.tip_amount ?? 0,
+      inv.tip_amount ?? 0, // derived from service lines on backend
       inv.total,
     ]);
 

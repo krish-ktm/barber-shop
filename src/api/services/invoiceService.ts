@@ -40,7 +40,7 @@ export interface Invoice {
   discount_type?: 'percentage' | 'fixed';
   discount_value?: number;
   discount_amount?: number;
-  tip_amount?: number;
+  tip_amount?: number; // total tip for the invoice; server allocates equally among staff lines
   tax: number;
   tax_amount: number;
   total: number;

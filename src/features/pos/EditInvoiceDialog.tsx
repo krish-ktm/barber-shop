@@ -298,7 +298,7 @@ export const EditInvoiceDialog: React.FC<EditInvoiceDialogProps> = ({
 
       // Build payload to send to API
       const payload: Partial<Invoice> = {
-        tip_amount: formData.tipAmount,
+        tip_amount: formData.tipAmount, // total tip; backend allocates equally among staff lines
         discount_type: formData.discountType !== 'none' ? (formData.discountType as 'percentage' | 'fixed') : undefined,
         discount_value: formData.discountValue,
         notes: formData.notes,

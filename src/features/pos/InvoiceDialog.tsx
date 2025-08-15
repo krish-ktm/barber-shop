@@ -109,7 +109,7 @@ export const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
   // Safe numeric values
   const discountAmount = inv.discount_amount ?? 0;
-  const tipAmount = inv.tip_amount ?? 0;
+  const tipAmount = inv.tip_amount ?? 0; // derived from service lines by backend
 
   const handleCopyInvoiceNumber = () => {
     navigator.clipboard.writeText(inv.id);

@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { StepWiseInvoiceForm, InvoiceFormData } from './StepWiseInvoiceForm';
 import { useApi } from '@/hooks/useApi';
-import { createInvoice, InvoiceService, InvoiceProduct } from '@/api/services/invoiceService';
+import { createInvoice as apiCreateInvoice } from '@/api/services/invoiceService';
+import type { Invoice as ApiInvoice } from '@/api/services/invoiceService';
+import { InvoiceService, InvoiceProduct } from '@/api/services/invoiceService';
 import { getAllStaff } from '@/api/services/staffService';
 import { getAllServices } from '@/api/services/serviceService';
 import { getAllProducts } from '@/api/services/productService';
@@ -71,7 +73,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
   const {
     loading,
     execute: executeCreateInvoice
-  } = useApi(createInvoice);
+  } = useApi(apiCreateInvoice);
   
   const {
     execute: fetchStaff
@@ -465,7 +467,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
         payment_method: formData.paymentMethod,
         status: 'paid', // Invoice is created as paid
         notes: formData.notes || '',
-        tip_amount: tipAmount || 0, // Always include tip_amount even if 0
+        tip_amount: tipAmount || 0, // total tip; backend now allocates equally among staff lines
         // Add customer creation fields
         is_new_customer: isNewCustomer,
         customer_details: customerDetails
@@ -512,7 +514,7 @@ export const StepInvoiceDialog: React.FC<StepInvoiceDialogProps> = ({
       }
       
       // Send data to the API
-      const response = await executeCreateInvoice(invoiceData);
+      const response = await executeCreateInvoice(invoiceData as unknown as Partial<ApiInvoice>);
       
       if (response.success) {
         toast({
