@@ -23,6 +23,8 @@ import {
   LayoutGrid, 
   LayoutList
 } from 'lucide-react';
+
+import { DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -49,6 +51,63 @@ export const DesktopCalendarView = ({
 }: DesktopCalendarViewProps): JSX.Element => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>('day');
+  // For list view range selection; default one day
+  const [listRange, setListRange] = useState<DateRange>({ from: new Date(), to: new Date() });
+
+  // Quick range presets for list view
+  const applyQuickRange = (preset: 'today' | 'tomorrow' | 'next7' | 'next14' | 'thisWeek' | 'nextWeek') => {
+    const today = startOfDay(new Date());
+    let from = today;
+    let to = today;
+    switch (preset) {
+      case 'tomorrow':
+        from = addDays(today, 1);
+        to = from;
+        break;
+      case 'next7':
+        to = addDays(today, 6);
+        break;
+      case 'next14':
+        to = addDays(today, 13);
+        break;
+      case 'thisWeek':
+        from = startOfWeek(today);
+        to = endOfWeek(today);
+        break;
+      case 'nextWeek': {
+        const nextWeekStart = startOfWeek(addWeeks(today, 1));
+        from = nextWeekStart;
+        to = endOfWeek(nextWeekStart);
+        break;
+      }
+    }
+    setListRange({ from, to });
+    setCurrentDate(from);
+    onSelectDate?.(from);
+  };
+
+  const isPresetActive = (preset: 'today' | 'tomorrow' | 'next7' | 'next14' | 'thisWeek' | 'nextWeek') => {
+    const today = startOfDay(new Date());
+    const eq = (d1: Date, d2: Date) => format(d1, 'yyyy-MM-dd') === format(d2, 'yyyy-MM-dd');
+    switch (preset) {
+      case 'today':
+        return eq(listRange.from ?? today, today) && eq(listRange.to ?? today, today);
+      case 'tomorrow': {
+        const t = addDays(today, 1);
+        return eq(listRange.from ?? t, t) && eq(listRange.to ?? t, t);
+      }
+      case 'next7':
+        return eq(listRange.from ?? today, today) && eq(listRange.to ?? today, addDays(today, 6));
+      case 'next14':
+        return eq(listRange.from ?? today, today) && eq(listRange.to ?? today, addDays(today, 13));
+      case 'thisWeek':
+        return eq(listRange.from ?? today, startOfWeek(today)) && eq(listRange.to ?? today, endOfWeek(today));
+      case 'nextWeek': {
+        const start = startOfWeek(addWeeks(today, 1));
+        return eq(listRange.from ?? today, start) && eq(listRange.to ?? today, endOfWeek(start));
+      }
+    }
+  };
   
   // Add CSS for custom scrollbar when component mounts
   useEffect(() => {
@@ -138,8 +197,8 @@ export const DesktopCalendarView = ({
         title = format(currentDate, 'EEEE, MMMM d, yyyy');
         break;
       case 'list': {
-        const listStart = startOfDay(currentDate);
-        const listEnd = endOfDay(addDays(currentDate, 14));
+        const listStart = listRange?.from ?? currentDate;
+        const listEnd = listRange?.to ?? currentDate;
         title = `${format(listStart, 'MMM d')} - ${format(listEnd, 'MMM d, yyyy')}`;
         break;
       }
@@ -261,26 +320,74 @@ export const DesktopCalendarView = ({
             <Button variant="outline" size="icon" onClick={goToPrevious} className="rounded-full shadow-sm hover:shadow">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="px-3 py-2 text-sm">
-                  {format(currentDate, 'dd MMM yyyy')}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={currentDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setCurrentDate(date);
-                      onSelectDate?.(date);
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            {view !== 'list' ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="px-3 py-2 text-sm">
+                    {format(currentDate, 'dd MMM yyyy')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={currentDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setCurrentDate(date);
+                        onSelectDate?.(date);
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="px-3 py-2 text-sm">
+                    {`${format(listRange.from ?? new Date(), 'dd MMM')} - ${format(listRange.to ?? new Date(), 'dd MMM')}`}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-auto" align="start">
+                  <div className="p-3 pb-2 border-b space-y-2 w-[260px]">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-1">Quick ranges</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        { key: 'today', label: 'Today' },
+                        { key: 'tomorrow', label: 'Tomorrow' },
+                        { key: 'next7', label: 'Next 7 Days' },
+                        { key: 'next14', label: 'Next 14 Days' },
+                        { key: 'thisWeek', label: 'This Week' },
+                        { key: 'nextWeek', label: 'Next Week' },
+                      ] as const).map(({ key, label }) => (
+                        <Button
+                          key={key}
+                          variant={isPresetActive(key) ? 'default' : 'ghost'}
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => applyQuickRange(key)}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <CalendarComponent
+                    mode="range"
+                    selected={listRange}
+                    onSelect={(range) => {
+                      if (range?.from) {
+                        setListRange(range as DateRange);
+                        const newCurrent = range.from;
+                        setCurrentDate(newCurrent);
+                        onSelectDate?.(newCurrent);
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
             <Button variant="outline" size="icon" onClick={goToNext} className="rounded-full shadow-sm hover:shadow">
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -652,22 +759,20 @@ export const DesktopCalendarView = ({
   const renderListView = () => {
     // Get appointments for the next 14 days
     const getAppointmentsForPeriod = () => {
-      const appointments14Days = [];
-      for (let i = 0; i < 14; i++) {
-        const date = addDays(currentDate, i);
-        const dateStr = format(date, 'yyyy-MM-dd');
-        const dateAppointments = appointments.filter(
-          (appointment) => appointment.date === dateStr
-        );
-        
+      const start = listRange?.from ?? currentDate;
+      const end = listRange?.to ?? currentDate;
+      const days = [] as { date: Date; appointments: Appointment[] }[];
+      let day = startOfDay(start);
+      const endDay = endOfDay(end);
+      while (day <= endDay) {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const dateAppointments = appointments.filter(a => a.date === dateStr);
         if (dateAppointments.length > 0) {
-          appointments14Days.push({
-            date,
-            appointments: dateAppointments,
-          });
+          days.push({ date: day, appointments: dateAppointments });
         }
+        day = addDays(day, 1);
       }
-      return appointments14Days;
+      return days;
     };
 
     const periodAppointments = getAppointmentsForPeriod();
