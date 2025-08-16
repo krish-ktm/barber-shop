@@ -48,6 +48,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { getAllStaff } from '@/api/services/staffService';
+import { ReviewsPagination } from '@/components/ReviewsPagination';
 
 // Define minimal type for staff option used in filter select
 interface StaffOption {
@@ -66,8 +67,8 @@ export const POS: React.FC = () => {
   const [showNewInvoiceDialog, setShowNewInvoiceDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
-  const [page] = useState(1);
-  const [limit] = useState(100);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
   const { toast } = useToast();
   const [status, setStatus] = useState<string | undefined>(undefined);
   const [staffId, setStaffId] = useState<string | undefined>(undefined);
@@ -146,6 +147,7 @@ export const POS: React.FC = () => {
   }, [error, toast]);
 
   const invoices = invoicesResponse?.invoices ?? [];
+  const totalPages = invoicesResponse?.pages ?? 1;
 
   // Export invoices to CSV
   const handleExport = () => {
@@ -621,6 +623,17 @@ export const POS: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-4">
+          <ReviewsPagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
+
     </div>
   );
 };
