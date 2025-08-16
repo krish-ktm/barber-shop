@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { format, subDays } from "date-fns";
+import { format, subDays, addDays } from "date-fns";
 import {
   BarChart3,
   Calendar as CalendarIcon,
@@ -218,8 +218,9 @@ const reportType = "daily";
   useEffect(() => {
     if (showStaffDialog && selectedStaffMember) {
       const dateFromStr = format(fromDate, 'yyyy-MM-dd');
-      const dateToStr = format(toDate, 'yyyy-MM-dd');
-      fetchStaffTipsDiscounts(dateFromStr, dateToStr, selectedStaffMember);
+      const dateToStr = format(addDays(toDate, 1), 'yyyy-MM-dd');
+      // Pass groupBy explicitly to ensure staffId is the 4th argument
+      fetchStaffTipsDiscounts(dateFromStr, dateToStr, 'day', selectedStaffMember);
     }
   }, [showStaffDialog, selectedStaffMember, fromDate, toDate, fetchStaffTipsDiscounts]);
 
@@ -294,7 +295,8 @@ const reportType = "daily";
   const fetchReportsData = () => {
     // Format dates for API calls
     const dateFrom = format(fromDate, 'yyyy-MM-dd');
-    const dateTo = format(toDate, 'yyyy-MM-dd');
+    // Add 1 day to make the end-date inclusive (prevents timezone truncation issues)
+    const dateTo = format(addDays(toDate, 1), 'yyyy-MM-dd');
     
     // Define groupBy based on report type
     const groupBy = reportType === 'yearly' ? 'month' : reportType === 'monthly' ? 'week' : 'day';
@@ -516,7 +518,7 @@ const reportType = "daily";
     
     // Format dates for API calls
     const dateFrom = format(fromDate, 'yyyy-MM-dd');
-    const dateTo = format(toDate, 'yyyy-MM-dd');
+    const dateTo = format(addDays(toDate, 1), 'yyyy-MM-dd');
     
     // Find the staff in the existing data if possible
     if (advancedStaffData?.data) {
@@ -569,7 +571,7 @@ const reportType = "daily";
     
     // Format dates for API calls
     const dateFrom = format(fromDate, 'yyyy-MM-dd');
-    const dateTo = format(toDate, 'yyyy-MM-dd');
+    const dateTo = format(addDays(toDate, 1), 'yyyy-MM-dd');
     
     // Fetch the data - dialog will show loading state while this happens
     fetchAdvancedService(dateFrom, dateTo, serviceId)
@@ -1542,7 +1544,7 @@ const reportType = "daily";
                       className="mt-4"
                       onClick={() => {
                         const dateFrom = format(fromDate, 'yyyy-MM-dd');
-                        const dateTo = format(toDate, 'yyyy-MM-dd');
+                        const dateTo = format(addDays(toDate, 1), 'yyyy-MM-dd');
                         if (selectedService) {
                           fetchAdvancedService(dateFrom, dateTo, selectedService);
                         }
@@ -2068,7 +2070,7 @@ const reportType = "daily";
                       className="mt-4"
                       onClick={() => {
                         const dateFrom = format(fromDate, 'yyyy-MM-dd');
-                        const dateTo = format(toDate, 'yyyy-MM-dd');
+                        const dateTo = format(addDays(toDate, 1), 'yyyy-MM-dd');
                         if (selectedStaffMember) {
                           fetchAdvancedStaff(dateFrom, dateTo, selectedStaffMember);
                         }
