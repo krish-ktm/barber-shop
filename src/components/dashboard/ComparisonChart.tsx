@@ -56,7 +56,8 @@ export const ComparisonChart: React.FC<ComparisonChartProps> = ({
           />
           <Tooltip 
             formatter={(value, name) => {
-              return [yAxisFormatter(Number(value)), name === "current" ? currentLabel : previousLabel];
+              // Use the provided series name directly to ensure accurate tooltip labels
+              return [yAxisFormatter(Number(value)), String(name)];
             }}
             labelFormatter={(date) => {
               const d = new Date(date);

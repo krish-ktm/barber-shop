@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { format } from 'date-fns';
-import { Copy, Download, Loader2 } from 'lucide-react';
+import { Copy, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -99,12 +99,7 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
     });
   };
 
-  const handleDownload = () => {
-    toast({
-      title: 'Download started',
-      description: 'Customer details PDF will be downloaded shortly.',
-    });
-  };
+  // Removed export/download functionality as per requirements
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,11 +246,7 @@ export const CustomerDetailsDialog: React.FC<CustomerDetailsDialogProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-between pt-4 mt-4 border-t px-5 pb-5">
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-end pt-4 mt-4 border-t px-5 pb-5">
           <Button variant="default" onClick={() => onOpenChange(false)}>
             Close
           </Button>
