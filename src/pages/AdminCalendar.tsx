@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { Appointment } from '@/types';
 import { toast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Staff as ApiStaff, Service as ApiService } from '@/api/services/appointmentService';
 import { NewAppointmentDialog } from '@/features/appointments/NewAppointmentDialog';
 
@@ -157,19 +157,33 @@ export const AdminCalendar: React.FC = () => {
           </Button>
         </div>
       ) : (
-        <div className="mb-6 relative">
-          <div className="flex justify-end mb-4">
-            <Select value={selectedStaffId} onValueChange={(value) => setSelectedStaffId(value)}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Filter by Staff" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
+        <div className="mb-6 relative" >
+          <div className="mb-4 overflow-x-auto pb-1">
+            <Tabs
+              value={selectedStaffId}
+              onValueChange={(value) => setSelectedStaffId(value)}
+              className="w-full"
+            >
+              <TabsList
+                className="inline-flex gap-1 bg-muted/20 p-1 rounded-xl shadow-sm min-w-max mx-auto"
+              >
+                <TabsTrigger
+                  value="all"
+                  className="whitespace-nowrap px-4 py-2 text-sm rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground bg-transparent hover:bg-primary/10 transition-colors"
+                >
+                  All Staff
+                </TabsTrigger>
                 {staffList.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                  <TabsTrigger
+                    key={staff.id}
+                    value={String(staff.id)}
+                    className="whitespace-nowrap px-4 py-2 text-sm rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground bg-transparent hover:bg-primary/10 transition-colors"
+                  >
+                    {staff.name}
+                  </TabsTrigger>
                 ))}
-              </SelectContent>
-            </Select>
+              </TabsList>
+            </Tabs>
           </div>
           {/* Calendar */}
           <CalendarLayout 
